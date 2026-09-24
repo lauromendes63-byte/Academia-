@@ -120,33 +120,38 @@ export async function getLastExercisePerformance(
   exerciseId: string,
   exerciseName: string
 ): Promise<{ weightKg: number; reps: number; date: string } | null> {
-  const sessions = await db.workoutSessions
-    .where('completed')
-    .equals(1 as any)
-    .reverse()
-    .sortBy('date');
+  const allSessions = await db.workoutSessions.toArray();
+  const sessions = allSessions
+    .filter((s) => s.completed)
+    .sort((a, b) => {
+      if (b.date !== a.date) return b.date.localeCompare(a.date);
+      return (b.id || 0) - (a.id || 0);
+    });
 
   for (const session of sessions) {
     const exLog = session.exercises?.find(
       (e) =>
         e.exerciseId === exerciseId ||
         e.exerciseName.toLowerCase() === exerciseName.toLowerCase() ||
-        e.activeExerciseName.toLowerCase() === exerciseName.toLowerCase()
+        (e.activeExerciseName &&
+          e.activeExerciseName.toLowerCase() === exerciseName.toLowerCase())
     );
 
     if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
       const completedSets = exLog.sets.filter((s) => s.completed);
-      if (completedSets.length > 0) {
-        // Return highest weight or last set weight
-        const topSet = completedSets.reduce(
+      const targetSets = completedSets.length > 0 ? completedSets : exLog.sets;
+      if (targetSets.length > 0) {
+        const topSet = targetSets.reduce(
           (max, s) => (s.weightKg > max.weightKg ? s : max),
-          completedSets[0]
+          targetSets[0]
         );
-        return {
-          weightKg: topSet.weightKg,
-          reps: topSet.reps,
-          date: session.date
-        };
+        if (topSet && topSet.weightKg > 0) {
+          return {
+            weightKg: topSet.weightKg,
+            reps: topSet.reps,
+            date: session.date
+          };
+        }
       }
     }
   }

@@ -108,12 +108,29 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     };
   }, [currentRoutine]);
 
-  // Update an exercise log
-  const handleUpdateLog = useCallback((updated: ExerciseLog) => {
-    setExerciseLogs((prev) =>
-      prev.map((item) => (item.exerciseId === updated.exerciseId ? updated : item))
-    );
-  }, []);
+  // Update an exercise log & immediately persist load
+  const handleUpdateLog = useCallback(
+    async (updated: ExerciseLog) => {
+      setExerciseLogs((prev) =>
+        prev.map((item) => (item.exerciseId === updated.exerciseId ? updated : item))
+      );
+
+      // Instantly persist the updated weight into db.routines so it is permanently remembered!
+      if (currentRoutine && updated.sets && updated.sets[0]) {
+        const newWeight = updated.sets[0].weightKg;
+        const exIdx = currentRoutine.exercises.findIndex((e) => e.id === updated.exerciseId);
+        if (exIdx !== -1 && currentRoutine.exercises[exIdx].defaultWeightKg !== newWeight) {
+          const newExercises = [...currentRoutine.exercises];
+          newExercises[exIdx] = {
+            ...newExercises[exIdx],
+            defaultWeightKg: newWeight
+          };
+          await db.routines.update(currentRoutine.id, { exercises: newExercises });
+        }
+      }
+    },
+    [currentRoutine]
+  );
 
   const completedSetsCount = useMemo(() => {
     return exerciseLogs.reduce(
@@ -152,6 +169,18 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
 
     // Save to Dexie
     await db.workoutSessions.add(newSession);
+
+    // Save final weights to db.routines so they remain permanent for subsequent workouts!
+    if (currentRoutine) {
+      const updatedExercises = currentRoutine.exercises.map((ex) => {
+        const log = exerciseLogs.find((l) => l.exerciseId === ex.id);
+        if (log && log.sets && log.sets[0] && log.sets[0].weightKg > 0) {
+          return { ...ex, defaultWeightKg: log.sets[0].weightKg };
+        }
+        return ex;
+      });
+      await db.routines.update(currentRoutine.id, { exercises: updatedExercises });
+    }
 
     // Advance active routine in cycle (A -> B -> C -> D -> A)
     const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
