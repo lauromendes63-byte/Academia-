@@ -18,7 +18,8 @@ import {
   Trophy,
   RotateCw,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
 
 interface WorkoutScreenProps {
@@ -114,19 +115,12 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     );
   }, []);
 
-  // Compute stats
-  const totalSetsCount = useMemo(() => {
-    return exerciseLogs.reduce((acc, ex) => acc + ex.sets.length, 0);
-  }, [exerciseLogs]);
-
   const completedSetsCount = useMemo(() => {
     return exerciseLogs.reduce(
       (acc, ex) => acc + ex.sets.filter((s) => s.completed).length,
       0
     );
   }, [exerciseLogs]);
-
-  const progressPercent = totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0;
 
   // Finalize Workout
   const handleFinishWorkout = async () => {
@@ -211,7 +205,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
 
-    // Check if horizontal swipe was intentional
     if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
       const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
       const currentIdx = cycle.indexOf(selectedRoutineId);
@@ -233,42 +226,52 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     setTouchStartY(null);
   };
 
+  const focusName = currentRoutine?.title.split(':')[1]?.trim() || currentRoutine?.id;
+
   return (
     <div
       className="pb-36 pt-1 max-w-lg mx-auto px-4 touch-pan-y"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* HEADER: ROTINAS ABCD SELETOR REFINADO */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
-        <div className="flex items-center justify-between mb-2">
-          {/* Prominent Muscle Groups Focus */}
-          <div className="min-w-0 pr-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
-                {currentRoutine?.title.split(':')[1]?.trim() || currentRoutine?.id}
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">
-                • Deslize para trocar
+      {/* HEADER PREMIUM CENTRALIZADO (Sem barra redundante de 0/15 séries) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-3 mb-3 -mx-4 px-4 border-b border-slate-200/60">
+        <div className="relative flex items-center justify-between mb-2.5">
+          {/* Spacer esquerdo para centralização exata */}
+          <div className="w-8 shrink-0" />
+
+          {/* Conteúdo Centralizado */}
+          <div className="flex-1 text-center min-w-0 px-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700">
+                Treino {selectedRoutineId} • {focusName}
               </span>
             </div>
-            <h1 className="text-sm font-extrabold text-slate-900 tracking-tight mt-0.5 truncate">
+            
+            <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
               {currentRoutine?.subtitle}
             </h1>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+              ‹ Deslize para os lados para alternar ›
+            </p>
           </div>
 
-          <button
-            onClick={handleResetSession}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 flex items-center justify-center active:scale-95 transition-all shrink-0"
-            title="Recomeçar séries desta sessão"
-            aria-label="Recomeçar sessão"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-          </button>
+          {/* Botão de resetar sessão no canto direito */}
+          <div className="w-8 shrink-0 flex justify-end">
+            <button
+              onClick={handleResetSession}
+              className="w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 flex items-center justify-center active:scale-90 transition-all shadow-2xs"
+              title="Recomeçar séries desta sessão"
+              aria-label="Recomeçar sessão"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* ABCD TAB SELECTOR COMPACTO */}
-        <div className="grid grid-cols-4 gap-1.5 bg-slate-200/60 p-1 rounded-xl">
+        {/* ABCD TAB SELECTOR */}
+        <div className="grid grid-cols-4 gap-1.5 bg-slate-200/60 p-1 rounded-2xl">
           {(['A', 'B', 'C', 'D'] as RoutineId[]).map((rId) => {
             const isSelected = selectedRoutineId === rId;
             return (
@@ -278,7 +281,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
                   triggerHaptic('light');
                   setSelectedRoutineId(rId);
                 }}
-                className={`py-1.5 rounded-lg text-xs font-black transition-all duration-150 min-h-[38px] flex items-center justify-center active:scale-95 ${
+                className={`py-2 rounded-xl text-xs font-black transition-all duration-150 min-h-[40px] flex items-center justify-center active:scale-95 ${
                   isSelected
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
@@ -288,19 +291,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
               </button>
             );
           })}
-        </div>
-
-        {/* PROGRESS BAR DA SESSÃO */}
-        <div className="mt-2 flex items-center gap-2.5">
-          <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 transition-all duration-300 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <span className="text-[11px] font-bold text-slate-500 shrink-0">
-            {completedSetsCount}/{totalSetsCount} séries ({Math.round(progressPercent)}%)
-          </span>
         </div>
       </div>
 
@@ -338,10 +328,20 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
         </button>
       </div>
 
-      {/* MODAL DE CONCLUSÃO COMEMORATIVA */}
+      {/* MODAL DE CONCLUSÃO COM BOTÃO X E ESCOLHA DE FICAR OU IR PARA EVOLUÇÃO */}
       {completedSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
+            {/* Botão Fechar X no topo */}
+            <button
+              onClick={() => setCompletedSummary(null)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center active:scale-90 transition-all"
+              title="Fechar"
+              aria-label="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-3 shadow-inner">
               <Trophy className="w-7 h-7 stroke-[2.5]" />
             </div>
@@ -374,16 +374,26 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setCompletedSummary(null);
-                if (onGoToEvolution) onGoToEvolution();
-              }}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              <span>Ver Minha Evolução</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Opções de Ação: Ver Evolução OU Ficar nos Treinos */}
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setCompletedSummary(null);
+                  if (onGoToEvolution) onGoToEvolution();
+                }}
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                <span>Ver Minha Evolução</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setCompletedSummary(null)}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs active:scale-95 transition-all"
+              >
+                Continuar nos Treinos
+              </button>
+            </div>
           </div>
         </div>
       )}

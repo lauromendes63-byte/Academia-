@@ -332,52 +332,79 @@ export const NutritionScreen: React.FC = () => {
   };
 
   const isToday = selectedDate === todayStr;
-  const formattedDisplayDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString(
-    'pt-BR',
-    {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    }
-  );
+  const parsedDate = new Date(selectedDate + 'T00:00:00');
+  const dayNumber = parsedDate.getDate();
+  const monthShort = parsedDate
+    .toLocaleDateString('pt-BR', { month: 'short' })
+    .replace('.', '')
+    .toUpperCase();
 
   const waterProgress = Math.min(100, Math.round((currentData.waterMl / 4000) * 100));
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-4">
-      {/* HEADER CENTRALIZADO (Sem poluição de caixas desnecessárias) */}
+      {/* HEADER CENTRALIZADO PREMIUM */}
       <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
         <div className="flex items-center justify-between">
-          <div className="w-8" /> {/* Spacer para centralização */}
-
-          <div className="text-center">
-            <h1 className="text-base font-black text-slate-900 tracking-tight">
-              Dieta & Nutrição
-            </h1>
-            <p className="text-[11px] font-semibold text-slate-400">
-              Meta: 185g Proteína • 4,0L Água
-            </p>
+          {/* Spacer esquerdo proporcional para centralização perfeita */}
+          <div className="w-16 shrink-0 flex items-center">
+            {isToday ? (
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
+                Hoje
+              </span>
+            ) : (
+              <button
+                onClick={() => setSelectedDate(todayStr)}
+                className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 active:scale-95"
+              >
+                Hoje
+              </button>
+            )}
           </div>
 
-          {/* Date Navigator Compacto */}
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs">
+          {/* Título e Metas Coloridas em Destaque Central */}
+          <div className="flex-1 text-center min-w-0 px-1">
+            <h1 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+              Dieta & Nutrição
+            </h1>
+            <div className="flex items-center justify-center gap-1.5 mt-1 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
+                <Target className="w-3 h-3 text-blue-600" />
+                <span>185g Prot</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
+                <Droplets className="w-3 h-3 text-cyan-600 fill-current" />
+                <span>4,0L Água</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Quadrado Pequeno de Data no Canto Superior Direito */}
+          <div className="w-16 shrink-0 flex items-center justify-end gap-0.5">
             <button
               onClick={() => handleShiftDate(-1)}
-              className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90"
+              className="w-5 h-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 active:scale-90"
+              title="Dia anterior"
               aria-label="Dia anterior"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-3 h-3" />
             </button>
-            <span className="px-1.5 text-[11px] font-bold text-slate-800 capitalize min-w-[65px] text-center truncate">
-              {isToday ? 'Hoje' : formattedDisplayDate}
-            </span>
+            <div className="w-9 h-11 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center shrink-0">
+              <span className="text-[9px] font-black text-blue-600 uppercase tracking-wider leading-none">
+                {monthShort}
+              </span>
+              <span className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                {dayNumber}
+              </span>
+            </div>
             <button
               onClick={() => handleShiftDate(1)}
               disabled={isToday}
-              className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 disabled:opacity-30"
+              className="w-5 h-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 active:scale-90 disabled:opacity-20"
+              title="Próximo dia"
               aria-label="Próximo dia"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3 h-3" />
             </button>
           </div>
         </div>
