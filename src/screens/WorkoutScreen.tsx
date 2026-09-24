@@ -58,7 +58,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
   const [completedSummary, setCompletedSummary] = useState<{
     routineTitle: string;
     totalSets: number;
-    totalTonnage: number;
+    totalExercises: number;
   } | null>(null);
 
   // Load / initialize exercise logs when current routine changes
@@ -139,15 +139,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
       origin: { y: 0.6 }
     });
 
-    let totalTonnage = 0;
-    exerciseLogs.forEach((ex) => {
-      ex.sets.forEach((s) => {
-        if (s.completed) {
-          totalTonnage += s.weightKg * s.reps;
-        }
-      });
-    });
-
     const todayStr = new Date().toISOString().split('T')[0];
 
     const newSession: WorkoutSession = {
@@ -174,7 +165,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     setCompletedSummary({
       routineTitle: currentRoutine?.title || 'Treino Concluído',
       totalSets: completedSetsCount,
-      totalTonnage: Math.round(totalTonnage)
+      totalExercises: exerciseLogs.filter((ex) => ex.sets.some((s) => s.completed)).length
     });
 
     setIsFinishing(false);
@@ -357,16 +348,16 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
 
             <div className="grid grid-cols-2 gap-2.5 mb-5">
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Séries</div>
+                <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Séries Feitas</div>
                 <div className="text-base font-black text-slate-900">
                   {completedSummary.totalSets}
                 </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Volume Total</div>
+                <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Exercícios</div>
                 <div className="text-base font-black text-blue-600">
-                  {completedSummary.totalTonnage.toLocaleString('pt-BR')} kg
+                  {completedSummary.totalExercises}
                 </div>
               </div>
             </div>
