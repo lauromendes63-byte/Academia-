@@ -117,14 +117,19 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-2 max-w-lg mx-auto px-4">
-      {/* HEADER */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-3 pb-3 mb-4 -mx-4 px-4 border-b border-slate-200/60">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-          Configurações
-        </span>
-        <h1 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-          Perfil & Metas Calóricas
-        </h1>
+      {/* HEADER CENTRALIZADO PREMIUM */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
+        <div className="text-center min-w-0 px-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+              Ajustes do Sistema
+            </span>
+          </div>
+          <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
+            Perfil & Metas Calóricas
+          </h1>
+        </div>
       </div>
 
       {message && (

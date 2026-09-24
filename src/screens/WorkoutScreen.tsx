@@ -245,7 +245,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
             <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               <span className="text-[11px] font-black uppercase tracking-wider text-blue-700">
-                Treino {selectedRoutineId} • {focusName}
+                {focusName}
               </span>
             </div>
             

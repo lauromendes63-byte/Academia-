@@ -223,13 +223,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => handleAdjustWeight(-2)}
+              onClick={() => handleAdjustWeight(-5)}
               disabled={isAborted || currentWeight <= 0}
               className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
-              aria-label="-2kg"
+              aria-label="-5kg"
             >
               <Minus className="w-3 h-3" />
-              <span>2kg</span>
+              <span>5kg</span>
             </button>
 
             <div className="relative flex items-center">
@@ -237,8 +237,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 type="number"
                 step="0.5"
                 min="0"
-                value={currentWeight}
-                onChange={(e) => handleDirectWeightChange(parseFloat(e.target.value))}
+                value={currentWeight === 0 ? '' : currentWeight}
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleDirectWeightChange(val === '' ? 0 : parseFloat(val));
+                }}
                 disabled={isAborted}
                 className="w-14 h-8 text-center text-sm font-black text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 shadow-2xs"
               />
@@ -246,13 +251,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             </div>
 
             <button
-              onClick={() => handleAdjustWeight(2)}
+              onClick={() => handleAdjustWeight(5)}
               disabled={isAborted}
               className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
-              aria-label="+2kg"
+              aria-label="+5kg"
             >
               <Plus className="w-3 h-3" />
-              <span>2kg</span>
+              <span>5kg</span>
             </button>
           </div>
         </div>

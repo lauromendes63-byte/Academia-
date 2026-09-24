@@ -45,6 +45,19 @@ export interface WorkoutSession {
   exercises: ExerciseLog[];
 }
 
+export interface PlateConfig {
+  proteinType: 'carne' | 'frango' | 'peixe';
+  proteinPortions: number; // 1, 2, 3, 4, 5
+  ricePortions: number; // 0, 1, 2, 3, 4
+  beanPortions: number; // 0, 1, 2, 3
+  hasSalad: boolean;
+}
+
+export interface SubwayConfig {
+  protein: 'frango_teriyaki' | 'carne';
+  size: '15cm' | '30cm';
+}
+
 export interface NutritionLog {
   date: string; // Key: YYYY-MM-DD
   tookWhey: boolean;
@@ -60,6 +73,11 @@ export interface NutritionLog {
     besteiraCount: number;
     superBesteiraCount: number;
   };
+  breakfastEggCount?: number;
+  lunchConfig?: PlateConfig;
+  dinnerType?: 'subway' | 'caseiro';
+  dinnerSubwayConfig?: SubwayConfig;
+  dinnerPlateConfig?: PlateConfig;
 }
 
 export interface WeightLog {
