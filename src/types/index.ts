@@ -48,11 +48,12 @@ export interface WorkoutSession {
 export interface NutritionLog {
   date: string; // Key: YYYY-MM-DD
   tookWhey: boolean;
+  wheyScoops: number; // 20g of protein per scoop
   meals: {
-    breakfast: string; // 'none' | 'cafe_leite' | 'cafe_tapioca' | 'ovos'
-    lunch: string;     // 'none' | 'padrao' | 'pesado' | 'leve'
-    snack: string;     // 'none' | 'sem_lanche' | 'tapioca_cafe' | 'shake'
-    dinner: string;    // 'none' | 'subway' | 'caseiro' | 'outro'
+    breakfast: string;
+    lunch: string;
+    snack: string;
+    dinner: string;
   };
   waterMl: number;
   escapes: {
