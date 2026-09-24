@@ -74,6 +74,7 @@ export interface NutritionLog {
     superBesteiraCount: number;
   };
   breakfastEggCount?: number;
+  milkGlasses?: number; // Copos de leite Piracanjuba (~200ml, 6g prot, 110 kcal)
   lunchConfig?: PlateConfig;
   dinnerType?: 'subway' | 'caseiro';
   dinnerSubwayConfig?: SubwayConfig;

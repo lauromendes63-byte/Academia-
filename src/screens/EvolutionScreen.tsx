@@ -1,23 +1,33 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../db/db';
+import type { RoutineId, RoutineDefinition } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
 import {
   TrendingUp,
   Scale,
-  Calendar,
   Award,
-  ChevronDown,
   Plus,
-  Trash2
+  Trash2,
+  Flame,
+  CheckCircle2
 } from 'lucide-react';
 
 export const EvolutionScreen: React.FC = () => {
   const weightLogs = useLiveQuery(() => db.weightLogs.orderBy('date').toArray());
-  const workoutSessions = useLiveQuery(() =>
-    db.workoutSessions.where('completed').equals(1 as any).reverse().sortBy('date')
-  );
+  
+  // Query all completed sessions reliably
+  const workoutSessions = useLiveQuery(async () => {
+    const list = await db.workoutSessions.toArray();
+    return list
+      .filter((s) => s.completed)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }) || [];
+
   const routines = useLiveQuery(() => db.routines.toArray());
+
+  // Selected routine tab for routine-level overload analysis (A, B, C, D)
+  const [selectedRoutineId, setSelectedRoutineId] = useState<RoutineId>('A');
 
   // Weight entry state
   const [newWeight, setNewWeight] = useState<string>('97.5');
@@ -25,21 +35,6 @@ export const EvolutionScreen: React.FC = () => {
     new Date().toISOString().split('T')[0]
   );
   const [showAddWeight, setShowAddWeight] = useState(false);
-
-  // Selected exercise for Progressive Overload chart
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string>('pull_1');
-
-  // Build a distinct list of all exercises for the dropdown
-  const allExercises = useMemo(() => {
-    if (!routines) return [];
-    const list: { id: string; name: string; routineId: string }[] = [];
-    routines.forEach((r) => {
-      r.exercises.forEach((ex) => {
-        list.push({ id: ex.id, name: ex.name, routineId: r.id });
-      });
-    });
-    return list;
-  }, [routines]);
 
   // Handle adding weekly weight log
   const handleAddWeightLog = async (e: React.FormEvent) => {
@@ -80,46 +75,148 @@ export const EvolutionScreen: React.FC = () => {
     return { initial, latest, delta };
   }, [weightLogs]);
 
-  // Progressive Overload data for the selected exercise
-  const exerciseOverloadData = useMemo(() => {
-    if (!workoutSessions || !selectedExerciseId) return [];
+  // =========================================================
+  // 1. FREQUÊNCIA SEMANAL & MENSAL (META: 4X POR SEMANA)
+  // =========================================================
+  const frequencyStats = useMemo(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const mondayDate = new Date(now);
+    mondayDate.setDate(now.getDate() - diffToMonday);
+    mondayDate.setHours(0, 0, 0, 0);
 
-    // Filter sessions containing this exercise
-    const points: { date: string; maxWeight: number; totalVolume: number }[] = [];
+    const mondayStr = mondayDate.toISOString().split('T')[0];
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 6);
+    const sundayStr = sundayDate.toISOString().split('T')[0];
 
-    // Reverse to chronological order
-    const chronological = [...workoutSessions].reverse();
+    // Sessions completed this calendar week (Mon-Sun)
+    const thisWeekSessions = workoutSessions.filter(
+      (s) => s.date >= mondayStr && s.date <= sundayStr
+    );
+    const weeklyCount = thisWeekSessions.length;
+    const WEEKLY_GOAL = 4;
+    const weeklyProgress = Math.min(100, Math.round((weeklyCount / WEEKLY_GOAL) * 100));
 
-    chronological.forEach((session) => {
-      const match = session.exercises?.find((ex) => ex.exerciseId === selectedExerciseId);
-      if (match && !match.abortedForFatigue && match.sets) {
-        const completedSets = match.sets.filter((s) => s.completed);
-        if (completedSets.length > 0) {
-          const maxW = Math.max(...completedSets.map((s) => s.weightKg));
-          const vol = completedSets.reduce((sum, s) => sum + s.weightKg * s.reps, 0);
-          points.push({
-            date: session.date,
-            maxWeight: maxW,
-            totalVolume: vol
-          });
-        }
-      }
+    // Daily breakdown for this week
+    const weekDayPills = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((label, idx) => {
+      const d = new Date(mondayDate);
+      d.setDate(mondayDate.getDate() + idx);
+      const dStr = d.toISOString().split('T')[0];
+      const hadWorkout = workoutSessions.some((s) => s.date === dStr);
+      const isToday = dStr === now.toISOString().split('T')[0];
+      return { label, dayNumber: d.getDate(), dStr, hadWorkout, isToday };
     });
 
-    return points;
-  }, [workoutSessions, selectedExerciseId]);
+    // Month stats
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonthSessions = workoutSessions.filter((s) => s.date.startsWith(currentMonthPrefix));
+    const monthlyCount = thisMonthSessions.length;
+    const currentMonthName = now.toLocaleDateString('pt-BR', { month: 'long' });
 
-  const selectedExerciseName = useMemo(() => {
-    return (
-      allExercises.find((e) => e.id === selectedExerciseId)?.name ||
-      'Exercício Selecionado'
-    );
-  }, [allExercises, selectedExerciseId]);
+    return {
+      weeklyCount,
+      weeklyGoal: WEEKLY_GOAL,
+      weeklyProgress,
+      weekDayPills,
+      monthlyCount,
+      currentMonthName,
+      totalSessions: workoutSessions.length
+    };
+  }, [workoutSessions]);
 
-  const maxPR = useMemo(() => {
-    if (exerciseOverloadData.length === 0) return 0;
-    return Math.max(...exerciseOverloadData.map((d) => d.maxWeight));
-  }, [exerciseOverloadData]);
+  // =========================================================
+  // 2. SOBRECARGA PROGRESSIVA POR ROTINA (ABCD)
+  // =========================================================
+  const currentRoutine = useMemo<RoutineDefinition | undefined>(() => {
+    return routines?.find((r) => r.id === selectedRoutineId);
+  }, [routines, selectedRoutineId]);
+
+  // Filter sessions matching this routine in chronological order
+  const routineSessionsChronological = useMemo(() => {
+    return workoutSessions
+      .filter((s) => s.routineId === selectedRoutineId)
+      .slice()
+      .reverse();
+  }, [workoutSessions, selectedRoutineId]);
+
+  // Total volume/tonnage progression data for this specific routine
+  const routineVolumeData = useMemo(() => {
+    return routineSessionsChronological.map((s) => {
+      const vol = (s.exercises || []).reduce((acc, ex) => {
+        return (
+          acc +
+          (ex.sets || []).reduce(
+            (sAcc, set) => sAcc + (set.completed ? set.weightKg * set.reps : 0),
+            0
+          )
+        );
+      }, 0);
+
+      return {
+        date: s.date,
+        totalVolume: Math.round(vol)
+      };
+    });
+  }, [routineSessionsChronological]);
+
+  const maxRoutineVolume = useMemo(() => {
+    if (routineVolumeData.length === 0) return 0;
+    return Math.max(...routineVolumeData.map((d) => d.totalVolume));
+  }, [routineVolumeData]);
+
+  // Detailed exercise overload progression for all exercises in this routine
+  const exerciseOverloadMatrix = useMemo(() => {
+    if (!currentRoutine) return [];
+
+    return currentRoutine.exercises.map((exDef) => {
+      // Find all performances for this exercise across all sessions of this routine
+      const weightsLogged: { date: string; weightKg: number }[] = [];
+
+      routineSessionsChronological.forEach((session) => {
+        const found = session.exercises?.find(
+          (e) => e.exerciseId === exDef.id || e.exerciseName === exDef.name
+        );
+        if (found && !found.abortedForFatigue && found.sets) {
+          const completed = found.sets.filter((s) => s.completed);
+          if (completed.length > 0) {
+            const maxW = Math.max(...completed.map((s) => s.weightKg));
+            weightsLogged.push({ date: session.date, weightKg: maxW });
+          }
+        }
+      });
+
+      const initialWeight =
+        weightsLogged.length > 0 ? weightsLogged[0].weightKg : exDef.defaultWeightKg;
+      const latestWeight =
+        weightsLogged.length > 0
+          ? weightsLogged[weightsLogged.length - 1].weightKg
+          : exDef.defaultWeightKg;
+      const maxWeight =
+        weightsLogged.length > 0
+          ? Math.max(...weightsLogged.map((w) => w.weightKg))
+          : exDef.defaultWeightKg;
+      const delta = latestWeight - initialWeight;
+      const hasProgress = delta > 0;
+
+      return {
+        id: exDef.id,
+        name: exDef.name,
+        muscleGroup: exDef.muscleGroup,
+        targetReps: exDef.targetReps,
+        defaultSets: exDef.defaultSets,
+        initialWeight,
+        latestWeight,
+        maxWeight,
+        delta,
+        hasProgress,
+        logsCount: weightsLogged.length
+      };
+    });
+  }, [currentRoutine, routineSessionsChronological]);
+
+  const evolvedCount = exerciseOverloadMatrix.filter((e) => e.hasProgress).length;
 
   return (
     <div className="pb-36 pt-2 max-w-lg mx-auto px-4">
@@ -139,15 +236,306 @@ export const EvolutionScreen: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        {/* 1. PESO CORPORAL CARD */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+        {/* ========================================================= */}
+        {/* 1. FREQUÊNCIA & ASSIDUIDADE (META: 4X POR SEMANA) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+                <Flame className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Assiduidade Semanal (Meta 4x)
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <h3 className="text-lg font-black text-slate-900 leading-none">
+                    {frequencyStats.weeklyCount} / {frequencyStats.weeklyGoal} treinos
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            <span
+              className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
+                frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+              }`}
+            >
+              {frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
+                ? 'Meta Batida! 🔥'
+                : `${frequencyStats.weeklyProgress}% da meta`}
+            </span>
+          </div>
+
+          {/* Barra de Progresso Semanal */}
+          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+            <div
+              className={`h-full transition-all duration-300 ease-out rounded-full ${
+                frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
+                  ? 'bg-emerald-500'
+                  : 'bg-blue-600'
+              }`}
+              style={{ width: `${frequencyStats.weeklyProgress}%` }}
+            />
+          </div>
+
+          {/* Indicadores Visuais dos Dias da Semana (Seg a Dom) */}
+          <div className="grid grid-cols-7 gap-1 text-center mb-3">
+            {frequencyStats.weekDayPills.map((day, idx) => (
+              <div
+                key={idx}
+                className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-between transition-all ${
+                  day.hadWorkout
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900 shadow-2xs font-bold'
+                    : day.isToday
+                    ? 'border-blue-400 bg-blue-50/60 text-blue-900 font-bold'
+                    : 'border-slate-100 bg-slate-50/50 text-slate-400'
+                }`}
+              >
+                <span className="text-[9px] uppercase tracking-tight">{day.label}</span>
+                <span className="text-xs font-black my-0.5">{day.dayNumber}</span>
+                <div className="h-3 flex items-center justify-center">
+                  {day.hadWorkout ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                  ) : day.isToday ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  ) : (
+                    <span className="text-[9px] text-slate-300">•</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Resumo do Mês */}
+          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-medium text-slate-600">
+            <span>
+              Em <strong className="text-slate-900 font-bold capitalize">{frequencyStats.currentMonthName}</strong>: {frequencyStats.monthlyCount} {frequencyStats.monthlyCount === 1 ? 'treino' : 'treinos'}
+            </span>
+            <span className="text-slate-400 text-[11px]">
+              {frequencyStats.totalSessions} sessões no total
+            </span>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* 2. SOBRECARGA PROGRESSIVA POR ROTINA (ABCD) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                <TrendingUp className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Sobrecarga por Treino
+                </span>
+                <h3 className="text-base font-black text-slate-900 leading-tight">
+                  Evolução em Todos os Exercícios
+                </h3>
+              </div>
+            </div>
+
+            {maxRoutineVolume > 0 && (
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-xl text-amber-800 text-[11px] font-black">
+                <Award className="w-3.5 h-3.5 text-amber-600" />
+                <span>Recorde: {maxRoutineVolume.toLocaleString('pt-BR')}kg</span>
+              </div>
+            )}
+          </div>
+
+          {/* ABCD SELECTOR DE ROTINA */}
+          <div className="grid grid-cols-4 gap-1.5 bg-slate-100 p-1 rounded-2xl">
+            {(['A', 'B', 'C', 'D'] as RoutineId[]).map((rId) => {
+              const isSel = selectedRoutineId === rId;
+              const subLabel =
+                rId === 'A' ? 'PULL' : rId === 'B' ? 'LOWER 1' : rId === 'C' ? 'PUSH' : 'LOWER 2';
+
+              return (
+                <button
+                  key={rId}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedRoutineId(rId);
+                  }}
+                  className={`py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center active:scale-95 ${
+                    isSel
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <span>Treino {rId}</span>
+                  <span className={`text-[9px] font-semibold ${isSel ? 'text-blue-100' : 'text-slate-400'}`}>
+                    {subLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Subtítulo do Treino Ativo */}
+          <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+            <span className="text-xs font-black text-slate-800">
+              {currentRoutine?.title}: <span className="font-normal text-slate-600">{currentRoutine?.subtitle}</span>
+            </span>
+            <span className="text-[10px] font-black text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full shrink-0 ml-2">
+              {evolvedCount}/{exerciseOverloadMatrix.length} em alta
+            </span>
+          </div>
+
+          {/* GRÁFICO DE VOLUME / TONELAGEM DO TREINO */}
+          {routineVolumeData.length > 0 ? (
+            <div className="pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1.5">
+                <span>Evolução de Tonelagem (Treino {selectedRoutineId})</span>
+                <span className="text-blue-600">{routineVolumeData.length} {routineVolumeData.length === 1 ? 'sessão' : 'sessões'}</span>
+              </div>
+              <svg viewBox="0 0 320 100" className="w-full h-24 overflow-visible">
+                {(() => {
+                  const values = routineVolumeData.map((d) => d.totalVolume);
+                  const min = Math.max(0, Math.min(...values) - 100);
+                  const max = Math.max(...values) + 100;
+                  const range = max - min || 1;
+
+                  const points = routineVolumeData.map((d, i) => {
+                    const x =
+                      routineVolumeData.length === 1
+                        ? 160
+                        : (i / (routineVolumeData.length - 1)) * 290 + 15;
+                    const y = 90 - ((d.totalVolume - min) / range) * 75;
+                    return { x, y, ...d };
+                  });
+
+                  const pathD = points
+                    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+                    .join(' ');
+
+                  return (
+                    <g>
+                      <line
+                        x1="10"
+                        y1="90"
+                        x2="310"
+                        y2="90"
+                        stroke="#e2e8f0"
+                        strokeDasharray="4 4"
+                      />
+                      {points.length > 1 && (
+                        <path
+                          d={pathD}
+                          fill="none"
+                          stroke="#2563eb"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                      {points.map((p, idx) => (
+                        <g key={idx}>
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r="4.5"
+                            fill="#ffffff"
+                            stroke="#2563eb"
+                            strokeWidth="2.5"
+                          />
+                          <text
+                            x={p.x}
+                            y={p.y - 8}
+                            textAnchor="middle"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fill="#0f172a"
+                          >
+                            {p.totalVolume}kg
+                          </text>
+                        </g>
+                      ))}
+                    </g>
+                  );
+                })()}
+              </svg>
+            </div>
+          ) : (
+            <div className="text-center py-4 bg-slate-50/50 rounded-2xl border border-slate-100 text-xs text-slate-400">
+              Nenhuma sessão concluída do Treino {selectedRoutineId} ainda. Complete um treino para traçar a curva de volume!
+            </div>
+          )}
+
+          {/* MATRIZ DE TODOS OS EXERCÍCIOS DO TREINO */}
+          <div>
+            <div className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+              Status de Carga • Todos os Exercícios
+            </div>
+
+            <div className="space-y-2">
+              {exerciseOverloadMatrix.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-2 shadow-2xs"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                        {item.muscleGroup}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-semibold">
+                        {item.defaultSets}× {item.targetReps}
+                      </span>
+                    </div>
+
+                    <h4 className="text-xs font-black text-slate-900 mt-0.5 truncate">
+                      {item.name}
+                    </h4>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium">
+                      <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
+                      <span>•</span>
+                      <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
+                      {item.maxWeight > item.latestWeight && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-700 font-bold">PR: {item.maxWeight}kg</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Badge de Evolução em kg */}
+                  <div className="shrink-0 text-right">
+                    {item.delta > 0 ? (
+                      <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                        <TrendingUp className="w-3 h-3 stroke-[2.5]" />
+                        <span>+{item.delta}kg</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">
+                        {item.latestWeight}kg
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* 3. PESAGEM SEMANAL & EVOLUÇÃO CORPORAL */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
                 <Scale className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Pesagem Semanal
                 </span>
                 <div className="flex items-baseline gap-2">
@@ -235,10 +623,7 @@ export const EvolutionScreen: React.FC = () => {
           {/* Minimalist SVG Weight Chart */}
           {weightLogs && weightLogs.length > 1 ? (
             <div className="mt-2 pt-2">
-              <svg
-                viewBox="0 0 320 120"
-                className="w-full h-28 overflow-visible"
-              >
+              <svg viewBox="0 0 320 110" className="w-full h-24 overflow-visible">
                 {(() => {
                   const values = weightLogs.map((l) => l.weightKg);
                   const min = Math.min(...values) - 0.5;
@@ -247,7 +632,7 @@ export const EvolutionScreen: React.FC = () => {
 
                   const points = weightLogs.map((l, i) => {
                     const x = (i / (weightLogs.length - 1)) * 300 + 10;
-                    const y = 110 - ((l.weightKg - min) / range) * 90;
+                    const y = 100 - ((l.weightKg - min) / range) * 80;
                     return { x, y, ...l };
                   });
 
@@ -257,16 +642,14 @@ export const EvolutionScreen: React.FC = () => {
 
                   return (
                     <g>
-                      {/* Grid Line */}
                       <line
                         x1="10"
-                        y1="110"
+                        y1="100"
                         x2="310"
-                        y2="110"
+                        y2="100"
                         stroke="#e2e8f0"
                         strokeDasharray="4 4"
                       />
-                      {/* Line */}
                       <path
                         d={pathD}
                         fill="none"
@@ -275,20 +658,19 @@ export const EvolutionScreen: React.FC = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
-                      {/* Points */}
                       {points.map((p, idx) => (
                         <g key={idx}>
                           <circle
                             cx={p.x}
                             cy={p.y}
-                            r="5"
+                            r="4.5"
                             fill="#ffffff"
                             stroke="#2563eb"
                             strokeWidth="2.5"
                           />
                           <text
                             x={p.x}
-                            y={p.y - 9}
+                            y={p.y - 8}
                             textAnchor="middle"
                             fontSize="9"
                             fontWeight="bold"
@@ -332,210 +714,6 @@ export const EvolutionScreen: React.FC = () => {
           ) : (
             <p className="text-xs text-slate-400 text-center py-4">
               Registre ao menos 2 pesagens semanais para gerar a curva de evolução.
-            </p>
-          )}
-        </div>
-
-        {/* 2. SOBRECARGA PROGRESSIVA (Cargas Máximas por Exercício) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                <TrendingUp className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Sobrecarga Progressiva
-                </span>
-                <h3 className="text-base font-black text-slate-900 leading-tight">
-                  Evolução de Cargas
-                </h3>
-              </div>
-            </div>
-
-            {maxPR > 0 && (
-              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl text-amber-800 text-xs font-black">
-                <Award className="w-3.5 h-3.5 text-amber-600" />
-                <span>PR: {maxPR}kg</span>
-              </div>
-            )}
-          </div>
-
-          {/* Exercise Selector Dropdown */}
-          <div className="relative mb-4">
-            <label className="text-[11px] font-bold text-slate-500 mb-1 block">
-              Selecione o Exercício
-            </label>
-            <div className="relative">
-              <select
-                value={selectedExerciseId}
-                onChange={(e) => {
-                  triggerHaptic('light');
-                  setSelectedExerciseId(e.target.value);
-                }}
-                className="w-full h-11 px-3.5 pr-9 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {allExercises.map((ex) => (
-                  <option key={ex.id} value={ex.id}>
-                    [{ex.routineId}] {ex.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3.5 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Overload Chart */}
-          {exerciseOverloadData.length > 0 ? (
-            <div className="pt-2">
-              <div className="text-xs font-bold text-slate-700 mb-2">
-                Histórico de Carga Máxima ({selectedExerciseName})
-              </div>
-              <svg viewBox="0 0 320 120" className="w-full h-28 overflow-visible">
-                {(() => {
-                  const values = exerciseOverloadData.map((d) => d.maxWeight);
-                  const min = Math.max(0, Math.min(...values) - 5);
-                  const max = Math.max(...values) + 5;
-                  const range = max - min || 1;
-
-                  const points = exerciseOverloadData.map((d, i) => {
-                    const x =
-                      exerciseOverloadData.length === 1
-                        ? 160
-                        : (i / (exerciseOverloadData.length - 1)) * 290 + 15;
-                    const y = 110 - ((d.maxWeight - min) / range) * 90;
-                    return { x, y, ...d };
-                  });
-
-                  const pathD = points
-                    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-                    .join(' ');
-
-                  return (
-                    <g>
-                      <line
-                        x1="10"
-                        y1="110"
-                        x2="310"
-                        y2="110"
-                        stroke="#e2e8f0"
-                        strokeDasharray="4 4"
-                      />
-                      {points.length > 1 && (
-                        <path
-                          d={pathD}
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      )}
-                      {points.map((p, idx) => (
-                        <g key={idx}>
-                          <circle
-                            cx={p.x}
-                            cy={p.y}
-                            r="5"
-                            fill="#ffffff"
-                            stroke="#10b981"
-                            strokeWidth="2.5"
-                          />
-                          <text
-                            x={p.x}
-                            y={p.y - 9}
-                            textAnchor="middle"
-                            fontSize="10"
-                            fontWeight="bold"
-                            fill="#0f172a"
-                          >
-                            {p.maxWeight}kg
-                          </text>
-                        </g>
-                      ))}
-                    </g>
-                  );
-                })()}
-              </svg>
-              <div className="flex justify-between text-[10px] text-slate-400 mt-2 font-semibold">
-                <span>{exerciseOverloadData[0].date}</span>
-                <span>
-                  {exerciseOverloadData[exerciseOverloadData.length - 1].date}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-xs text-slate-400">
-              Nenhuma sessão concluída com este exercício ainda. Complete o primeiro treino para acompanhar a sobrecarga!
-            </div>
-          )}
-        </div>
-
-        {/* 3. HISTÓRICO GERAL DE TREINOS CONCLUÍDOS */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-              Histórico de Sessões ({workoutSessions?.length || 0})
-            </h3>
-          </div>
-
-          {workoutSessions && workoutSessions.length > 0 ? (
-            <div className="space-y-2.5">
-              {workoutSessions.slice(0, 10).map((session) => {
-                const totalSets =
-                  session.exercises?.reduce(
-                    (acc, ex) =>
-                      acc + (ex.sets?.filter((s) => s.completed).length || 0),
-                    0
-                  ) || 0;
-
-                const totalVol =
-                  session.exercises?.reduce(
-                    (acc, ex) =>
-                      acc +
-                      (ex.sets?.reduce(
-                        (sAcc, s) => sAcc + (s.completed ? s.weightKg * s.reps : 0),
-                        0
-                      ) || 0),
-                    0
-                  ) || 0;
-
-                return (
-                  <div
-                    key={session.id}
-                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                          {session.routineId}
-                        </span>
-                        <span className="text-xs font-bold text-slate-900">
-                          Treino {session.routineId}
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          {session.date}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-1">
-                        {totalSets} séries concluídas • {session.exercises?.length || 0} exercícios
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs font-black text-blue-600">
-                        {Math.round(totalVol).toLocaleString('pt-BR')} kg
-                      </div>
-                      <div className="text-[10px] text-slate-400">tonelagem</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 text-center py-4">
-              Nenhum treino concluído ainda.
             </p>
           )}
         </div>

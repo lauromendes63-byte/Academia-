@@ -214,6 +214,7 @@ export const NutritionScreen: React.FC = () => {
             superBesteiraCount: 0
           },
           breakfastEggCount: 2,
+          milkGlasses: 0,
           lunchConfig: DEFAULT_LUNCH_CONFIG,
           dinnerType: 'subway',
           dinnerSubwayConfig: DEFAULT_SUBWAY_CONFIG,
@@ -232,6 +233,7 @@ export const NutritionScreen: React.FC = () => {
         date: selectedDate,
         tookWhey: false,
         wheyScoops: 0,
+        milkGlasses: 0,
         meals: { breakfast: '', lunch: '', snack: '', dinner: '' },
         waterMl: 0,
         escapes: { besteiraCount: 0, superBesteiraCount: 0 },
@@ -248,6 +250,13 @@ export const NutritionScreen: React.FC = () => {
   const wheyScoops = currentData.wheyScoops ?? (currentData.tookWhey ? 2 : 0);
   const wheyProtein = wheyScoops * 20;
   const wheyCalories = wheyScoops * 95;
+
+  // Copos de leite Piracanjuba (~200ml, 6g protein, 110 kcal, 9g carbo, 5g gordura)
+  const milkGlasses = currentData.milkGlasses ?? 0;
+  const milkProtein = milkGlasses * 6;
+  const milkCalories = milkGlasses * 110;
+  const milkCarbs = milkGlasses * 9;
+  const milkFat = milkGlasses * 5;
 
   // Configurations
   const eggCount = currentData.breakfastEggCount ?? (currentData.meals.breakfast === 'ovos_mexidos' ? 3 : 2);
@@ -288,18 +297,18 @@ export const NutritionScreen: React.FC = () => {
 
   // AUTOMATIC CALCULATOR: Sum of daily protein and macros
   const dailyTotals = useMemo(() => {
-    const p = wheyProtein + breakfastMacros.protein + lunchMacros.protein + snackMacros.protein + dinnerMacros.protein;
-    const c = breakfastMacros.carbs + lunchMacros.carbs + snackMacros.carbs + dinnerMacros.carbs;
-    const f = breakfastMacros.fat + lunchMacros.fat + snackMacros.fat + dinnerMacros.fat;
+    const p = wheyProtein + milkProtein + breakfastMacros.protein + lunchMacros.protein + snackMacros.protein + dinnerMacros.protein;
+    const c = milkCarbs + breakfastMacros.carbs + lunchMacros.carbs + snackMacros.carbs + dinnerMacros.carbs;
+    const f = milkFat + breakfastMacros.fat + lunchMacros.fat + snackMacros.fat + dinnerMacros.fat;
 
     const escapeKcal =
       (currentData.escapes.besteiraCount || 0) * 600 +
       (currentData.escapes.superBesteiraCount || 0) * 1350;
 
-    const kcal = wheyCalories + breakfastMacros.calories + lunchMacros.calories + snackMacros.calories + dinnerMacros.calories + escapeKcal;
+    const kcal = wheyCalories + milkCalories + breakfastMacros.calories + lunchMacros.calories + snackMacros.calories + dinnerMacros.calories + escapeKcal;
 
     return { protein: p, carbs: c, fat: f, calories: kcal };
-  }, [wheyProtein, wheyCalories, breakfastMacros, lunchMacros, snackMacros, dinnerMacros, currentData.escapes]);
+  }, [wheyProtein, wheyCalories, milkProtein, milkCalories, milkCarbs, milkFat, breakfastMacros, lunchMacros, snackMacros, dinnerMacros, currentData.escapes]);
 
   const TARGET_PROTEIN = 185;
   const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / TARGET_PROTEIN) * 100));
@@ -315,6 +324,14 @@ export const NutritionScreen: React.FC = () => {
     await db.nutritionLogs.update(selectedDate, {
       wheyScoops: nextScoops,
       tookWhey: nextScoops > 0
+    });
+  };
+
+  const handleAdjustMilkGlasses = async (delta: number) => {
+    triggerHaptic('light');
+    const nextGlasses = Math.max(0, Math.min(6, milkGlasses + delta));
+    await db.nutritionLogs.update(selectedDate, {
+      milkGlasses: nextGlasses
     });
   };
 
@@ -463,7 +480,7 @@ export const NutritionScreen: React.FC = () => {
     <div className="pb-36 pt-1 max-w-lg mx-auto px-4">
       {/* HEADER CENTRALIZADO PREMIUM */}
       <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           {/* Spacer esquerdo proporcional para centralização perfeita */}
           <div className="w-16 shrink-0 flex items-center">
             {isToday ? (
@@ -480,25 +497,11 @@ export const NutritionScreen: React.FC = () => {
             )}
           </div>
 
-          {/* Título e Metas Coloridas em Destaque Central */}
+          {/* Título Central */}
           <div className="flex-1 text-center min-w-0 px-1">
             <h1 className="text-base font-black text-slate-900 tracking-tight leading-tight">
               Dieta & Nutrição
             </h1>
-            <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
-                <Target className="w-2.5 h-2.5 text-blue-600" />
-                <span>185g Prot</span>
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
-                <Flame className="w-2.5 h-2.5 text-amber-600 fill-current" />
-                <span>{targetCalories.toLocaleString('pt-BR')} kcal</span>
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
-                <Droplets className="w-2.5 h-2.5 text-cyan-600 fill-current" />
-                <span>4,0L Água</span>
-              </span>
-            </div>
           </div>
 
           {/* Quadrado Pequeno de Data no Canto Superior Direito */}
@@ -529,6 +532,22 @@ export const NutritionScreen: React.FC = () => {
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>
+        </div>
+
+        {/* METAS NA MESMA LINHA (FULL WIDTH - SEM QUEBRA) */}
+        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap overflow-x-auto no-scrollbar">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
+            <Target className="w-2.5 h-2.5 text-blue-600 shrink-0" />
+            <span>185g Prot</span>
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
+            <Flame className="w-2.5 h-2.5 text-amber-600 fill-current shrink-0" />
+            <span>{targetCalories.toLocaleString('pt-BR')} kcal</span>
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
+            <Droplets className="w-2.5 h-2.5 text-cyan-600 fill-current shrink-0" />
+            <span>4,0L Água</span>
+          </span>
         </div>
       </div>
 
@@ -666,45 +685,95 @@ export const NutritionScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. CONTROLE DE SCOOPS DE WHEY PROTEIN (20g por scoop) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Suplementação (20g / scoop)
-                </span>
-                <h3 className="text-sm font-black text-slate-900 leading-tight">
+        {/* 2. PROTEÍNA RÁPIDA: WHEY & COPO DE LEITE (PIRACANJUBA) */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+              Proteína Rápida & Suplementação
+            </h3>
+          </div>
+
+          {/* WHEY PROTEIN */}
+          <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="min-w-0 pr-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-black text-slate-900">
                   Whey Protein
-                </h3>
-                <p className="text-[11px] font-semibold text-blue-600">
-                  {wheyScoops > 0 ? `+${wheyProtein}g proteína • +${wheyCalories} kcal (${wheyScoops} ${wheyScoops === 1 ? 'scoop' : 'scoops'})` : 'Nenhum scoop marcado'}
-                </p>
+                </span>
+                <span className="text-[9px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded whitespace-nowrap">
+                  20g Prot • 95 kcal / scoop
+                </span>
               </div>
+              <p className="text-[11px] font-semibold text-blue-600 mt-0.5 truncate">
+                {wheyScoops > 0
+                  ? `+${wheyProtein}g proteína • +${wheyCalories} kcal (${wheyScoops} ${wheyScoops === 1 ? 'scoop' : 'scoops'})`
+                  : 'Nenhum scoop marcado'}
+              </p>
             </div>
 
-            {/* Contador de Scoops com [-] e [+] */}
-            <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            {/* Stepper Whey */}
+            <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => handleAdjustWheyScoops(-1)}
                 disabled={wheyScoops <= 0}
-                className="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-2xs font-bold"
+                className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
                 aria-label="Diminuir scoop"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
 
-              <div className="w-8 text-center font-black text-sm text-slate-900">
+              <div className="w-6 text-center font-black text-xs text-slate-900">
                 {wheyScoops}
               </div>
 
               <button
                 onClick={() => handleAdjustWheyScoops(1)}
-                className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform shadow-2xs font-bold"
+                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
                 aria-label="Aumentar scoop"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* COPO DE LEITE (PIRACANJUBA) */}
+          <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="min-w-0 pr-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-black text-slate-900">
+                  🥛 Copo de Leite
+                </span>
+                <span className="text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded whitespace-nowrap">
+                  Piracanjuba ~200ml • 6g Prot • 110 kcal
+                </span>
+              </div>
+              <p className="text-[11px] font-semibold text-amber-700 mt-0.5 truncate">
+                {milkGlasses > 0
+                  ? `+${milkProtein}g proteína • +${milkCalories} kcal (${milkGlasses} ${milkGlasses === 1 ? 'copo' : 'copos'})`
+                  : 'Nenhum copo marcado'}
+              </p>
+            </div>
+
+            {/* Stepper Leite */}
+            <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+              <button
+                onClick={() => handleAdjustMilkGlasses(-1)}
+                disabled={milkGlasses <= 0}
+                className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
+                aria-label="Diminuir copo de leite"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="w-6 text-center font-black text-xs text-slate-900">
+                {milkGlasses}
+              </div>
+
+              <button
+                onClick={() => handleAdjustMilkGlasses(1)}
+                className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                aria-label="Aumentar copo de leite"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
