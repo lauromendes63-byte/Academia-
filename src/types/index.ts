@@ -77,5 +77,7 @@ export interface UserProfile {
   currentWeightKg: number;
   targetProteinGrams: number;
   targetWaterMl: number;
+  targetCaloriesKcal: number; // 2200 or 2700
+  calorieMode: 'recomposicao' | 'manutencao';
   activeRoutine: RoutineId;
 }

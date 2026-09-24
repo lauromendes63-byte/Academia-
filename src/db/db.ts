@@ -36,6 +36,14 @@ export async function initializeDatabase(): Promise<void> {
   const profileCount = await db.userProfile.count();
   if (profileCount === 0) {
     await db.userProfile.put(DEFAULT_USER_PROFILE);
+  } else {
+    const existing = await db.userProfile.get('main_user');
+    if (existing && (!existing.targetCaloriesKcal || !existing.calorieMode)) {
+      await db.userProfile.update('main_user', {
+        targetCaloriesKcal: existing.targetCaloriesKcal || 2200,
+        calorieMode: existing.calorieMode || 'recomposicao'
+      });
+    }
   }
 
   const routinesCount = await db.routines.count();

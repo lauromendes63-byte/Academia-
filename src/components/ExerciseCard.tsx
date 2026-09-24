@@ -14,7 +14,8 @@ import {
   Minus,
   Plus,
   ArrowRightLeft,
-  Dumbbell
+  Dumbbell,
+  Target
 } from 'lucide-react';
 
 interface ExerciseCardProps {
@@ -115,25 +116,31 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   return (
     <>
       <div
-        className={`relative bg-white rounded-2xl p-4 border transition-all duration-200 shadow-xs ${
+        className={`relative bg-white rounded-2xl p-4 border transition-all duration-200 shadow-2xs ${
           isAborted
             ? 'border-red-200 bg-red-50/20 opacity-80'
-            : 'border-slate-200/90 hover:border-slate-300'
+            : 'border-slate-200/80 hover:border-slate-300'
         }`}
       >
-        {/* TOP ROW: Muscle Badge, Grip/Form and Actions */}
-        <div className="flex items-start justify-between gap-2 mb-2">
+        {/* TOP ROW: Muscle, Target Reps, Rest Badges and Action Buttons */}
+        <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex-1 min-w-0 pr-1">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100/80 whitespace-nowrap">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
                 {exercise.muscleGroup}
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-500 whitespace-nowrap">
+
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
+                <Target className="w-2.5 h-2.5 text-slate-500" />
+                <span>{exercise.defaultSets}× {exercise.targetReps} reps</span>
+              </span>
+
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-100 whitespace-nowrap">
                 {exercise.restSeconds}s
               </span>
             </div>
 
-            <h3 className="text-[15px] font-black text-slate-900 tracking-tight leading-snug truncate">
+            <h3 className="text-base font-black text-slate-900 tracking-tight leading-snug truncate">
               {log.activeExerciseName}
             </h3>
 
@@ -147,7 +154,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setIsSubModalOpen(true)}
-              className="w-8 h-8 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center active:scale-95 transition-all"
+              className="w-8 h-8 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center active:scale-95 transition-all shadow-2xs"
               title="Substituir exercício"
               aria-label="Substituir exercício"
             >
@@ -156,7 +163,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
             <button
               onClick={handleToggleFatigue}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs active:scale-95 transition-all ${
+              className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs active:scale-95 transition-all shadow-2xs ${
                 isAborted
                   ? 'bg-red-500 text-white shadow-xs ring-2 ring-red-400'
                   : 'border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-600'
@@ -185,46 +192,40 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </div>
         )}
 
-        {/* BADGE HISTÓRICO: Linha única sem quebras */}
-        <div className="flex items-center justify-between mb-3 py-1.5 px-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] gap-2">
-          <div className="flex items-center gap-1.5 min-w-0 text-slate-600 truncate">
-            <History className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate">
-              {lastPerformance ? (
-                <>
-                  Último:{' '}
-                  <strong className="text-slate-900 font-bold">
-                    {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
-                  </strong>
-                  {formattedLastDate && (
-                    <span className="text-slate-400 font-normal ml-1">
-                      ({formattedLastDate})
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="text-slate-400">1ª sessão registrada</span>
-              )}
-            </span>
+        {/* HISTÓRICO: Linha fluida e elegante (Sem caixa cinza pesada) */}
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mb-3 pt-0.5">
+          <History className="w-3 h-3 text-blue-600 shrink-0" />
+          <div className="truncate">
+            {lastPerformance ? (
+              <span>
+                Último:{' '}
+                <strong className="text-slate-800 font-bold">
+                  {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
+                </strong>
+                {formattedLastDate && (
+                  <span className="text-slate-400 font-normal ml-1">
+                    ({formattedLastDate})
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-slate-400">1ª sessão registrada nesta carga</span>
+            )}
           </div>
-
-          <span className="font-bold text-slate-600 shrink-0 whitespace-nowrap bg-white px-2 py-0.5 rounded-md border border-slate-200/60 text-[10px]">
-            Alvo: {exercise.targetReps} reps
-          </span>
         </div>
 
         {/* CONTROLE DE CARGA: Linha Única sem quebra */}
-        <div className="flex items-center justify-between gap-2 mb-3 py-0.5">
+        <div className="flex items-center justify-between gap-2 mb-3 py-1 px-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap">
             <Dumbbell className="w-3.5 h-3.5 text-blue-600" />
-            <span>Carga</span>
+            <span>Carga da Série</span>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => handleAdjustWeight(-2)}
               disabled={isAborted || currentWeight <= 0}
-              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40"
+              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
               aria-label="-2kg"
             >
               <Minus className="w-3 h-3" />
@@ -239,7 +240,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 value={currentWeight}
                 onChange={(e) => handleDirectWeightChange(parseFloat(e.target.value))}
                 disabled={isAborted}
-                className="w-14 h-8 text-center text-sm font-black text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                className="w-14 h-8 text-center text-sm font-black text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 shadow-2xs"
               />
               <span className="ml-1 text-[11px] font-bold text-slate-400">kg</span>
             </div>
@@ -247,7 +248,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             <button
               onClick={() => handleAdjustWeight(2)}
               disabled={isAborted}
-              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40"
+              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
               aria-label="+2kg"
             >
               <Plus className="w-3 h-3" />
@@ -269,7 +270,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   isAborted
                     ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                     : isDone
-                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
                     : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100'
                 }`}
                 aria-label={`Série ${set.setNumber}`}

@@ -8,7 +8,9 @@ import {
   Smartphone,
   RefreshCcw,
   CheckCircle2,
-  HardDrive
+  HardDrive,
+  Flame,
+  Check
 } from 'lucide-react';
 
 export const SettingsScreen: React.FC = () => {
@@ -16,6 +18,21 @@ export const SettingsScreen: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const currentCalorieMode = profile?.calorieMode || 'recomposicao';
+
+  const handleSelectCalorieMode = async (mode: 'recomposicao' | 'manutencao') => {
+    triggerHaptic('light');
+    const kcal = mode === 'recomposicao' ? 2200 : 2700;
+    await db.userProfile.update('main_user', {
+      targetCaloriesKcal: kcal,
+      calorieMode: mode
+    });
+    setMessage({
+      text: `Meta atualizada para ${kcal.toLocaleString('pt-BR')} kcal (${mode === 'recomposicao' ? 'Recomposição' : 'Manutenção'})!`,
+      type: 'success'
+    });
+  };
 
   // Export JSON backup
   const handleExportBackup = async () => {
@@ -106,7 +123,7 @@ export const SettingsScreen: React.FC = () => {
           Configurações
         </span>
         <h1 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-          Perfil & Dados Offline
+          Perfil & Metas Calóricas
         </h1>
       </div>
 
@@ -126,7 +143,89 @@ export const SettingsScreen: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        {/* 1. PERFIL DO USUÁRIO */}
+        {/* 1. SELETOR DE PERFIL CALÓRICO (2.200 kcal vs 2.700 kcal) */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-amber-500 fill-current" />
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
+              Meta Calórica Diária (Cálculo Gemini)
+            </h3>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Gasto estimado em 2.700 - 2.800 kcal (4-5 treinos/semana). Selecione a estratégia atual:
+          </p>
+
+          <div className="grid grid-cols-1 gap-2.5 pt-1">
+            {/* OPÇÃO 1: RECOMPOSIÇÃO (2.200 kcal) - PADRÃO */}
+            <div
+              onClick={() => handleSelectCalorieMode('recomposicao')}
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-center justify-between active:scale-[0.98] ${
+                currentCalorieMode === 'recomposicao'
+                  ? 'border-blue-500 bg-blue-50/70 text-blue-950 shadow-xs ring-1 ring-blue-400/40'
+                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black">Recomposição Corporal</span>
+                  <span className="text-[10px] font-black uppercase bg-blue-600 text-white px-2 py-0.5 rounded-md">
+                    Padrão
+                  </span>
+                </div>
+                <div className="text-base font-black text-blue-700 mt-0.5">
+                  2.200 kcal / dia
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Déficit de ~500 kcal: foco em perder gordura preservando/ganhando massa magra.
+                </p>
+              </div>
+
+              {currentCalorieMode === 'recomposicao' ? (
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 stroke-[3]" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded-full border border-slate-300 shrink-0" />
+              )}
+            </div>
+
+            {/* OPÇÃO 2: MANUTENÇÃO (2.700 kcal) */}
+            <div
+              onClick={() => handleSelectCalorieMode('manutencao')}
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-center justify-between active:scale-[0.98] ${
+                currentCalorieMode === 'manutencao'
+                  ? 'border-emerald-500 bg-emerald-50/70 text-emerald-950 shadow-xs ring-1 ring-emerald-400/40'
+                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black">Manutenção Muscular</span>
+                  <span className="text-[10px] font-black uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-md">
+                    Equilíbrio
+                  </span>
+                </div>
+                <div className="text-base font-black text-emerald-700 mt-0.5">
+                  2.700 kcal / dia
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Sem déficit calórico: para manter o percentual de gordura e progredir cargas.
+                </p>
+              </div>
+
+              {currentCalorieMode === 'manutencao' ? (
+                <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 stroke-[3]" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded-full border border-slate-300 shrink-0" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. PERFIL DO USUÁRIO */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/20">
@@ -151,15 +250,17 @@ export const SettingsScreen: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Meta Hidratação</span>
-              <div className="text-sm font-black text-cyan-700">
-                {((profile?.targetWaterMl || 4000) / 1000).toFixed(1)}L / dia
+              <span className="text-[10px] uppercase font-bold text-slate-400">Meta Calórica</span>
+              <div className="text-sm font-black text-amber-700">
+                {(profile?.targetCaloriesKcal || 2200).toLocaleString('pt-BR')} kcal
               </div>
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Objetivo</span>
-              <div className="text-sm font-black text-blue-600">Recomposição</div>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Meta Hidratação</span>
+              <div className="text-sm font-black text-cyan-700">
+                {((profile?.targetWaterMl || 4000) / 1000).toFixed(1)}L / dia
+              </div>
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
@@ -171,7 +272,7 @@ export const SettingsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. BACKUP & RESTAURAÇÃO (JSON) */}
+        {/* 3. BACKUP & RESTAURAÇÃO (JSON) */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-blue-600" />
@@ -210,7 +311,7 @@ export const SettingsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. PWA & DEPLOY CONTÍNUO STATUS */}
+        {/* 4. PWA & DEPLOY CONTÍNUO STATUS */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <Smartphone className="w-4 h-4 text-emerald-600" />
@@ -234,12 +335,12 @@ export const SettingsScreen: React.FC = () => {
               Como adicionar à tela inicial no Samsung A54:
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              No navegador Chrome ou Samsung Internet, toque no menu de <strong>3 pontinhos (⋮)</strong> e selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>. Ele se comportará como um app nativo de alta performance!
+              No navegador Chrome ou Samsung Internet, toque no menu de <strong>3 pontinhos (⋮)</strong> e selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.
             </p>
           </div>
         </div>
 
-        {/* 4. REINICIAR DADOS PADRÃO */}
+        {/* 5. REINICIAR DADOS PADRÃO */}
         <div className="pt-2">
           <button
             onClick={handleResetToFactory}

@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Plus,
   Minus,
-  Target
+  Target,
+  Flame
 } from 'lucide-react';
 
 interface MealOption {
@@ -227,6 +228,10 @@ export const NutritionScreen: React.FC = () => {
   const selectedSnack = SNACK_OPTIONS.find((o) => o.id === currentData.meals.snack);
   const selectedDinner = DINNER_OPTIONS.find((o) => o.id === currentData.meals.dinner);
 
+  const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
+  const targetCalories = userProfile?.targetCaloriesKcal || 2200;
+  const calorieMode = userProfile?.calorieMode || 'recomposicao';
+
   // AUTOMATIC CALCULATOR: Sum of daily protein and macros
   const dailyTotals = useMemo(() => {
     const p =
@@ -248,12 +253,17 @@ export const NutritionScreen: React.FC = () => {
       (selectedSnack?.fat || 0) +
       (selectedDinner?.fat || 0);
 
+    const escapeKcal =
+      (currentData.escapes.besteiraCount || 0) * 600 +
+      (currentData.escapes.superBesteiraCount || 0) * 1350;
+
     const kcal =
       wheyScoops * 95 +
       (selectedBreakfast?.calories || 0) +
       (selectedLunch?.calories || 0) +
       (selectedSnack?.calories || 0) +
-      (selectedDinner?.calories || 0);
+      (selectedDinner?.calories || 0) +
+      escapeKcal;
 
     return { protein: p, carbs: c, fat: f, calories: kcal };
   }, [
@@ -262,12 +272,16 @@ export const NutritionScreen: React.FC = () => {
     selectedBreakfast,
     selectedLunch,
     selectedSnack,
-    selectedDinner
+    selectedDinner,
+    currentData.escapes
   ]);
 
   const TARGET_PROTEIN = 185;
   const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / TARGET_PROTEIN) * 100));
   const remainingProtein = Math.max(0, TARGET_PROTEIN - dailyTotals.protein);
+
+  const calorieProgress = Math.min(100, Math.round((dailyTotals.calories / targetCalories) * 100));
+  const remainingCalories = targetCalories - dailyTotals.calories;
 
   // Handlers
   const handleAdjustWheyScoops = async (delta: number) => {
@@ -367,13 +381,17 @@ export const NutritionScreen: React.FC = () => {
             <h1 className="text-base font-black text-slate-900 tracking-tight leading-tight">
               Dieta & Nutrição
             </h1>
-            <div className="flex items-center justify-center gap-1.5 mt-1 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
-                <Target className="w-3 h-3 text-blue-600" />
+            <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
+                <Target className="w-2.5 h-2.5 text-blue-600" />
                 <span>185g Prot</span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
-                <Droplets className="w-3 h-3 text-cyan-600 fill-current" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
+                <Flame className="w-2.5 h-2.5 text-amber-600 fill-current" />
+                <span>{targetCalories.toLocaleString('pt-BR')} kcal</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
+                <Droplets className="w-2.5 h-2.5 text-cyan-600 fill-current" />
                 <span>4,0L Água</span>
               </span>
             </div>
@@ -411,74 +429,136 @@ export const NutritionScreen: React.FC = () => {
       </div>
 
       <div className="space-y-3">
-        {/* 1. CALCULADORA AUTOMÁTICA DE PROTEÍNAS & MACROS DIÁRIOS (DESTAQUE NO TOPO) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Target className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Calculadora Diária
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <h2 className="text-xl font-black text-slate-900 leading-none">
-                    {dailyTotals.protein}g
-                  </h2>
-                  <span className="text-xs font-bold text-slate-400">
-                    / {TARGET_PROTEIN}g proteína
+        {/* 1. CALCULADORA AUTOMÁTICA DE PROTEÍNAS & CALORIAS (DESTAQUE NO TOPO) */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+          {/* TRACKER DE PROTEÍNA */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Target className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Proteína Alvo
                   </span>
+                  <div className="flex items-baseline gap-1">
+                    <h2 className="text-lg font-black text-slate-900 leading-none">
+                      {dailyTotals.protein}g
+                    </h2>
+                    <span className="text-xs font-bold text-slate-400">
+                      / {TARGET_PROTEIN}g
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <span
+                className={`text-xs font-black px-2 py-0.5 rounded-xl whitespace-nowrap ${
+                  dailyTotals.protein >= TARGET_PROTEIN
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-blue-50 text-blue-700 border border-blue-100'
+                }`}
+              >
+                {proteinProgress}%
+              </span>
             </div>
 
-            <span
-              className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
-                dailyTotals.protein >= TARGET_PROTEIN
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-blue-50 text-blue-700 border border-blue-100'
-              }`}
-            >
-              {proteinProgress}%
-            </span>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+              <div
+                className={`h-full transition-all duration-300 ease-out rounded-full ${
+                  dailyTotals.protein >= TARGET_PROTEIN ? 'bg-emerald-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${proteinProgress}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
+              <span>
+                {remainingProtein > 0 ? (
+                  <>Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para a meta</>
+                ) : (
+                  <span className="text-emerald-700 font-bold">Meta proteica atingida!</span>
+                )}
+              </span>
+            </div>
           </div>
 
-          {/* Barra de Progresso da Proteína */}
-          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
-            <div
-              className={`h-full transition-all duration-300 ease-out rounded-full ${
-                dailyTotals.protein >= TARGET_PROTEIN ? 'bg-emerald-500' : 'bg-blue-600'
-              }`}
-              style={{ width: `${proteinProgress}%` }}
-            />
-          </div>
+          {/* TRACKER DE CALORIAS */}
+          <div className="pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Flame className="w-4 h-4 fill-current" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Balanço Calórico
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <h2 className="text-lg font-black text-slate-900 leading-none">
+                      {dailyTotals.calories.toLocaleString('pt-BR')} kcal
+                    </h2>
+                    <span className="text-xs font-bold text-slate-400">
+                      / {targetCalories.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-3">
-            <span>
-              {remainingProtein > 0 ? (
-                <>Faltam <strong className="text-slate-900 font-bold">{remainingProtein}g</strong> para a meta</>
-              ) : (
-                <span className="text-emerald-700 font-bold">Meta proteica atingida!</span>
-              )}
-            </span>
-            <span className="text-slate-400">~{dailyTotals.calories} kcal estimadas</span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
+                {calorieMode === 'recomposicao' ? 'Déficit (2.200)' : 'Manutenção (2.700)'}
+              </span>
+            </div>
+
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+              <div
+                className={`h-full transition-all duration-300 ease-out rounded-full ${
+                  dailyTotals.calories > targetCalories ? 'bg-red-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${calorieProgress}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
+              <span>
+                {remainingCalories > 0 ? (
+                  <>Restam <strong className="text-slate-800 font-bold">{remainingCalories} kcal</strong></>
+                ) : (
+                  <span className="text-amber-800 font-bold">Meta calórica atingida!</span>
+                )}
+              </span>
+              <span className="text-slate-400">
+                {calorieProgress}% consumido
+              </span>
+            </div>
           </div>
 
           {/* Breakdown de Macros Estimados */}
           <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-center">
             <div className="p-1.5 rounded-xl bg-blue-50/60 border border-blue-100/60">
-              <div className="text-[10px] font-bold text-blue-600">PROTEÍNA</div>
+              <div className="text-[9px] font-bold text-blue-600">PROTEÍNA</div>
               <div className="text-xs font-black text-blue-900">{dailyTotals.protein}g</div>
             </div>
             <div className="p-1.5 rounded-xl bg-amber-50/60 border border-amber-100/60">
-              <div className="text-[10px] font-bold text-amber-600">CARBO</div>
+              <div className="text-[9px] font-bold text-amber-600">CARBO</div>
               <div className="text-xs font-black text-amber-900">~{dailyTotals.carbs}g</div>
             </div>
             <div className="p-1.5 rounded-xl bg-purple-50/60 border border-purple-100/60">
-              <div className="text-[10px] font-bold text-purple-600">GORDURA</div>
+              <div className="text-[9px] font-bold text-purple-600">GORDURA</div>
               <div className="text-xs font-black text-purple-900">~{dailyTotals.fat}g</div>
             </div>
+          </div>
+
+          {/* REASSURANCE AUTO-SAVE FOOTER */}
+          <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between text-[10px]">
+            <span className="flex items-center gap-1 font-semibold text-emerald-600">
+              <Check className="w-3 h-3 stroke-[3]" />
+              Salvo automaticamente hoje
+            </span>
+            <span className="text-slate-400">
+              Cada dia mantém seu histórico
+            </span>
           </div>
         </div>
 

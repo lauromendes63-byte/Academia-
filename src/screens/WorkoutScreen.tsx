@@ -252,9 +252,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
             <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
               {currentRoutine?.subtitle}
             </h1>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-              ‹ Deslize para os lados para alternar ›
-            </p>
           </div>
 
           {/* Botão de resetar sessão no canto direito */}

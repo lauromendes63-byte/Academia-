@@ -8,6 +8,8 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   currentWeightKg: 98,
   targetProteinGrams: 185,
   targetWaterMl: 4000,
+  targetCaloriesKcal: 2200,
+  calorieMode: 'recomposicao',
   activeRoutine: 'A'
 };
 
