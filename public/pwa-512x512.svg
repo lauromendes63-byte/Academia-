@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#primaryGrad)" />
+  <!-- Minimalist Barbell + Plus Icon -->
+  <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Barbell left weight -->
+    <rect x="110" y="196" width="36" height="120" rx="12" fill="#ffffff" />
+    <!-- Barbell right weight -->
+    <rect x="366" y="196" width="36" height="120" rx="12" fill="#ffffff" />
+    <!-- Barbell inner collar left -->
+    <rect x="162" y="216" width="18" height="80" rx="8" fill="#ffffff" />
+    <!-- Barbell inner collar right -->
+    <rect x="332" y="216" width="18" height="80" rx="8" fill="#ffffff" />
+    <!-- Central bar -->
+    <line x1="180" y1="256" x2="332" y2="256" stroke-width="24" />
+  </g>
+  <!-- Plus badge top right -->
+  <circle cx="390" cy="120" r="54" fill="#10b981" />
+  <path d="M390 98 V142 M368 120 H412" stroke="#ffffff" stroke-width="14" stroke-linecap="round" />
+</svg>
