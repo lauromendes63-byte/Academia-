@@ -9,16 +9,21 @@ import {
   Plus,
   Trash2,
   Flame,
-  CheckCircle2
+  CheckCircle2,
+  Calendar,
+  Target,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const EXERCISE_COLORS = [
+  '#ef4444', // Vermelho Vibrante (Red) - 1ª cor
   '#2563eb', // Azul Cobalto
   '#10b981', // Verde Esmeralda
   '#8b5cf6', // Roxo / Violeta
-  '#f59e0b', // Âmbar / Laranja
+  '#f59e0b', // Âmbar / Dourado
   '#06b6d4', // Ciano
-  '#ec4899', // Rosa / Pink
+  '#ec4899', // Rosa Pink
   '#f97316'  // Laranja Quente
 ];
 
@@ -30,13 +35,19 @@ export const EvolutionScreen: React.FC = () => {
     const list = await db.workoutSessions.toArray();
     return list
       .filter((s) => s.completed)
-      .sort((a, b) => b.date.localeCompare(a.date));
+      .sort((a, b) => {
+        if (b.date !== a.date) return b.date.localeCompare(a.date);
+        return (b.id || 0) - (a.id || 0);
+      });
   }) || [];
 
   const routines = useLiveQuery(() => db.routines.toArray());
 
   // Selected routine tab for routine-level overload analysis (A, B, C, D)
   const [selectedRoutineId, setSelectedRoutineId] = useState<RoutineId>('A');
+
+  // Accordion to expand/see specific workouts of the week/month
+  const [showSessionsList, setShowSessionsList] = useState(false);
 
   // Weight entry state
   const [newWeight, setNewWeight] = useState<string>('97.5');
@@ -72,6 +83,15 @@ export const EvolutionScreen: React.FC = () => {
     if (!id) return;
     if (window.confirm('Excluir este registro de peso?')) {
       await db.weightLogs.delete(id);
+    }
+  };
+
+  // Excluir sessão de treino
+  const handleDeleteSession = async (id?: number) => {
+    if (!id) return;
+    if (window.confirm('Deseja realmente excluir este treino do histórico?')) {
+      triggerHaptic('alert');
+      await db.workoutSessions.delete(id);
     }
   };
 
@@ -244,7 +264,7 @@ export const EvolutionScreen: React.FC = () => {
 
       <div className="space-y-4">
         {/* ========================================================= */}
-        {/* 1. FREQUÊNCIA SEMANAL & MENSAL (1 TREINO POR DIA) */}
+        {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
         {/* ========================================================= */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between mb-3">
@@ -253,32 +273,38 @@ export const EvolutionScreen: React.FC = () => {
                 <Flame className="w-5 h-5 fill-current" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Assiduidade Semanal (Meta 4x)
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  Meta Semanal
                 </span>
-                <div className="flex items-baseline gap-1.5">
-                  <h3 className="text-lg font-black text-slate-900 leading-none">
-                    {frequencyStats.weeklyCount} / {frequencyStats.weeklyGoal} treinos
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Target className="w-4 h-4 text-blue-600 shrink-0" />
+                  <h3 className="text-base font-black text-slate-900 leading-none">
+                    {frequencyStats.weeklyCount} de {frequencyStats.weeklyGoal} treinos
                   </h3>
                 </div>
               </div>
             </div>
 
-            <span
-              className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
-                frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200'
-              }`}
+            {/* Botão de Expandir / Ver Sessões com ícone de seta */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setShowSessionsList(!showSessionsList);
+              }}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-2xs"
+              title="Ver treinos realizados"
             >
-              {frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
-                ? 'Meta Batida! 🔥'
-                : `${frequencyStats.weeklyProgress}% da meta`}
-            </span>
+              <span>{showSessionsList ? 'Ocultar' : 'Treinos'}</span>
+              {showSessionsList ? (
+                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+              )}
+            </button>
           </div>
 
           {/* Barra de Progresso Semanal */}
-          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+          <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
             <div
               className={`h-full transition-all duration-300 ease-out rounded-full ${
                 frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
@@ -317,15 +343,70 @@ export const EvolutionScreen: React.FC = () => {
             ))}
           </div>
 
-          {/* Resumo do Mês */}
-          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-medium text-slate-600">
-            <span>
-              Em <strong className="text-slate-900 font-bold capitalize">{frequencyStats.currentMonthName}</strong>: {frequencyStats.monthlyCount} {frequencyStats.monthlyCount === 1 ? 'dia treinado' : 'dias treinados'}
+          {/* Resumo do Mês Embelezado (Sem o '2 dias no total') */}
+          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900 text-xs font-bold shadow-2xs">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>Em <strong className="capitalize">{frequencyStats.currentMonthName}</strong>: {frequencyStats.monthlyCount} {frequencyStats.monthlyCount === 1 ? 'dia treinado' : 'dias treinados'}</span>
             </span>
-            <span className="text-slate-400 text-[11px]">
-              {frequencyStats.totalDistinctDays} dias no total
-            </span>
+
+            {frequencyStats.weeklyCount >= frequencyStats.weeklyGoal && (
+              <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                Meta Batida! 🔥
+              </span>
+            )}
           </div>
+
+          {/* LISTA EXPANSÍVEL DE TREINOS COM OPÇÃO DE EXCLUIR */}
+          {showSessionsList && (
+            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                <span>Histórico de Sessões</span>
+                <span>{workoutSessions.length} {workoutSessions.length === 1 ? 'treino' : 'treinos'}</span>
+              </div>
+
+              {workoutSessions.length > 0 ? (
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
+                  {workoutSessions.map((session) => {
+                    const routineDef = routines?.find((r) => r.id === session.routineId);
+                    const focus = routineDef?.title.split(':')[1]?.trim() || session.routineId;
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                            {session.routineId}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-black text-slate-900 truncate">
+                              Treino {session.routineId} • {focus}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              {session.date.slice(8, 10)}/{session.date.slice(5, 7)} • {session.exercises?.length || 0} exercícios
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSession(session.id)}
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0"
+                          title="Excluir treino"
+                          aria-label="Excluir treino"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 py-2 text-center">Nenhum treino registrado ainda.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ========================================================= */}
@@ -398,20 +479,22 @@ export const EvolutionScreen: React.FC = () => {
               </span>
             </div>
 
-            {/* Legenda visual colorida dos exercícios */}
-            <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {/* Legenda Padronizada em Grade de 2 Colunas Alinhadas */}
+            <div className="grid grid-cols-2 gap-1.5 mb-3">
               {exerciseCurves.map((curve) => (
-                <span
+                <div
                   key={curve.id}
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-50 border border-slate-200 text-slate-700"
+                  className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-slate-50 border border-slate-200/90 text-slate-700 flex items-center justify-between shadow-2xs min-w-0"
                 >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0 shadow-2xs"
-                    style={{ backgroundColor: curve.color }}
-                  />
-                  <span className="truncate max-w-[130px]">{curve.name.split(' ')[0]} {curve.name.split(' ')[1] || ''}:</span>
-                  <strong className="text-slate-900 font-black">{curve.latestWeight}kg</strong>
-                </span>
+                  <span className="truncate flex items-center gap-1.5 mr-1">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs ring-1 ring-white"
+                      style={{ backgroundColor: curve.color }}
+                    />
+                    <span className="truncate">{curve.name}</span>
+                  </span>
+                  <strong className="text-slate-900 font-black shrink-0">{curve.latestWeight}kg</strong>
+                </div>
               ))}
             </div>
 
