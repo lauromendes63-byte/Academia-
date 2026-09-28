@@ -54,7 +54,7 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
       },
       {
         id: 'pull_4',
-        name: 'Rosca Baiana na Polia',
+        name: 'Rosca Bayesiana na Polia',
         muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
         gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
         defaultSets: 3,

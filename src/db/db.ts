@@ -50,18 +50,18 @@ export async function initializeDatabase(): Promise<void> {
   if (routinesCount === 0) {
     await db.routines.bulkPut(DEFAULT_ROUTINES);
   } else {
-    // Migration: ensure Treino A has Rosca Baiana na Polia
+    // Migration: ensure Treino A has Rosca Bayesiana na Polia
     const routineA = await db.routines.get('A');
     if (routineA) {
       const needsUpdate = routineA.exercises.some(
-        (e) => e.id === 'pull_4' && e.name !== 'Rosca Baiana na Polia'
+        (e) => e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia'
       );
       if (needsUpdate) {
         routineA.exercises = routineA.exercises.map((e) => {
           if (e.id === 'pull_4') {
             return {
               id: 'pull_4',
-              name: 'Rosca Baiana na Polia',
+              name: 'Rosca Bayesiana na Polia',
               muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
               gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
               defaultSets: 3,
@@ -74,6 +74,29 @@ export async function initializeDatabase(): Promise<void> {
           return e;
         });
         await db.routines.put(routineA);
+      }
+    }
+
+    // Also migrate any past session logs if they had "Rosca Baiana na Polia"
+    const allSessions = await db.workoutSessions.toArray();
+    for (const s of allSessions) {
+      let modified = false;
+      const updatedExercises = s.exercises?.map((ex) => {
+        if (
+          ex.exerciseId === 'pull_4' &&
+          (ex.exerciseName.includes('Baiana') || ex.activeExerciseName.includes('Baiana'))
+        ) {
+          modified = true;
+          return {
+            ...ex,
+            exerciseName: 'Rosca Bayesiana na Polia',
+            activeExerciseName: 'Rosca Bayesiana na Polia'
+          };
+        }
+        return ex;
+      });
+      if (modified && s.id) {
+        await db.workoutSessions.update(s.id, { exercises: updatedExercises });
       }
     }
   }
@@ -125,8 +148,8 @@ export async function initializeDatabase(): Promise<void> {
         },
         {
           exerciseId: 'pull_4',
-          exerciseName: 'Rosca Baiana na Polia',
-          activeExerciseName: 'Rosca Baiana na Polia',
+          exerciseName: 'Rosca Bayesiana na Polia',
+          activeExerciseName: 'Rosca Bayesiana na Polia',
           isSubstituted: false,
           abortedForFatigue: false,
           sets: [
