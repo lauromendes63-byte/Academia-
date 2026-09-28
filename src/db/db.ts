@@ -187,6 +187,57 @@ export async function getLastExercisePerformance(
 }
 
 /**
+ * Single-pass performance fetch for all exercises in a routine (drastically reduces CPU & DB overhead)
+ */
+export async function getRoutineLastPerformances(
+  exercises: { id: string; name: string }[]
+): Promise<Record<string, { weightKg: number; reps: number; date: string } | null>> {
+  const allSessions = await db.workoutSessions.toArray();
+  const sessions = allSessions
+    .filter((s) => s.completed)
+    .sort((a, b) => {
+      if (b.date !== a.date) return b.date.localeCompare(a.date);
+      return (b.id || 0) - (a.id || 0);
+    });
+
+  const perfMap: Record<string, { weightKg: number; reps: number; date: string } | null> = {};
+
+  for (const ex of exercises) {
+    perfMap[ex.id] = null;
+    for (const session of sessions) {
+      const exLog = session.exercises?.find(
+        (e) =>
+          e.exerciseId === ex.id ||
+          e.exerciseName.toLowerCase() === ex.name.toLowerCase() ||
+          (e.activeExerciseName &&
+            e.activeExerciseName.toLowerCase() === ex.name.toLowerCase())
+      );
+
+      if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
+        const completedSets = exLog.sets.filter((s) => s.completed);
+        const targetSets = completedSets.length > 0 ? completedSets : exLog.sets;
+        if (targetSets.length > 0) {
+          const topSet = targetSets.reduce(
+            (max, s) => (s.weightKg > max.weightKg ? s : max),
+            targetSets[0]
+          );
+          if (topSet && topSet.weightKg > 0) {
+            perfMap[ex.id] = {
+              weightKg: topSet.weightKg,
+              reps: topSet.reps,
+              date: session.date
+            };
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return perfMap;
+}
+
+/**
  * Exports all data from IndexedDB as a downloadable JSON object
  */
 export async function exportAllData() {

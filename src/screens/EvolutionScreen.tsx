@@ -255,8 +255,8 @@ export const EvolutionScreen: React.FC = () => {
     mondayDate.setHours(0, 0, 0, 0);
 
     const calorieTarget = profile?.targetCaloriesKcal || 2200;
-    const proteinTarget = profile?.targetProteinGrams || 160;
-    const waterTargetMl = profile?.targetWaterMl || 3000;
+    const proteinTarget = profile?.targetProteinGrams || 185;
+    const waterTargetMl = profile?.targetWaterMl || 4000;
 
     const logsMap = new Map<string, NutritionLog>();
     nutritionLogs.forEach((log) => {
@@ -1070,7 +1070,7 @@ export const EvolutionScreen: React.FC = () => {
             ) : weeklyNutritionStats.avgProtein < weeklyNutritionStats.proteinTarget * 0.85 ? (
               <p>
                 💪 <strong>Proteínas abaixo do ideal:</strong> Sua média diária de{' '}
-                <strong>{weeklyNutritionStats.avgProtein}g</strong> está abaixo da meta ({weeklyNutritionStats.proteinTarget}g). Adicione doses extras de Whey, copos de leite Piracanjuba ou ovos para blindar os músculos durante o déficit.
+                <strong>{weeklyNutritionStats.avgProtein}g</strong> está abaixo da meta ({weeklyNutritionStats.proteinTarget}g). Adicione doses extras de Whey, copos de leite ou ovos para blindar os músculos durante o déficit.
               </p>
             ) : (
               <p>

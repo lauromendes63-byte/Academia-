@@ -34,14 +34,16 @@ export const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100">
-      {/* Active Screen View */}
+      {/* Active Screen View with smooth GPU-accelerated transition */}
       <main className="flex-1 w-full max-w-lg mx-auto">
-        {activeTab === 'treino' && (
-          <WorkoutScreen onGoToEvolution={() => setActiveTab('evolucao')} />
-        )}
-        {activeTab === 'nutricao' && <NutritionScreen />}
-        {activeTab === 'evolucao' && <EvolutionScreen />}
-        {activeTab === 'ajustes' && <SettingsScreen />}
+        <div key={activeTab} className="animate-smooth-in">
+          {activeTab === 'treino' && (
+            <WorkoutScreen onGoToEvolution={() => setActiveTab('evolucao')} />
+          )}
+          {activeTab === 'nutricao' && <NutritionScreen />}
+          {activeTab === 'evolucao' && <EvolutionScreen />}
+          {activeTab === 'ajustes' && <SettingsScreen />}
+        </div>
       </main>
 
       {/* Persistent Bottom Nav Bar (Thumb Zone) */}

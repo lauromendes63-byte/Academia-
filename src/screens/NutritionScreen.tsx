@@ -120,7 +120,7 @@ export function calculatePlateMacros(config: PlateConfig = DEFAULT_LUNCH_CONFIG)
   };
 }
 
-// HELPER: Macro calculations for Subway Completo
+// HELPER: Macro calculations for Sanduíche Baguete Completo
 export function calculateSubwayMacros(config: SubwayConfig = DEFAULT_SUBWAY_CONFIG) {
   const isDouble = config.size === '30cm';
   const multiplier = isDouble ? 2 : 1;
@@ -131,13 +131,13 @@ export function calculateSubwayMacros(config: SubwayConfig = DEFAULT_SUBWAY_CONF
   let baseKcal = 0;
 
   if (config.protein === 'carne') {
-    // Subway Carne / Bife 15cm Completo (Chipotle + Parmesão + Mussarela + Salada)
+    // Sanduíche Carne / Bife 15cm Completo (Molho + Queijos + Salada)
     baseP = 30;
     baseC = 50;
     baseF = 18;
     baseKcal = 490;
   } else {
-    // Subway Frango Teriyaki 15cm Completo (Chipotle + Parmesão + Mussarela + Salada)
+    // Sanduíche Frango Teriyaki 15cm Completo (Molho + Queijos + Salada)
     baseP = 32;
     baseC = 52;
     baseF = 14;
@@ -691,7 +691,7 @@ export const NutritionScreen: React.FC = () => {
   const wheyProtein = wheyScoops * 20;
   const wheyCalories = wheyScoops * 95;
 
-  // Copos de leite Piracanjuba (~200ml, 6g protein, 110 kcal, 9g carbo, 5g gordura)
+  // Copos de leite (~200ml, 6g protein, 110 kcal, 9g carbo, 5g gordura)
   const milkGlasses = currentData.milkGlasses ?? 0;
   const milkProtein = milkGlasses * 6;
   const milkCalories = milkGlasses * 110;
@@ -706,6 +706,8 @@ export const NutritionScreen: React.FC = () => {
   // User Profile
   const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
   const targetCalories = userProfile?.targetCaloriesKcal || 2200;
+  const targetProtein = userProfile?.targetProteinGrams || 185;
+  const targetWaterMl = userProfile?.targetWaterMl || 4000;
   const calorieMode = userProfile?.calorieMode || 'recomposicao';
 
   // Resolved customizable configs
@@ -756,9 +758,8 @@ export const NutritionScreen: React.FC = () => {
     return { protein: p, carbs: c, fat: f, calories: kcal };
   }, [wheyProtein, wheyCalories, milkProtein, milkCalories, milkCarbs, milkFat, breakfastMacros, lunchMacros, snackMacros, dinnerMacros, currentData.escapes]);
 
-  const TARGET_PROTEIN = 185;
-  const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / TARGET_PROTEIN) * 100));
-  const remainingProtein = Math.max(0, TARGET_PROTEIN - dailyTotals.protein);
+  const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / targetProtein) * 100));
+  const remainingProtein = Math.max(0, targetProtein - dailyTotals.protein);
 
   const calorieProgress = Math.min(100, Math.round((dailyTotals.calories / targetCalories) * 100));
   const remainingCalories = targetCalories - dailyTotals.calories;
@@ -976,7 +977,7 @@ export const NutritionScreen: React.FC = () => {
         <div className="flex items-center justify-center gap-1.5 whitespace-nowrap overflow-x-auto no-scrollbar">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
             <Target className="w-2.5 h-2.5 text-blue-600 shrink-0" />
-            <span>185g Prot</span>
+            <span>{targetProtein}g Prot</span>
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
             <Flame className="w-2.5 h-2.5 text-amber-600 fill-current shrink-0" />
@@ -984,7 +985,7 @@ export const NutritionScreen: React.FC = () => {
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
             <Droplets className="w-2.5 h-2.5 text-cyan-600 fill-current shrink-0" />
-            <span>4,0L Água</span>
+            <span>{(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L Água</span>
           </span>
         </div>
       </div>
@@ -1008,7 +1009,7 @@ export const NutritionScreen: React.FC = () => {
                       {dailyTotals.protein}g
                     </h2>
                     <span className="text-xs font-bold text-slate-400">
-                      / {TARGET_PROTEIN}g
+                      / {targetProtein}g
                     </span>
                   </div>
                 </div>
@@ -1016,7 +1017,7 @@ export const NutritionScreen: React.FC = () => {
 
               <span
                 className={`text-xs font-black px-2 py-0.5 rounded-xl whitespace-nowrap ${
-                  dailyTotals.protein >= TARGET_PROTEIN
+                  dailyTotals.protein >= targetProtein
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-blue-50 text-blue-700 border border-blue-100'
                 }`}
@@ -1028,7 +1029,7 @@ export const NutritionScreen: React.FC = () => {
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
               <div
                 className={`h-full transition-all duration-300 ease-out rounded-full ${
-                  dailyTotals.protein >= TARGET_PROTEIN ? 'bg-emerald-500' : 'bg-blue-600'
+                  dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
                 }`}
                 style={{ width: `${proteinProgress}%` }}
               />
@@ -1123,7 +1124,7 @@ export const NutritionScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. PROTEÍNA RÁPIDA: WHEY & COPO DE LEITE (PIRACANJUBA) */}
+        {/* 2. PROTEÍNA RÁPIDA: WHEY & COPO DE LEITE */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-600" />
@@ -1175,7 +1176,7 @@ export const NutritionScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* COPO DE LEITE (PIRACANJUBA) */}
+          {/* COPO DE LEITE */}
           <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
             <div className="min-w-0 pr-1">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -1183,7 +1184,7 @@ export const NutritionScreen: React.FC = () => {
                   🥛 Copo de Leite
                 </span>
                 <span className="text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded whitespace-nowrap">
-                  Piracanjuba ~200ml • 6g Prot • 110 kcal
+                  ~200ml • 6g Prot • 110 kcal
                 </span>
               </div>
               <p className="text-[11px] font-semibold text-amber-700 mt-0.5 truncate">
@@ -1420,12 +1421,12 @@ export const NutritionScreen: React.FC = () => {
           />
 
           {/* ========================================================= */}
-          {/* JANTAR: SUBWAY COMPLETO OU PRATO CASEIRO */}
+          {/* JANTAR: SANDUÍCHE BAGUETE OU PRATO CASEIRO */}
           {/* ========================================================= */}
           <div className="border-t border-slate-100 pt-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-                🌙 Jantar (2 Opções: Subway Completo ou Caseiro)
+                🌙 Jantar (2 Opções: Sanduíche Baguete ou Caseiro)
               </div>
               {currentData.meals.dinner && (
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
@@ -1434,7 +1435,7 @@ export const NutritionScreen: React.FC = () => {
               )}
             </div>
 
-            {/* TAB SELECTOR: SUBWAY vs PRATO CASEIRO */}
+            {/* TAB SELECTOR: SANDUÍCHE BAGUETE vs PRATO CASEIRO */}
             <div className="grid grid-cols-2 gap-2 mb-3">
               <button
                 onClick={() => handleSelectDinnerType('subway')}
@@ -1445,13 +1446,13 @@ export const NutritionScreen: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-black">
-                  <span>🥖 Subway Completo</span>
+                  <span>🥖 Sanduíche Baguete</span>
                   {currentData.meals.dinner === 'subway' && (
                     <Check className="w-4 h-4 text-blue-600 stroke-[3]" />
                   )}
                 </div>
                 <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                  Chipotle + Parmesão + Mussarela
+                  Molho + Queijos + Salada
                 </div>
                 <div className="text-[10px] font-bold text-amber-700 mt-1">
                   ~{currentSubwayPreview.calories} kcal ({currentSubwayPreview.protein}g Prot)
@@ -1481,7 +1482,7 @@ export const NutritionScreen: React.FC = () => {
               </button>
             </div>
 
-            {/* SE SUBWAY SELECIONADO: CONTROLES DO SUBWAY COMPLETO */}
+            {/* SE SANDUÍCHE SELECIONADO: CONTROLES DO SANDUÍCHE COMPLETO */}
             {currentData.meals.dinner === 'subway' && (
               <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-3 animate-in fade-in duration-150">
                 {/* Tamanho: 15cm ou 30cm (Dobro) */}

@@ -54,10 +54,48 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Safe area utilities for mobile devices like Samsung A54 */
+/* Safe area utilities for modern mobile screens */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 .safe-top {
   padding-top: env(safe-area-inset-top, 12px);
+}
+
+/* GPU acceleration for sticky headers and fixed navigation */
+.sticky, nav.fixed {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Content visibility optimization for long scrollable lists (saves battery & RAM) */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}
+
+/* Butter-smooth micro-animations */
+@keyframes smoothFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-smooth-in {
+  animation: smoothFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Battery-saver & Reduced Motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

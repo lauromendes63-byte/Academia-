@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import {
   db,
-  getLastExercisePerformance
+  getRoutineLastPerformances
 } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseCard } from '../components/ExerciseCard';
@@ -69,30 +69,27 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
       const routine = await db.routines.get(selectedRoutineId);
       if (!routine) return;
 
-      const perfMap: Record<string, { weightKg: number; reps: number; date: string } | null> = {};
+      // Ultra-fast single pass performance fetch for all exercises in this routine
+      const perfMap = await getRoutineLastPerformances(routine.exercises);
 
-      const initialLogs: ExerciseLog[] = await Promise.all(
-        routine.exercises.map(async (ex) => {
-          const last = await getLastExercisePerformance(ex.id, ex.name);
-          perfMap[ex.id] = last;
+      const initialLogs: ExerciseLog[] = routine.exercises.map((ex) => {
+        const last = perfMap[ex.id];
+        const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
 
-          const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
-
-          return {
-            exerciseId: ex.id,
-            exerciseName: ex.name,
-            activeExerciseName: ex.name,
-            isSubstituted: false,
-            abortedForFatigue: false,
-            sets: Array.from({ length: ex.defaultSets }, (_, i) => ({
-              setNumber: i + 1,
-              weightKg: baseWeight,
-              reps: parseInt(ex.targetReps.split('-')[0], 10) || 10,
-              completed: false
-            }))
-          };
-        })
-      );
+        return {
+          exerciseId: ex.id,
+          exerciseName: ex.name,
+          activeExerciseName: ex.name,
+          isSubstituted: false,
+          abortedForFatigue: false,
+          sets: Array.from({ length: ex.defaultSets }, (_, i) => ({
+            setNumber: i + 1,
+            weightKg: baseWeight,
+            reps: parseInt(ex.targetReps.split('-')[0], 10) || 10,
+            completed: false
+          }))
+        };
+      });
 
       if (isMounted) {
         setExerciseLogs(initialLogs);
@@ -147,10 +144,10 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     setIsFinishing(true);
     triggerHaptic('success');
 
-    // Confetti effect
+    // Lightweight confetti effect (smooth 60/120fps)
     confetti({
-      particleCount: 80,
-      spread: 70,
+      particleCount: 50,
+      spread: 60,
       origin: { y: 0.6 }
     });
 
@@ -214,6 +211,13 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
 
   // Touch Swipe Handlers for changing routines seamlessly
   const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    // Don't register swipe if user is interacting with form controls or buttons
+    if (target?.closest('input, button, select, textarea, [role="button"]')) {
+      setTouchStartX(null);
+      setTouchStartY(null);
+      return;
+    }
     setTouchStartX(e.touches[0].clientX);
     setTouchStartY(e.touches[0].clientY);
   };
@@ -223,7 +227,8 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
 
-    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+    // Must be a deliberate swipe (at least 70px) and predominantly horizontal
+    if (Math.abs(deltaX) > 70 && Math.abs(deltaX) > Math.abs(deltaY) * 1.8) {
       const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
       const currentIdx = cycle.indexOf(selectedRoutineId);
 
@@ -316,13 +321,14 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
           if (!log) return null;
 
           return (
-            <ExerciseCard
-              key={exDef.id}
-              exercise={exDef}
-              log={log}
-              lastPerformance={lastPerfMap[exDef.id]}
-              onUpdateLog={handleUpdateLog}
-            />
+            <div key={exDef.id} className="content-auto">
+              <ExerciseCard
+                exercise={exDef}
+                log={log}
+                lastPerformance={lastPerfMap[exDef.id]}
+                onUpdateLog={handleUpdateLog}
+              />
+            </div>
           );
         })}
       </div>

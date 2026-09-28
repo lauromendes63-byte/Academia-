@@ -153,7 +153,7 @@ export const SettingsScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-500 fill-current" />
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-              Meta Calórica Diária (Cálculo Gemini)
+              Meta Calórica Diária (Estratégia Nutricional)
             </h3>
           </div>
 
@@ -316,12 +316,12 @@ export const SettingsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. PWA & DEPLOY CONTÍNUO STATUS */}
+        {/* 4. PWA & DEPLOY STATUS */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <Smartphone className="w-4 h-4 text-emerald-600" />
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-              Instalação PWA & Vercel
+              Instalação & Funcionamento Offline
             </h3>
           </div>
 
@@ -337,10 +337,10 @@ export const SettingsScreen: React.FC = () => {
 
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 space-y-1">
             <div className="font-bold text-xs text-slate-900">
-              Como adicionar à tela inicial no Samsung A54:
+              Como adicionar à tela inicial no seu celular:
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              No navegador Chrome ou Samsung Internet, toque no menu de <strong>3 pontinhos (⋮)</strong> e selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.
+              No navegador do aparelho, toque no menu de <strong>3 pontinhos (⋮)</strong> e selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.
             </p>
           </div>
         </div>

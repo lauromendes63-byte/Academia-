@@ -91,7 +91,7 @@ export function playSetCompleteSound(): void {
 }
 
 /**
- * Triggers phone vibration (supported on Samsung Galaxy A54 and Android Chrome)
+ * Triggers phone vibration with subtle tactile feedback
  */
 export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'alert' = 'light'): void {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
