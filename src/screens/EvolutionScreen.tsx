@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../db/db';
-import type { RoutineId, RoutineDefinition } from '../types';
+import type { RoutineId, RoutineDefinition, NutritionLog } from '../types';
+import {
+  calculatePlateMacros,
+  calculateSubwayMacros,
+  calculateCustomMealMacros,
+  getResolvedBreakfastConfig,
+  getResolvedSnackConfig
+} from './NutritionScreen';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
 import {
@@ -13,7 +20,13 @@ import {
   Calendar,
   Target,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  UtensilsCrossed,
+  Droplets,
+  Sparkles,
+  Award,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 
 const EXERCISE_COLORS = [
@@ -26,6 +39,72 @@ const EXERCISE_COLORS = [
   '#ec4899', // Rosa Pink
   '#f97316'  // Laranja Quente
 ];
+
+export function computeNutritionLogTotals(log: NutritionLog) {
+  const wheyScoops = log.wheyScoops ?? (log.tookWhey ? 2 : 0);
+  const wheyProtein = wheyScoops * 20;
+  const wheyCalories = wheyScoops * 95;
+
+  const milkGlasses = log.milkGlasses ?? 0;
+  const milkProtein = milkGlasses * 6;
+  const milkCalories = milkGlasses * 110;
+  const milkCarbs = milkGlasses * 9;
+  const milkFat = milkGlasses * 5;
+
+  const bConfig = getResolvedBreakfastConfig(log);
+  const bMacros = calculateCustomMealMacros(bConfig);
+
+  const lunchConfig = log.lunchConfig;
+  const lunchMacros =
+    log.meals?.lunch === 'caseiro'
+      ? calculatePlateMacros(lunchConfig)
+      : { protein: 0, carbs: 0, fat: 0, calories: 0 };
+
+  const sConfig = getResolvedSnackConfig(log);
+  const sMacros = calculateCustomMealMacros(sConfig);
+
+  let dinnerMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  if (log.meals?.dinner === 'subway') {
+    dinnerMacros = calculateSubwayMacros(log.dinnerSubwayConfig);
+  } else if (log.meals?.dinner === 'caseiro') {
+    dinnerMacros = calculatePlateMacros(log.dinnerPlateConfig);
+  }
+
+  const escapeKcal =
+    (log.escapes?.besteiraCount || 0) * 600 +
+    (log.escapes?.superBesteiraCount || 0) * 1350;
+
+  const protein =
+    wheyProtein +
+    milkProtein +
+    bMacros.protein +
+    lunchMacros.protein +
+    sMacros.protein +
+    dinnerMacros.protein;
+  const carbs =
+    milkCarbs +
+    bMacros.carbs +
+    lunchMacros.carbs +
+    sMacros.carbs +
+    dinnerMacros.carbs;
+  const fat =
+    milkFat +
+    bMacros.fat +
+    lunchMacros.fat +
+    sMacros.fat +
+    dinnerMacros.fat;
+  const calories =
+    wheyCalories +
+    milkCalories +
+    bMacros.calories +
+    lunchMacros.calories +
+    sMacros.calories +
+    dinnerMacros.calories +
+    escapeKcal;
+  const waterL = (log.waterMl || 0) / 1000;
+
+  return { protein, carbs, fat, calories, waterL, waterMl: log.waterMl || 0 };
+}
 
 export const EvolutionScreen: React.FC = () => {
   const weightLogs = useLiveQuery(() => db.weightLogs.orderBy('date').toArray());
@@ -42,6 +121,12 @@ export const EvolutionScreen: React.FC = () => {
   }) || [];
 
   const routines = useLiveQuery(() => db.routines.toArray());
+
+  // Sub-aba de visualização: 'treinos' | 'nutricao'
+  const [evolutionTab, setEvolutionTab] = useState<'treinos' | 'nutricao'>('treinos');
+
+  const nutritionLogs = useLiveQuery(() => db.nutritionLogs.toArray()) || [];
+  const profile = useLiveQuery(() => db.userProfile.get('main_user'));
 
   // Selected routine tab for routine-level overload analysis (A, B, C, D)
   const [selectedRoutineId, setSelectedRoutineId] = useState<RoutineId>('A');
@@ -159,6 +244,109 @@ export const EvolutionScreen: React.FC = () => {
   }, [workoutSessions]);
 
   // =========================================================
+  // NUTRIÇÃO & DÉFICIT SEMANAL
+  // =========================================================
+  const weeklyNutritionStats = useMemo(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const mondayDate = new Date(now);
+    mondayDate.setDate(now.getDate() - diffToMonday);
+    mondayDate.setHours(0, 0, 0, 0);
+
+    const calorieTarget = profile?.targetCaloriesKcal || 2200;
+    const proteinTarget = profile?.targetProteinGrams || 160;
+    const waterTargetMl = profile?.targetWaterMl || 3000;
+
+    const logsMap = new Map<string, NutritionLog>();
+    nutritionLogs.forEach((log) => {
+      logsMap.set(log.date, log);
+    });
+
+    const dayLabels = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const shortLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+    const weekDays = dayLabels.map((label, idx) => {
+      const d = new Date(mondayDate);
+      d.setDate(mondayDate.getDate() + idx);
+      const dStr = d.toISOString().split('T')[0];
+      const isToday = dStr === now.toISOString().split('T')[0];
+
+      const log = logsMap.get(dStr);
+      const totals = log
+        ? computeNutritionLogTotals(log)
+        : { protein: 0, carbs: 0, fat: 0, calories: 0, waterL: 0, waterMl: 0 };
+
+      const hasEntries =
+        !!log && (totals.calories > 0 || totals.protein > 0 || totals.waterMl > 0);
+
+      const calorieStatus: 'good' | 'warning' | 'over' | 'empty' = !hasEntries
+        ? 'empty'
+        : totals.calories <= calorieTarget + 50
+        ? 'good'
+        : totals.calories <= calorieTarget + 250
+        ? 'warning'
+        : 'over';
+
+      const proteinMet = totals.protein >= proteinTarget * 0.85;
+      const waterMet = totals.waterMl >= waterTargetMl * 0.8;
+
+      return {
+        label,
+        shortLabel: shortLabels[idx],
+        dateStr: dStr,
+        dayNumber: d.getDate(),
+        monthNumber: d.getMonth() + 1,
+        isToday,
+        hasEntries,
+        totals,
+        escapesCount:
+          (log?.escapes?.besteiraCount || 0) + (log?.escapes?.superBesteiraCount || 0),
+        calorieStatus,
+        proteinMet,
+        waterMet
+      };
+    });
+
+    const loggedDays = weekDays.filter((d) => d.hasEntries);
+    const loggedCount = loggedDays.length;
+
+    const totalCalories = loggedDays.reduce((acc, d) => acc + d.totals.calories, 0);
+    const totalProtein = loggedDays.reduce((acc, d) => acc + d.totals.protein, 0);
+    const totalWater = loggedDays.reduce((acc, d) => acc + d.totals.waterL, 0);
+
+    const avgCalories = loggedCount > 0 ? Math.round(totalCalories / loggedCount) : 0;
+    const avgProtein = loggedCount > 0 ? Math.round(totalProtein / loggedCount) : 0;
+    const avgWater =
+      loggedCount > 0 ? Number((totalWater / loggedCount).toFixed(1)) : 0;
+
+    const daysInCalorieGoal = loggedDays.filter(
+      (d) => d.calorieStatus === 'good' || d.calorieStatus === 'warning'
+    ).length;
+    const daysInProteinGoal = loggedDays.filter((d) => d.proteinMet).length;
+    const daysInWaterGoal = loggedDays.filter((d) => d.waterMet).length;
+
+    const adherencePercent =
+      loggedCount > 0 ? Math.round((daysInCalorieGoal / loggedCount) * 100) : 0;
+
+    return {
+      weekDays,
+      loggedCount,
+      avgCalories,
+      avgProtein,
+      avgWater,
+      daysInCalorieGoal,
+      daysInProteinGoal,
+      daysInWaterGoal,
+      adherencePercent,
+      calorieTarget,
+      proteinTarget,
+      waterTargetL: Number((waterTargetMl / 1000).toFixed(1)),
+      calorieMode: profile?.calorieMode || 'recomposicao'
+    };
+  }, [nutritionLogs, profile]);
+
+  // =========================================================
   // 2. EVOLUÇÃO POR TREINO (GRÁFICO MULTI-LINHAS POR EXERCÍCIO)
   // =========================================================
   const currentRoutine = useMemo<RoutineDefinition | undefined>(() => {
@@ -247,9 +435,9 @@ export const EvolutionScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-2 max-w-lg mx-auto px-4">
-      {/* HEADER CENTRALIZADO: "Evolução de Cargas" */}
+      {/* HEADER CENTRALIZADO COM SUB-ABAS */}
       <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
-        <div className="text-center min-w-0 px-2">
+        <div className="text-center min-w-0 px-2 mb-2.5">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
             <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
@@ -257,16 +445,52 @@ export const EvolutionScreen: React.FC = () => {
             </span>
           </div>
           <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
-            Evolução de Cargas
+            {evolutionTab === 'treinos' ? 'Evolução de Cargas' : 'Evolução da Dieta'}
           </h1>
+        </div>
+
+        {/* SUB-ABAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
+        <div className="grid grid-cols-2 gap-1.5 bg-slate-200/70 p-1 rounded-2xl max-w-sm mx-auto">
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setEvolutionTab('treinos');
+            }}
+            className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+              evolutionTab === 'treinos'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Treinos & Cargas</span>
+          </button>
+
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setEvolutionTab('nutricao');
+            }}
+            className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+              evolutionTab === 'nutricao'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <UtensilsCrossed className="w-3.5 h-3.5" />
+            <span>Dieta & Nutrição</span>
+          </button>
         </div>
       </div>
 
       <div className="space-y-4">
         {/* ========================================================= */}
-        {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
+        {/* CONTEÚDO DA ABA: TREINOS & CARGAS */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+        {evolutionTab === 'treinos' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
@@ -669,11 +893,320 @@ export const EvolutionScreen: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+    )}
 
-        {/* ========================================================= */}
-        {/* 3. PESAGEM SEMANAL & BOTÕES RÁPIDOS (+/- 0,5 KG) */}
-        {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+    {/* ========================================================= */}
+    {/* CONTEÚDO DA ABA: DIETA & NUTRIÇÃO */}
+    {/* ========================================================= */}
+    {evolutionTab === 'nutricao' && (
+      <div className="space-y-4 animate-in fade-in duration-150">
+        {/* 1. RESUMO SEMANAL DA DIETA (KCAL, PROTEÍNA, ÁGUA) */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
+                <UtensilsCrossed className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                  Balanço Semanal da Dieta
+                </span>
+                <h3 className="text-base font-black text-slate-900 leading-tight truncate">
+                  Adesão Nutricional
+                </h3>
+              </div>
+            </div>
+
+            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full shrink-0 shadow-2xs">
+              {weeklyNutritionStats.loggedCount} de 7 dias logados
+            </span>
+          </div>
+
+          {/* Grid 3 KPIs */}
+          <div className="grid grid-cols-3 gap-2">
+            {/* Calorias Médias */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col justify-between">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <Flame className="w-3 h-3 text-amber-500 fill-current" />
+                <span>Calorias</span>
+              </div>
+              <div className="my-1.5">
+                <div className="text-lg font-black text-slate-900 leading-none">
+                  {weeklyNutritionStats.avgCalories}
+                </div>
+                <span className="text-[9px] font-bold text-slate-500">
+                  / {weeklyNutritionStats.calorieTarget} kcal
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    weeklyNutritionStats.avgCalories <= weeklyNutritionStats.calorieTarget + 50
+                      ? 'bg-emerald-500'
+                      : weeklyNutritionStats.avgCalories <= weeklyNutritionStats.calorieTarget + 250
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (weeklyNutritionStats.avgCalories / weeklyNutritionStats.calorieTarget) * 100
+                    )}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Proteína Média */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col justify-between">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <Award className="w-3 h-3 text-blue-600" />
+                <span>Proteína</span>
+              </div>
+              <div className="my-1.5">
+                <div className="text-lg font-black text-slate-900 leading-none">
+                  {weeklyNutritionStats.avgProtein}g
+                </div>
+                <span className="text-[9px] font-bold text-slate-500">
+                  / {weeklyNutritionStats.proteinTarget}g meta
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    weeklyNutritionStats.avgProtein >= weeklyNutritionStats.proteinTarget * 0.85
+                      ? 'bg-blue-600'
+                      : 'bg-amber-500'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (weeklyNutritionStats.avgProtein / weeklyNutritionStats.proteinTarget) * 100
+                    )}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Água Média */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col justify-between">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <Droplets className="w-3 h-3 text-cyan-500" />
+                <span>Água</span>
+              </div>
+              <div className="my-1.5">
+                <div className="text-lg font-black text-slate-900 leading-none">
+                  {weeklyNutritionStats.avgWater}L
+                </div>
+                <span className="text-[9px] font-bold text-slate-500">
+                  / {weeklyNutritionStats.waterTargetL}L meta
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    weeklyNutritionStats.avgWater >= weeklyNutritionStats.waterTargetL * 0.8
+                      ? 'bg-cyan-500'
+                      : 'bg-slate-400'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (weeklyNutritionStats.avgWater / weeklyNutritionStats.waterTargetL) * 100
+                    )}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Status do Perfil Calórico */}
+          <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between gap-2 shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] font-black uppercase text-emerald-700 block">
+                  Perfil Ativo: {weeklyNutritionStats.calorieMode === 'recomposicao' ? 'Recomposição Corporal' : 'Manutenção'}
+                </span>
+                <span className="text-xs font-bold text-slate-800">
+                  Meta de {weeklyNutritionStats.calorieTarget} kcal • Déficit de 500 kcal
+                </span>
+              </div>
+            </div>
+            <span className="text-xs font-black text-emerald-800 px-2 py-0.5 rounded-lg bg-white border border-emerald-200 shrink-0">
+              {weeklyNutritionStats.adherencePercent}% no alvo
+            </span>
+          </div>
+        </div>
+
+        {/* 2. DIAGNÓSTICO INTELIGENTE DA SEMANA */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              Diagnóstico do Treinador
+            </h4>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-medium">
+            {weeklyNutritionStats.loggedCount === 0 ? (
+              <p className="text-slate-500">
+                Nenhum dia registrado nesta semana ainda. Registre suas refeições na aba <strong>Nutrição</strong> para gerar o diagnóstico de recomposição corporal e déficit calórico.
+              </p>
+            ) : weeklyNutritionStats.avgCalories <= weeklyNutritionStats.calorieTarget + 50 &&
+              weeklyNutritionStats.avgProtein >= weeklyNutritionStats.proteinTarget * 0.85 ? (
+              <p>
+                🔥 <strong>Déficit e Proteínas no ponto!</strong> Você está mantendo a média em{' '}
+                <strong>{weeklyNutritionStats.avgCalories} kcal</strong> com ótimo aporte proteico ({weeklyNutritionStats.avgProtein}g/dia). Esse ritmo preserva sua massa muscular e oxida gordura com alta consistência.
+              </p>
+            ) : weeklyNutritionStats.avgCalories > weeklyNutritionStats.calorieTarget + 100 ? (
+              <p>
+                ⚠️ <strong>Atenção ao superávit:</strong> Sua média semanal de{' '}
+                <strong>{weeklyNutritionStats.avgCalories} kcal</strong> ficou acima do teto do déficit ({weeklyNutritionStats.calorieTarget} kcal). Experimente diminuir as porções de carboidratos ou evitar escapes noturnos para retomar a queima de gordura.
+              </p>
+            ) : weeklyNutritionStats.avgProtein < weeklyNutritionStats.proteinTarget * 0.85 ? (
+              <p>
+                💪 <strong>Proteínas abaixo do ideal:</strong> Sua média diária de{' '}
+                <strong>{weeklyNutritionStats.avgProtein}g</strong> está abaixo da meta ({weeklyNutritionStats.proteinTarget}g). Adicione doses extras de Whey, copos de leite Piracanjuba ou ovos para blindar os músculos durante o déficit.
+              </p>
+            ) : (
+              <p>
+                👍 <strong>Bom progresso semanal:</strong> Você manteve{' '}
+                <strong>{weeklyNutritionStats.daysInCalorieGoal} de {weeklyNutritionStats.loggedCount} dias</strong> dentro do plano calórico. Mantenha a hidratação acima de {weeklyNutritionStats.waterTargetL}L para potencializar os treinos de força.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 3. ACOMPANHAMENTO DIÁRIO (SEG A DOM) */}
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                Dias da Semana (Seg a Dom)
+              </h4>
+            </div>
+            <span className="text-[10px] font-bold text-slate-400">
+              {weeklyNutritionStats.daysInCalorieGoal} dias dentro do déficit
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {weeklyNutritionStats.weekDays.map((day) => (
+              <div
+                key={day.dateStr}
+                className={`p-3 rounded-2xl border transition-all ${
+                  day.isToday
+                    ? 'border-blue-400 bg-blue-50/20 shadow-2xs'
+                    : day.hasEntries
+                    ? 'border-slate-200/90 bg-white shadow-2xs'
+                    : 'border-slate-100 bg-slate-50/40 opacity-70'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`w-7 h-7 rounded-lg font-black text-xs flex items-center justify-center shrink-0 ${
+                        day.hasEntries
+                          ? day.calorieStatus === 'good'
+                            ? 'bg-emerald-600 text-white'
+                            : day.calorieStatus === 'warning'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-rose-500 text-white'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {day.shortLabel}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <span>
+                          {day.label}, {day.dayNumber}/{String(day.monthNumber).padStart(2, '0')}
+                        </span>
+                        {day.isToday && (
+                          <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                            Hoje
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  {day.hasEntries ? (
+                    day.calorieStatus === 'good' ? (
+                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 flex items-center gap-1">
+                        <Check className="w-3 h-3 stroke-[2.5]" />
+                        <span>Déficit OK</span>
+                      </span>
+                    ) : day.calorieStatus === 'warning' ? (
+                      <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+                        <span>Leve Alerta</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/80 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+                        <span>Superávit</span>
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[10px] font-medium text-slate-400">
+                      Sem registros
+                    </span>
+                  )}
+                </div>
+
+                {day.hasEntries && (
+                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                    {/* Macro pills */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold">
+                      <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800">
+                        ⚡ {day.totals.calories} kcal
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-lg ${
+                          day.proteinMet
+                            ? 'bg-blue-50 text-blue-800 border border-blue-100'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        🍗 {day.totals.protein}g prot
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-lg ${
+                          day.waterMet
+                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-100'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        💧 {day.totals.waterL.toFixed(1)}L água
+                      </span>
+                      {day.escapesCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/80">
+                          🍩 {day.escapesCount} escape(s)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ========================================================= */}
+    {/* 3. PESAGEM SEMANAL & BOTÕES RÁPIDOS (+/- 0,5 KG) */}
+    {/* ========================================================= */}
+    <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">

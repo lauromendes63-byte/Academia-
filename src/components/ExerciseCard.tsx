@@ -5,7 +5,6 @@ import type {
   SetEntry
 } from '../types';
 import { SubstituteModal } from './SubstituteModal';
-import { useRestTimer } from '../context/RestTimerContext';
 import { playSetCompleteSound, triggerHaptic } from '../utils/audio';
 import {
   Check,
@@ -32,7 +31,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onUpdateLog
 }) => {
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
-  const { startTimer } = useRestTimer();
 
   const isAborted = log.abortedForFatigue;
   const currentWeight =
@@ -48,7 +46,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         if (nextCompleted) {
           playSetCompleteSound();
           triggerHaptic('success');
-          startTimer(exercise.restSeconds, log.activeExerciseName);
         } else {
           triggerHaptic('light');
         }
@@ -133,10 +130,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
                 <Target className="w-2.5 h-2.5 text-slate-500" />
                 <span>{exercise.defaultSets}× {exercise.targetReps} reps</span>
-              </span>
-
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-100 whitespace-nowrap">
-                {exercise.restSeconds}s
               </span>
             </div>
 

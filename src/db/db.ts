@@ -49,6 +49,33 @@ export async function initializeDatabase(): Promise<void> {
   const routinesCount = await db.routines.count();
   if (routinesCount === 0) {
     await db.routines.bulkPut(DEFAULT_ROUTINES);
+  } else {
+    // Migration: ensure Treino A has Rosca Baiana na Polia
+    const routineA = await db.routines.get('A');
+    if (routineA) {
+      const needsUpdate = routineA.exercises.some(
+        (e) => e.id === 'pull_4' && e.name !== 'Rosca Baiana na Polia'
+      );
+      if (needsUpdate) {
+        routineA.exercises = routineA.exercises.map((e) => {
+          if (e.id === 'pull_4') {
+            return {
+              id: 'pull_4',
+              name: 'Rosca Baiana na Polia',
+              muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
+              gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
+              defaultSets: 3,
+              targetReps: '12-15',
+              restSeconds: 60,
+              defaultWeightKg: 15,
+              substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
+            };
+          }
+          return e;
+        });
+        await db.routines.put(routineA);
+      }
+    }
   }
 
   const weightCount = await db.weightLogs.count();
@@ -98,14 +125,14 @@ export async function initializeDatabase(): Promise<void> {
         },
         {
           exerciseId: 'pull_4',
-          exerciseName: 'Rosca Direta Banco Inclinado c/ Halteres',
-          activeExerciseName: 'Rosca Direta Banco Inclinado c/ Halteres',
+          exerciseName: 'Rosca Baiana na Polia',
+          activeExerciseName: 'Rosca Baiana na Polia',
           isSubstituted: false,
           abortedForFatigue: false,
           sets: [
-            { setNumber: 1, weightKg: 12, reps: 10, completed: true },
-            { setNumber: 2, weightKg: 12, reps: 9, completed: true },
-            { setNumber: 3, weightKg: 12, reps: 8, completed: true }
+            { setNumber: 1, weightKg: 15, reps: 12, completed: true },
+            { setNumber: 2, weightKg: 15, reps: 12, completed: true },
+            { setNumber: 3, weightKg: 15, reps: 12, completed: true }
           ]
         }
       ]

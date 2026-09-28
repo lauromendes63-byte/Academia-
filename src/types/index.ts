@@ -58,6 +58,19 @@ export interface SubwayConfig {
   size: '15cm' | '30cm';
 }
 
+export type FruitType = 'banana' | 'laranja' | 'maca';
+export type EggType = 'mexidos' | 'fritos';
+
+export interface CustomMealConfig {
+  coffeeWithMilkCups: number; // canecas de café com leite (0, 1, 2...)
+  tapiocaCount: number; // tapiocas com queijo (0, 1, 2...)
+  eggType: EggType; // 'mexidos' | 'fritos'
+  eggCount: number; // quantidade de ovos (0, 1, 2, 3...)
+  fruitType: FruitType; // 'banana' | 'laranja' | 'maca'
+  fruitCount: number; // quantidade de frutas (0, 1, 2...)
+  shakeCount?: number; // Para o lanche da tarde opcional (0, 1...)
+}
+
 export interface NutritionLog {
   date: string; // Key: YYYY-MM-DD
   tookWhey: boolean;
@@ -79,6 +92,8 @@ export interface NutritionLog {
   dinnerType?: 'subway' | 'caseiro';
   dinnerSubwayConfig?: SubwayConfig;
   dinnerPlateConfig?: PlateConfig;
+  breakfastConfig?: CustomMealConfig;
+  snackConfig?: CustomMealConfig;
 }
 
 export interface WeightLog {

@@ -61,19 +61,18 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     totalExercises: number;
   } | null>(null);
 
-  // Load / initialize exercise logs when current routine changes
+  // Load / initialize exercise logs when selected routine changes
   useEffect(() => {
-    if (!currentRoutine) return;
-
     let isMounted = true;
 
     async function loadRoutineData() {
-      if (!currentRoutine) return;
+      const routine = await db.routines.get(selectedRoutineId);
+      if (!routine) return;
 
       const perfMap: Record<string, { weightKg: number; reps: number; date: string } | null> = {};
 
       const initialLogs: ExerciseLog[] = await Promise.all(
-        currentRoutine.exercises.map(async (ex) => {
+        routine.exercises.map(async (ex) => {
           const last = await getLastExercisePerformance(ex.id, ex.name);
           perfMap[ex.id] = last;
 
@@ -106,7 +105,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
     return () => {
       isMounted = false;
     };
-  }, [currentRoutine]);
+  }, [selectedRoutineId]);
 
   // Update an exercise log & immediately persist load
   const handleUpdateLog = useCallback(
@@ -115,21 +114,20 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onGoToEvolution })
         prev.map((item) => (item.exerciseId === updated.exerciseId ? updated : item))
       );
 
-      // Instantly persist the updated weight into db.routines so it is permanently remembered!
-      if (currentRoutine && updated.sets && updated.sets[0]) {
+      // Instantly persist the updated weight into db.routines so it is permanently remembered
+      if (updated.sets && updated.sets[0] && updated.sets[0].weightKg > 0) {
         const newWeight = updated.sets[0].weightKg;
-        const exIdx = currentRoutine.exercises.findIndex((e) => e.id === updated.exerciseId);
-        if (exIdx !== -1 && currentRoutine.exercises[exIdx].defaultWeightKg !== newWeight) {
-          const newExercises = [...currentRoutine.exercises];
-          newExercises[exIdx] = {
-            ...newExercises[exIdx],
-            defaultWeightKg: newWeight
-          };
-          await db.routines.update(currentRoutine.id, { exercises: newExercises });
+        const routine = await db.routines.get(selectedRoutineId);
+        if (routine) {
+          const exIdx = routine.exercises.findIndex((e) => e.id === updated.exerciseId);
+          if (exIdx !== -1 && routine.exercises[exIdx].defaultWeightKg !== newWeight) {
+            routine.exercises[exIdx].defaultWeightKg = newWeight;
+            await db.routines.put(routine);
+          }
         }
       }
     },
-    [currentRoutine]
+    [selectedRoutineId]
   );
 
   const completedSetsCount = useMemo(() => {

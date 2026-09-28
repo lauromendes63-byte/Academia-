@@ -54,14 +54,14 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
       },
       {
         id: 'pull_4',
-        name: 'Rosca Direta Banco Inclinado c/ Halteres',
-        muscleGroup: 'Bíceps (Cabeça Longa)',
-        gripOrForm: 'Supinada (Banco 45°-60°)',
+        name: 'Rosca Baiana na Polia',
+        muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
+        gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
         defaultSets: 3,
-        targetReps: '8-10',
-        restSeconds: 90,
-        defaultWeightKg: 12,
-        substitutes: ['Rosca Direta Barra em Pé', 'Rosca Scott c/ Halteres']
+        targetReps: '12-15',
+        restSeconds: 60,
+        defaultWeightKg: 15,
+        substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
       },
       {
         id: 'pull_5',

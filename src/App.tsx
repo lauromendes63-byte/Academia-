@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeDatabase } from './db/db';
-import { RestTimerProvider } from './context/RestTimerContext';
 import { BottomNavBar, type TabType } from './components/BottomNavBar';
-import { RestTimerBar } from './components/RestTimerBar';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 import { NutritionScreen } from './screens/NutritionScreen';
 import { EvolutionScreen } from './screens/EvolutionScreen';
@@ -46,9 +44,6 @@ export const AppContent: React.FC = () => {
         {activeTab === 'ajustes' && <SettingsScreen />}
       </main>
 
-      {/* Floating Global Rest Timer */}
-      <RestTimerBar />
-
       {/* Persistent Bottom Nav Bar (Thumb Zone) */}
       <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
@@ -56,9 +51,5 @@ export const AppContent: React.FC = () => {
 };
 
 export default function App() {
-  return (
-    <RestTimerProvider>
-      <AppContent />
-    </RestTimerProvider>
-  );
+  return <AppContent />;
 }
