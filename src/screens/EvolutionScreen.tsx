@@ -490,7 +490,7 @@ export const EvolutionScreen: React.FC = () => {
         {evolutionTab === 'treinos' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
-            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs anim-card-1">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
@@ -638,7 +638,7 @@ export const EvolutionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 2. EVOLUÇÃO POR TREINO (SEM TONELAGEM, LINHA POR EXERCÍCIO) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4 anim-card-2">
           {/* Header sem quebra: "Evolução por Treino" */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -902,7 +902,7 @@ export const EvolutionScreen: React.FC = () => {
     {evolutionTab === 'nutricao' && (
       <div className="space-y-4 animate-in fade-in duration-150">
         {/* 1. RESUMO SEMANAL DA DIETA (KCAL, PROTEÍNA, ÁGUA) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4 anim-card-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
@@ -1041,7 +1041,7 @@ export const EvolutionScreen: React.FC = () => {
         </div>
 
         {/* 2. DIAGNÓSTICO INTELIGENTE DA SEMANA */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-2.5">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
               <Sparkles className="w-4 h-4" />
@@ -1082,7 +1082,7 @@ export const EvolutionScreen: React.FC = () => {
         </div>
 
         {/* 3. ACOMPANHAMENTO DIÁRIO (SEG A DOM) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-3 anim-card-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
@@ -1206,7 +1206,7 @@ export const EvolutionScreen: React.FC = () => {
     {/* ========================================================= */}
     {/* 3. PESAGEM SEMANAL & BOTÕES RÁPIDOS (+/- 0,5 KG) */}
     {/* ========================================================= */}
-    <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+    <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs anim-card-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">

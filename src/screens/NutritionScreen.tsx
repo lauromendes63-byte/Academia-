@@ -992,7 +992,7 @@ export const NutritionScreen: React.FC = () => {
 
       <div className="space-y-3">
         {/* 1. CALCULADORA AUTOMÁTICA DE PROTEÍNAS & CALORIAS (DESTAQUE NO TOPO) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-1">
           {/* TRACKER DE PROTEÍNA */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -1125,7 +1125,7 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* 2. PROTEÍNA RÁPIDA: WHEY & COPO DE LEITE */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-2">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
@@ -1221,7 +1221,7 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* 3. REFEIÇÕES DIÁRIAS PERSONALIZÁVEIS */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-5">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-5 anim-card-3">
           <div className="flex items-center gap-2">
             <UtensilsCrossed className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
@@ -1692,7 +1692,7 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* 4. HIDRATAÇÃO DIÁRIA (META 4.0L) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs anim-card-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
@@ -1755,7 +1755,7 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* 5. CONTROLE DE ESCAPES CALÓRICOS */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs anim-card-5">
           <div className="mb-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Acompanhamento Realista

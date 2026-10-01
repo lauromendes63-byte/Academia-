@@ -74,7 +74,7 @@ input[type="number"] {
   contain-intrinsic-size: 0 120px;
 }
 
-/* Butter-smooth micro-animations */
+/* Butter-smooth micro-animations & Directional Tab Transitions */
 @keyframes smoothFadeIn {
   from {
     opacity: 0;
@@ -86,8 +86,103 @@ input[type="number"] {
   }
 }
 
+@keyframes slideFromRight {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cardFadeUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .animate-smooth-in {
   animation: smoothFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-forward {
+  animation: slideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.animate-slide-backward {
+  animation: slideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Staggered card reveals for tabs (delicate 60/120fps feel) */
+.anim-card-1 {
+  animation: cardFadeUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.02s both;
+}
+.anim-card-2 {
+  animation: cardFadeUp 0.30s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
+}
+.anim-card-3 {
+  animation: cardFadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) 0.10s both;
+}
+.anim-card-4 {
+  animation: cardFadeUp 0.34s cubic-bezier(0.16, 1, 0.3, 1) 0.14s both;
+}
+.anim-card-5 {
+  animation: cardFadeUp 0.36s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+}
+
+/* Native View Transitions (Baseline CSS specification) */
+::view-transition-group(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html:active-view-transition-type(forward)::view-transition-old(root) {
+  animation-name: slide-to-left;
+}
+html:active-view-transition-type(forward)::view-transition-new(root) {
+  animation-name: slide-from-right;
+}
+
+html:active-view-transition-type(backward)::view-transition-old(root) {
+  animation-name: slide-to-right;
+}
+html:active-view-transition-type(backward)::view-transition-new(root) {
+  animation-name: slide-from-left;
+}
+
+@keyframes slide-to-left {
+  to { transform: translateX(-15%); opacity: 0; }
+}
+@keyframes slide-from-right {
+  from { transform: translateX(15%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-to-right {
+  to { transform: translateX(15%); opacity: 0; }
+}
+@keyframes slide-from-left {
+  from { transform: translateX(-15%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* Battery-saver & Reduced Motion support */

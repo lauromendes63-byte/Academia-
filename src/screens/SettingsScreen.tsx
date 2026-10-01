@@ -149,7 +149,7 @@ export const SettingsScreen: React.FC = () => {
 
       <div className="space-y-4">
         {/* 1. SELETOR DE PERFIL CALÓRICO (2.200 kcal vs 2.700 kcal) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 anim-card-1">
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-500 fill-current" />
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
@@ -231,7 +231,7 @@ export const SettingsScreen: React.FC = () => {
         </div>
 
         {/* 2. PERFIL DO USUÁRIO */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm anim-card-2">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/20">
               L
@@ -278,7 +278,7 @@ export const SettingsScreen: React.FC = () => {
         </div>
 
         {/* 3. BACKUP & RESTAURAÇÃO (JSON) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 anim-card-3">
           <div className="flex items-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-blue-600" />
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
@@ -317,7 +317,7 @@ export const SettingsScreen: React.FC = () => {
         </div>
 
         {/* 4. PWA & DEPLOY STATUS */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 anim-card-4">
           <div className="flex items-center gap-2 mb-1">
             <Smartphone className="w-4 h-4 text-emerald-600" />
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
@@ -346,7 +346,7 @@ export const SettingsScreen: React.FC = () => {
         </div>
 
         {/* 5. REINICIAR DADOS PADRÃO */}
-        <div className="pt-2">
+        <div className="pt-2 anim-card-5">
           <button
             onClick={handleResetToFactory}
             className="w-full py-3.5 rounded-2xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"

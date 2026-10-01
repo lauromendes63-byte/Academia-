@@ -42,16 +42,34 @@ export default defineConfig({
         ],
         shortcuts: [
           {
+            name: '+500ml de Água',
+            short_name: '+Água',
+            description: 'Adicionar 500ml de água rapidamente',
+            url: '/?tab=nutricao&action=quick_water'
+          },
+          {
+            name: '+1 Scoop de Whey',
+            short_name: '+Whey',
+            description: 'Registrar 1 dose de whey (+20g prot)',
+            url: '/?tab=nutricao&action=quick_whey'
+          },
+          {
+            name: '+1 Copo de Leite',
+            short_name: '+Leite',
+            description: 'Registrar 1 copo de leite (+6g prot)',
+            url: '/?tab=nutricao&action=quick_milk'
+          },
+          {
+            name: '+1 Besteira / Escape',
+            short_name: '+Escape',
+            description: 'Registrar escape na dieta (+600 kcal)',
+            url: '/?tab=nutricao&action=quick_escape'
+          },
+          {
             name: 'Treino de Hoje',
             short_name: 'Treino',
             description: 'Acompanhar o treino de hoje',
             url: '/?tab=treino'
-          },
-          {
-            name: 'Dieta & Nutrição',
-            short_name: 'Nutrição',
-            description: 'Metas de água, proteína e calorias',
-            url: '/?tab=nutricao'
           }
         ]
       },

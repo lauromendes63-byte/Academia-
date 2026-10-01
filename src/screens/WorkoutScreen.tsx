@@ -12,7 +12,6 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { triggerHaptic } from '../utils/audio';
-import { TodayWidget } from '../components/TodayWidget';
 import confetti from 'canvas-confetti';
 import {
   CheckCircle2,
@@ -25,12 +24,10 @@ import {
 
 interface WorkoutScreenProps {
   onGoToEvolution?: () => void;
-  onGoToNutrition?: () => void;
 }
 
 export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
-  onGoToEvolution,
-  onGoToNutrition
+  onGoToEvolution
 }) => {
   const routines = useLiveQuery(() => db.routines.toArray());
   const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
@@ -318,17 +315,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
           })}
         </div>
       </div>
-
-      {/* WIDGET DE HOJE: NUTRIÇÃO & TREINO RÁPIDO */}
-      <TodayWidget
-        currentRoutineId={selectedRoutineId}
-        onSelectRoutine={(rId) => setSelectedRoutineId(rId)}
-        onGoToNutrition={onGoToNutrition}
-        onScrollToExercises={() => {
-          const el = document.getElementById('exercise-cards-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
 
       {/* EXERCISE CARDS LIST */}
       <div id="exercise-cards-section" className="space-y-3">
