@@ -39,9 +39,25 @@ export default defineConfig({
             type: 'image/svg+xml',
             purpose: 'maskable'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'Treino de Hoje',
+            short_name: 'Treino',
+            description: 'Acompanhar o treino de hoje',
+            url: '/?tab=treino'
+          },
+          {
+            name: 'Dieta & Nutrição',
+            short_name: 'Nutrição',
+            description: 'Metas de água, proteína e calorias',
+            url: '/?tab=nutricao'
+          }
         ]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
         runtimeCaching: [
           {

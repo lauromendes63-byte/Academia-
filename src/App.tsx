@@ -7,7 +7,16 @@ import { EvolutionScreen } from './screens/EvolutionScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 export const AppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('treino');
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabType;
+      if (tab && ['treino', 'nutricao', 'evolucao', 'ajustes'].includes(tab)) {
+        return tab;
+      }
+    }
+    return 'treino';
+  });
   const [isDbReady, setIsDbReady] = useState(false);
 
   useEffect(() => {
@@ -38,7 +47,10 @@ export const AppContent: React.FC = () => {
       <main className="flex-1 w-full max-w-lg mx-auto">
         <div key={activeTab} className="animate-smooth-in">
           {activeTab === 'treino' && (
-            <WorkoutScreen onGoToEvolution={() => setActiveTab('evolucao')} />
+            <WorkoutScreen
+              onGoToEvolution={() => setActiveTab('evolucao')}
+              onGoToNutrition={() => setActiveTab('nutricao')}
+            />
           )}
           {activeTab === 'nutricao' && <NutritionScreen />}
           {activeTab === 'evolucao' && <EvolutionScreen />}

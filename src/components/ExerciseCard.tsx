@@ -133,8 +133,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               </span>
             </div>
 
+            {/* Exercise Name with legacy Baiana sanitization */}
             <h3 className="text-base font-black text-slate-900 tracking-tight leading-snug truncate">
-              {log.activeExerciseName}
+              {log.activeExerciseName.includes('Baiana') || exercise.name.includes('Baiana')
+                ? 'Rosca Bayesiana na Polia'
+                : log.activeExerciseName}
             </h3>
 
             {/* Grip / Form Cue */}
