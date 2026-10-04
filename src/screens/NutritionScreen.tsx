@@ -15,19 +15,14 @@ import type {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
 import {
-  Droplets,
   Check,
-  Sparkles,
-  UtensilsCrossed,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   ChevronUp,
   ShieldCheck,
   Plus,
-  Minus,
-  Target,
-  Flame
+  Minus
 } from 'lucide-react';
 
 export const DEFAULT_LUNCH_CONFIG: PlateConfig = {
@@ -417,7 +412,7 @@ export function getResolvedSnackConfig(log: NutritionLog): CustomMealConfig {
 }
 
 // ============================================================================
-// COMPONENTE DE BADGES DE MACROS SEMÂNTICOS (LINHA ÚNICA, SEM SIGLAS P/C/G)
+// COMPONENTE DE BADGES DE MACROS UNIFORMES (4 COLUNAS PADRONIZADAS)
 // ============================================================================
 const MacroPills: React.FC<{
   calories: number;
@@ -425,26 +420,20 @@ const MacroPills: React.FC<{
   carbs?: number;
   fat?: number;
   unitLabel?: string;
-}> = ({ calories, protein, carbs, fat }) => (
-  <div className="flex items-center gap-1 flex-wrap mt-1">
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-extrabold bg-slate-200/80 text-slate-800 whitespace-nowrap leading-tight">
+}> = ({ calories, protein = 0, carbs = 0, fat = 0 }) => (
+  <div className="grid grid-cols-4 gap-1.5 w-full mt-2 pt-2 border-t border-slate-200/70">
+    <div className="py-1 px-1 rounded-lg bg-slate-200/80 border border-slate-300/70 text-slate-900 text-[10px] font-extrabold text-center whitespace-nowrap leading-tight">
       {calories} kcal
-    </span>
-    {protein !== undefined && protein > 0 && (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 whitespace-nowrap leading-tight">
-        {protein}g Prot
-      </span>
-    )}
-    {carbs !== undefined && carbs > 0 && (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60 whitespace-nowrap leading-tight">
-        {carbs}g Carbo
-      </span>
-    )}
-    {fat !== undefined && fat > 0 && (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-purple-50 text-purple-800 border border-purple-200/60 whitespace-nowrap leading-tight">
-        {fat}g Gord
-      </span>
-    )}
+    </div>
+    <div className="py-1 px-1 rounded-lg bg-blue-50 border border-blue-200/80 text-blue-800 text-[10px] font-extrabold text-center whitespace-nowrap leading-tight">
+      {protein}g Prot
+    </div>
+    <div className="py-1 px-1 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-900 text-[10px] font-extrabold text-center whitespace-nowrap leading-tight">
+      {carbs}g Carbo
+    </div>
+    <div className="py-1 px-1 rounded-lg bg-slate-100 border border-slate-200/90 text-slate-700 text-[10px] font-extrabold text-center whitespace-nowrap leading-tight">
+      {fat}g Gord
+    </div>
   </div>
 );
 
@@ -484,10 +473,10 @@ const CustomMealBuilder: React.FC<{
             {emoji}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 truncate">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
               {title}
             </h4>
-            <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap truncate">
+            <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap">
               {isEaten
                 ? `${macros.calories} kcal • ${macros.protein}g Prot • ${macros.carbs}g Carbo`
                 : '0 kcal • 0g Prot'}
@@ -516,113 +505,114 @@ const CustomMealBuilder: React.FC<{
       {isOpen && (
         <div className="p-2.5 pt-2 space-y-2 border-t border-slate-100 animate-in fade-in duration-150">
           {/* 1. Café c/ Leite */}
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm whitespace-nowrap shrink-0">☕🥛</span>
-                <span className="text-xs font-black text-slate-900 truncate">Café com Leite</span>
-              </div>
-              <MacroPills calories={95} protein={6} carbs={9} fat={4} />
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() =>
-                  onChange({ coffeeWithMilkCups: Math.max(0, config.coffeeWithMilkCups - 1) })
-                }
-                disabled={config.coffeeWithMilkCups <= 0}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                aria-label="Diminuir café com leite"
-              >
-                -
-              </button>
-              <span className="w-5 text-center font-black text-xs text-slate-900">
-                {config.coffeeWithMilkCups}
-              </span>
-              <button
-                onClick={() =>
-                  onChange({ coffeeWithMilkCups: Math.min(5, config.coffeeWithMilkCups + 1) })
-                }
-                disabled={config.coffeeWithMilkCups >= 5}
-                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                aria-label="Aumentar café com leite"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* 2. Tapioca c/ Queijo */}
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm whitespace-nowrap shrink-0">🌮🧀</span>
-                <span className="text-xs font-black text-slate-900 truncate">Tapioca com Queijo</span>
-              </div>
-              <MacroPills calories={240} protein={10} carbs={33} fat={8} />
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() => onChange({ tapiocaCount: Math.max(0, config.tapiocaCount - 1) })}
-                disabled={config.tapiocaCount <= 0}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                aria-label="Diminuir tapioca"
-              >
-                -
-              </button>
-              <span className="w-5 text-center font-black text-xs text-slate-900">
-                {config.tapiocaCount}
-              </span>
-              <button
-                onClick={() => onChange({ tapiocaCount: Math.min(4, config.tapiocaCount + 1) })}
-                disabled={config.tapiocaCount >= 4}
-                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                aria-label="Aumentar tapioca"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* 3. Ovos (Mexidos ou Fritos) */}
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 space-y-2 shadow-2xs">
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 pr-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm whitespace-nowrap shrink-0">🍳🥚</span>
-                  <span className="text-xs font-black text-slate-900 truncate">
-                    Ovos ({config.eggType === 'fritos' ? 'Fritos' : 'Mexidos'})
-                  </span>
-                </div>
-                <MacroPills
-                  calories={config.eggType === 'fritos' ? 90 : 80}
-                  protein={6}
-                  fat={config.eggType === 'fritos' ? 7 : 6}
-                />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm whitespace-nowrap shrink-0">☕🥛</span>
+                <span className="text-xs font-black text-slate-900">Café com Leite</span>
               </div>
 
               <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
                 <button
-                  onClick={() => onChange({ eggCount: Math.max(0, config.eggCount - 1) })}
-                  disabled={config.eggCount <= 0}
+                  onClick={() =>
+                    onChange({ coffeeWithMilkCups: Math.max(0, config.coffeeWithMilkCups - 1) })
+                  }
+                  disabled={config.coffeeWithMilkCups <= 0}
                   className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Diminuir ovos"
+                  aria-label="Diminuir café com leite"
                 >
                   -
                 </button>
                 <span className="w-5 text-center font-black text-xs text-slate-900">
-                  {config.eggCount}
+                  {config.coffeeWithMilkCups}
                 </span>
                 <button
-                  onClick={() => onChange({ eggCount: Math.min(8, config.eggCount + 1) })}
-                  disabled={config.eggCount >= 8}
+                  onClick={() =>
+                    onChange({ coffeeWithMilkCups: Math.min(5, config.coffeeWithMilkCups + 1) })
+                  }
+                  disabled={config.coffeeWithMilkCups >= 5}
                   className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Aumentar ovos"
+                  aria-label="Aumentar café com leite"
                 >
                   +
                 </button>
               </div>
+            </div>
+            <MacroPills calories={95} protein={6} carbs={9} fat={4} />
+          </div>
+
+          {/* 2. Tapioca c/ Queijo */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm whitespace-nowrap shrink-0">🌮🧀</span>
+                <span className="text-xs font-black text-slate-900">Tapioca com Queijo</span>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => onChange({ tapiocaCount: Math.max(0, config.tapiocaCount - 1) })}
+                  disabled={config.tapiocaCount <= 0}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Diminuir tapioca"
+                >
+                  -
+                </button>
+                <span className="w-5 text-center font-black text-xs text-slate-900">
+                  {config.tapiocaCount}
+                </span>
+                <button
+                  onClick={() => onChange({ tapiocaCount: Math.min(4, config.tapiocaCount + 1) })}
+                  disabled={config.tapiocaCount >= 4}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Aumentar tapioca"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <MacroPills calories={240} protein={10} carbs={33} fat={8} />
+          </div>
+
+          {/* 3. Ovos (Mexidos ou Fritos) */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 space-y-2 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm whitespace-nowrap shrink-0">🍳🥚</span>
+                  <span className="text-xs font-black text-slate-900">
+                    Ovos ({config.eggType === 'fritos' ? 'Fritos' : 'Mexidos'})
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                  <button
+                    onClick={() => onChange({ eggCount: Math.max(0, config.eggCount - 1) })}
+                    disabled={config.eggCount <= 0}
+                    className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Diminuir ovos"
+                  >
+                    -
+                  </button>
+                  <span className="w-5 text-center font-black text-xs text-slate-900">
+                    {config.eggCount}
+                  </span>
+                  <button
+                    onClick={() => onChange({ eggCount: Math.min(8, config.eggCount + 1) })}
+                    disabled={config.eggCount >= 8}
+                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Aumentar ovos"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <MacroPills
+                calories={config.eggType === 'fritos' ? 90 : 80}
+                protein={6}
+                carbs={1}
+                fat={config.eggType === 'fritos' ? 7 : 6}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">
@@ -651,9 +641,9 @@ const CustomMealBuilder: React.FC<{
 
           {/* 4. Frutas (Banana, Laranja ou Maçã) */}
           <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 pr-1">
-                <div className="flex items-center gap-1.5">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm shrink-0">
                     {config.fruitType === 'banana'
                       ? '🍌'
@@ -661,48 +651,49 @@ const CustomMealBuilder: React.FC<{
                       ? '🍊'
                       : '🍎'}
                   </span>
-                  <span className="text-xs font-black text-slate-900 truncate">Fruta Fresca</span>
+                  <span className="text-xs font-black text-slate-900">Fruta Fresca</span>
                 </div>
-                <MacroPills
-                  calories={
-                    config.fruitType === 'banana'
-                      ? 105
-                      : config.fruitType === 'laranja'
-                      ? 62
-                      : 75
-                  }
-                  protein={1}
-                  carbs={
-                    config.fruitType === 'banana'
-                      ? 26
-                      : config.fruitType === 'laranja'
-                      ? 15
-                      : 19
-                  }
-                />
-              </div>
 
-              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                <button
-                  onClick={() => onChange({ fruitCount: Math.max(0, config.fruitCount - 1) })}
-                  disabled={config.fruitCount <= 0}
-                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Diminuir fruta"
-                >
-                  -
-                </button>
-                <span className="w-5 text-center font-black text-xs text-slate-900">
-                  {config.fruitCount}
-                </span>
-                <button
-                  onClick={() => onChange({ fruitCount: Math.min(4, config.fruitCount + 1) })}
-                  disabled={config.fruitCount >= 4}
-                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Aumentar fruta"
-                >
-                  +
-                </button>
+                <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                  <button
+                    onClick={() => onChange({ fruitCount: Math.max(0, config.fruitCount - 1) })}
+                    disabled={config.fruitCount <= 0}
+                    className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Diminuir fruta"
+                  >
+                    -
+                  </button>
+                  <span className="w-5 text-center font-black text-xs text-slate-900">
+                    {config.fruitCount}
+                  </span>
+                  <button
+                    onClick={() => onChange({ fruitCount: Math.min(4, config.fruitCount + 1) })}
+                    disabled={config.fruitCount >= 4}
+                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Aumentar fruta"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+              <MacroPills
+                calories={
+                  config.fruitType === 'banana'
+                    ? 105
+                    : config.fruitType === 'laranja'
+                    ? 62
+                    : 75
+                }
+                protein={1}
+                carbs={
+                  config.fruitType === 'banana'
+                    ? 26
+                    : config.fruitType === 'laranja'
+                    ? 15
+                    : 19
+                }
+                fat={0}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-1.5">
@@ -741,40 +732,40 @@ const CustomMealBuilder: React.FC<{
 
           {/* 5. Shake Proteico (se permitido) */}
           {allowShake && (
-            <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-              <div className="min-w-0 pr-1">
-                <div className="flex items-center gap-1.5">
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm whitespace-nowrap shrink-0">🥤⚡</span>
-                  <span className="text-xs font-black text-slate-900 truncate">Shake Proteico</span>
+                  <span className="text-xs font-black text-slate-900">Shake Proteico</span>
                 </div>
-                <MacroPills calories={210} protein={25} carbs={20} fat={3} />
-              </div>
 
-              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                <button
-                  onClick={() =>
-                    onChange({ shakeCount: Math.max(0, (config.shakeCount || 0) - 1) })
-                  }
-                  disabled={(config.shakeCount || 0) <= 0}
-                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Diminuir shake"
-                >
-                  -
-                </button>
-                <span className="w-5 text-center font-black text-xs text-slate-900">
-                  {config.shakeCount || 0}
-                </span>
-                <button
-                  onClick={() =>
-                    onChange({ shakeCount: Math.min(3, (config.shakeCount || 0) + 1) })
-                  }
-                  disabled={(config.shakeCount || 0) >= 3}
-                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
-                  aria-label="Aumentar shake"
-                >
-                  +
-                </button>
+                <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                  <button
+                    onClick={() =>
+                      onChange({ shakeCount: Math.max(0, (config.shakeCount || 0) - 1) })
+                    }
+                    disabled={(config.shakeCount || 0) <= 0}
+                    className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Diminuir shake"
+                  >
+                    -
+                  </button>
+                  <span className="w-5 text-center font-black text-xs text-slate-900">
+                    {config.shakeCount || 0}
+                  </span>
+                  <button
+                    onClick={() =>
+                      onChange({ shakeCount: Math.min(3, (config.shakeCount || 0) + 1) })
+                    }
+                    disabled={(config.shakeCount || 0) >= 3}
+                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                    aria-label="Aumentar shake"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+              <MacroPills calories={210} protein={25} carbs={20} fat={3} />
             </div>
           )}
         </div>
@@ -948,7 +939,6 @@ export const NutritionScreen: React.FC = () => {
   const targetProtein = userProfile?.targetProteinGrams || 185;
   const targetCalories = userProfile?.targetCaloriesKcal || 2200;
   const targetWaterMl = userProfile?.targetWaterMl || 4000;
-  const calorieMode = userProfile?.calorieMode || 'recomposicao';
 
   const currentLog = useLiveQuery(
     () => db.nutritionLogs.get(selectedDate),
@@ -1149,7 +1139,6 @@ export const NutritionScreen: React.FC = () => {
   ]);
 
   const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / targetProtein) * 100));
-  const remainingProtein = Math.max(0, targetProtein - dailyTotals.protein);
 
   const calorieProgress = Math.min(100, Math.round((dailyTotals.calories / targetCalories) * 100));
   const remainingCalories = targetCalories - dailyTotals.calories;
@@ -1350,176 +1339,138 @@ export const NutritionScreen: React.FC = () => {
     prot: number;
     carbs: number;
     fat: number;
-    badgeColor: string;
   }[] = [
     {
       key: 'chocSmallCount',
-      emoji: '🍫🍬',
+      emoji: '🍫',
       title: 'Doce Pequeno / Bombom',
-      examples: 'Bombom, quadradinho 25g, 3x Bis',
+      examples: 'Bombom, 3x Bis ou quadradinho 25g',
       kcal: 130,
       prot: 1,
       carbs: 16,
-      fat: 7,
-      badgeColor: 'bg-amber-50 text-amber-800 border-amber-200'
+      fat: 7
     },
     {
       key: 'snickersBarCount',
-      emoji: '🍬🍫',
+      emoji: '🍬',
       title: 'Barra de Chocolate / Snickers',
-      examples: 'Snickers, KitKat, Twix, barra média',
+      examples: 'Snickers, KitKat, Twix ou barra média',
       kcal: 250,
       prot: 4,
       carbs: 30,
-      fat: 12,
-      badgeColor: 'bg-amber-100/80 text-amber-900 border-amber-300'
+      fat: 12
     },
     {
       key: 'iceCreamCount',
-      emoji: '🍦🍰',
+      emoji: '🍦',
       title: 'Sorvete / Eskibom / Bolo',
       examples: 'Eskibom, picolé, sorvete ou fatia de bolo',
       kcal: 380,
       prot: 5,
       carbs: 44,
-      fat: 20,
-      badgeColor: 'bg-orange-50 text-orange-800 border-orange-200'
+      fat: 20
     },
     {
       key: 'saltySnackCount',
-      emoji: '🥨🍪',
+      emoji: '🥨',
       title: 'Salgadinho / Biscoito / Salgado',
       examples: 'Doritos, Cheetos, biscoito ou salgado',
       kcal: 450,
       prot: 6,
       carbs: 52,
-      fat: 24,
-      badgeColor: 'bg-orange-100/80 text-orange-900 border-orange-300'
+      fat: 24
     },
     {
       key: 'superBesteiraCount',
-      emoji: '🍕🍻',
+      emoji: '🍕',
       title: 'Exagero / Refeição Livre',
       examples: 'Rodízio, combo duplo ou bebida + petiscos',
       kcal: 1200,
       prot: 35,
       carbs: 120,
-      fat: 65,
-      badgeColor: 'bg-rose-50 text-rose-800 border-rose-200'
+      fat: 65
     }
   ];
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER CENTRALIZADO PREMIUM */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/60">
-        <div className="flex items-center justify-between mb-2">
-          <div className="w-16 shrink-0 flex items-center">
-            {isToday ? (
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
-                Hoje
-              </span>
-            ) : (
+      {/* HEADER MINIMALISTA DE ALTO CONTRASTE */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md py-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/80">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">
+              Nutrição
+            </h1>
+            {!isToday && (
               <button
                 onClick={() => setSelectedDate(todayStr)}
-                className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 active:scale-95"
+                className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200 active:scale-95 whitespace-nowrap"
               >
-                Hoje
+                Voltar p/ Hoje
               </button>
             )}
           </div>
 
-          <div className="flex-1 text-center min-w-0 px-1">
-            <h1 className="text-base font-black text-slate-900 tracking-tight leading-tight">
-              Dieta & Nutrição
-            </h1>
-          </div>
-
-          <div className="w-16 shrink-0 flex items-center justify-end gap-0.5">
+          <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded-xl border border-slate-200/90 shadow-2xs shrink-0">
             <button
               onClick={() => handleShiftDate(-1)}
-              className="w-5 h-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 active:scale-90"
+              className="w-6 h-6 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-transform"
               title="Dia anterior"
               aria-label="Dia anterior"
             >
-              <ChevronLeft className="w-3 h-3" />
+              <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
-            <div className="w-9 h-11 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center shrink-0">
-              <span className="text-[9px] font-black text-blue-600 uppercase tracking-wider leading-none">
-                {monthShort}
-              </span>
-              <span className="text-sm font-black text-slate-900 leading-none mt-0.5">
-                {dayNumber}
+            <div className="px-2 flex items-center gap-1.5 whitespace-nowrap">
+              {isToday && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              )}
+              <span className="text-xs font-black text-slate-900 tracking-tight">
+                {isToday ? `Hoje, ${dayNumber} ${monthShort}` : `${dayNumber} ${monthShort}`}
               </span>
             </div>
             <button
               onClick={() => handleShiftDate(1)}
               disabled={isToday}
-              className="w-5 h-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 active:scale-90 disabled:opacity-20"
+              className="w-6 h-6 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-transform disabled:opacity-25"
               title="Próximo dia"
               aria-label="Próximo dia"
             >
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           </div>
-        </div>
-
-        {/* METAS NA MESMA LINHA */}
-        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap overflow-x-auto no-scrollbar">
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
-            <Target className="w-2.5 h-2.5 text-blue-600 shrink-0" />
-            <span>Meta: {targetProtein}g Proteína</span>
-          </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
-            <Flame className="w-2.5 h-2.5 text-amber-600 fill-current shrink-0" />
-            <span>{targetCalories.toLocaleString('pt-BR')} kcal</span>
-          </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-200/80 shadow-2xs">
-            <Droplets className="w-2.5 h-2.5 text-cyan-600 fill-current shrink-0" />
-            <span>{(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L Água</span>
-          </span>
         </div>
       </div>
 
       <div className="space-y-3">
         {/* ========================================================= */}
-        {/* 1. PAINEL DE METAS & MACROS DO DIA */}
+        {/* 1. PAINEL DE METAS & MACROS DO DIA (MINIMALISTA) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3 anim-card-1">
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/90 shadow-xs space-y-3.5 anim-card-1">
           {/* TRACKER DE PROTEÍNA */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-                  <Target className="w-4 h-4 stroke-[2.5]" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Proteína Diária
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <h2 className="text-lg font-black text-slate-900 leading-none">
-                      {dailyTotals.protein}g
-                    </h2>
-                    <span className="text-xs font-bold text-slate-400">
-                      / {targetProtein}g
-                    </span>
-                  </div>
-                </div>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  Proteína
+                </span>
+                <span className="text-sm font-black text-blue-600">
+                  {dailyTotals.protein}g
+                  <span className="text-xs font-bold text-slate-400"> / {targetProtein}g</span>
+                </span>
               </div>
 
               <span
-                className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
+                className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
                   dailyTotals.protein >= targetProtein
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-blue-50 text-blue-700 border border-blue-100'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200/80'
                 }`}
               >
                 {proteinProgress}%
               </span>
             </div>
 
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ease-out rounded-full ${
                   dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
@@ -1527,49 +1478,29 @@ export const NutritionScreen: React.FC = () => {
                 style={{ width: `${proteinProgress}%` }}
               />
             </div>
-
-            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
-              <span>
-                {remainingProtein > 0 ? (
-                  <>
-                    Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para a meta
-                  </>
-                ) : (
-                  <span className="text-emerald-700 font-bold">
-                    ✨ Meta proteica batida!
-                  </span>
-                )}
-              </span>
-            </div>
           </div>
 
           {/* TRACKER DE CALORIAS */}
-          <div className="pt-2.5 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
-                  <Flame className="w-4 h-4 fill-current" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Calorias ({calorieMode === 'recomposicao' ? 'Déficit' : 'Manutenção'})
+          <div className="pt-3 border-t border-slate-100">
+            <div className="flex items-baseline justify-between mb-1.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  Calorias
+                </span>
+                <span className="text-sm font-black text-slate-900">
+                  {dailyTotals.calories.toLocaleString('pt-BR')}
+                  <span className="text-xs font-bold text-slate-400">
+                    {' '}
+                    / {targetCalories.toLocaleString('pt-BR')} kcal
                   </span>
-                  <div className="flex items-baseline gap-1">
-                    <h2 className="text-lg font-black text-slate-900 leading-none">
-                      {dailyTotals.calories.toLocaleString('pt-BR')}
-                    </h2>
-                    <span className="text-xs font-bold text-slate-400">
-                      / {targetCalories.toLocaleString('pt-BR')} kcal
-                    </span>
-                  </div>
-                </div>
+                </span>
               </div>
 
               <span
-                className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
+                className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
                   remainingCalories >= 0
-                    ? 'bg-amber-50 text-amber-800 border border-amber-200/70'
-                    : 'bg-rose-100 text-rose-800'
+                    ? 'bg-slate-100 text-slate-800 border border-slate-200/80'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200'
                 }`}
               >
                 {remainingCalories >= 0
@@ -1578,7 +1509,7 @@ export const NutritionScreen: React.FC = () => {
               </span>
             </div>
 
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ease-out rounded-full ${
                   dailyTotals.calories <= targetCalories
@@ -1592,32 +1523,32 @@ export const NutritionScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Breakdown de Macros Semânticos */}
-          <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-center">
-            <div className="p-2 rounded-2xl bg-blue-50/60 border border-blue-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-blue-700 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+          {/* Breakdown de Macros Padronizado */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                 <span>Proteínas</span>
               </div>
-              <div className="text-sm font-black text-blue-950 mt-0.5">
+              <div className="text-base font-black text-slate-900 mt-0.5">
                 {dailyTotals.protein}g
               </div>
             </div>
-            <div className="p-2 rounded-2xl bg-amber-50/60 border border-amber-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-amber-800 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                 <span>Carboidratos</span>
               </div>
-              <div className="text-sm font-black text-amber-950 mt-0.5">
+              <div className="text-base font-black text-slate-900 mt-0.5">
                 {dailyTotals.carbs}g
               </div>
             </div>
-            <div className="p-2 rounded-2xl bg-purple-50/60 border border-purple-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-purple-800 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-slate-700 shrink-0" />
                 <span>Gorduras</span>
               </div>
-              <div className="text-sm font-black text-purple-950 mt-0.5">
+              <div className="text-base font-black text-slate-900 mt-0.5">
                 {dailyTotals.fat}g
               </div>
             </div>
@@ -1625,93 +1556,105 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* 2. SUPLEMENTAÇÃO & PROTEÍNA RÁPIDA (WHEY + LEITE) */}
+        {/* 2. PROTEÍNA RÁPIDA (WHEY + LEITE) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
-          <div className="flex items-center gap-2 mb-0.5">
-            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 truncate">
-              Suplementação & Proteína Rápida
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-2.5 anim-card-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              Proteína Rápida
             </h3>
           </div>
 
           {/* WHEY PROTEIN */}
-          <div className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
-                ⚡🥤
+          <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                  🥤
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-slate-900 leading-snug">
+                    Whey Protein
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium leading-snug">
+                    Dose padrão (30g)
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-xs font-black text-slate-900 truncate">Whey Protein</div>
-                <MacroPills calories={95} protein={20} />
-              </div>
-            </div>
 
-            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => handleAdjustWheyScoops(-1)}
-                disabled={wheyScoops <= 0}
-                className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
-                aria-label="Diminuir scoop"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <div className="w-5 text-center font-black text-xs text-slate-900">
-                {wheyScoops}
+              <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                <button
+                  onClick={() => handleAdjustWheyScoops(-1)}
+                  disabled={wheyScoops <= 0}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
+                  aria-label="Diminuir scoop"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-5 text-center font-black text-xs text-slate-900">
+                  {wheyScoops}
+                </div>
+                <button
+                  onClick={() => handleAdjustWheyScoops(1)}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                  aria-label="Aumentar scoop"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={() => handleAdjustWheyScoops(1)}
-                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
-                aria-label="Aumentar scoop"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
             </div>
+            <MacroPills calories={95} protein={20} carbs={2} fat={1} />
           </div>
 
           {/* COPO DE LEITE */}
-          <div className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
-                🥛🐄
+          <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                  🥛
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-slate-900 leading-snug">
+                    Copo de Leite (200ml)
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium leading-snug">
+                    Integral ou semidesnatado
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-xs font-black text-slate-900 truncate">Copo de Leite (200ml)</div>
-                <MacroPills calories={110} protein={6} carbs={9} fat={5} />
-              </div>
-            </div>
 
-            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => handleAdjustMilkGlasses(-1)}
-                disabled={milkGlasses <= 0}
-                className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
-                aria-label="Diminuir copo de leite"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <div className="w-5 text-center font-black text-xs text-slate-900">
-                {milkGlasses}
+              <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                <button
+                  onClick={() => handleAdjustMilkGlasses(-1)}
+                  disabled={milkGlasses <= 0}
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
+                  aria-label="Diminuir copo de leite"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-5 text-center font-black text-xs text-slate-900">
+                  {milkGlasses}
+                </div>
+                <button
+                  onClick={() => handleAdjustMilkGlasses(1)}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                  aria-label="Aumentar copo de leite"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={() => handleAdjustMilkGlasses(1)}
-                className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
-                aria-label="Aumentar copo de leite"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
             </div>
+            <MacroPills calories={110} protein={6} carbs={9} fat={5} />
           </div>
         </div>
 
         {/* ========================================================= */}
         {/* 3. REFEIÇÕES DO DIA (CAFÉ, ALMOÇO, LANCHE, JANTAR) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3.5 anim-card-3">
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="w-4 h-4 text-blue-600 shrink-0" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              Refeições do Dia
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-3.5 anim-card-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              Refeições
             </h3>
           </div>
 
@@ -2463,23 +2406,23 @@ export const NutritionScreen: React.FC = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* 4. HIDRATAÇÃO DIÁRIA (META 4.0L) */}
+        {/* 4. HIDRATAÇÃO (META 4.0L) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs anim-card-4">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs anim-card-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2.5">
-              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0">
-                💧🥤
+              <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-200/70 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                💧
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Hidratação Diária
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                  Hidratação
                 </span>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1 mt-0.5">
                   <h3 className="text-base font-black text-slate-900 leading-none">
                     {(currentData.waterMl / 1000).toFixed(2)}L
                   </h3>
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-bold text-slate-400">
                     / {(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L
                   </span>
                 </div>
@@ -2489,15 +2432,15 @@ export const NutritionScreen: React.FC = () => {
             <span
               className={`text-xs font-black px-2.5 py-1 rounded-xl ${
                 waterProgress >= 100
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-cyan-50 text-cyan-700 border border-cyan-100'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-cyan-50 text-cyan-800 border border-cyan-200/80'
               }`}
             >
               {waterProgress}%
             </span>
           </div>
 
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
+          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
             <div
               className={`h-full transition-all duration-300 ease-out rounded-full ${
                 waterProgress >= 100 ? 'bg-emerald-500' : 'bg-cyan-500'
@@ -2510,35 +2453,35 @@ export const NutritionScreen: React.FC = () => {
             <button
               onClick={() => handleAdjustWater(-250)}
               disabled={currentData.waterMl <= 0}
-              className="py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold active:scale-95 transition-all disabled:opacity-40 min-h-[40px] whitespace-nowrap"
+              className="py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-black active:scale-95 transition-all disabled:opacity-40 min-h-[40px] whitespace-nowrap"
             >
               -250 ml
             </button>
             <button
               onClick={() => handleAdjustWater(250)}
-              className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
+              className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
             >
-              🥤 +250 ml
+              +250 ml
             </button>
             <button
               onClick={() => handleAdjustWater(500)}
-              className="py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
+              className="py-2 rounded-xl border border-blue-200 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap shadow-2xs"
             >
-              💧 +500 ml
+              +500 ml
             </button>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* 5. CONTROLE DE ESCAPES CALÓRICOS GRANULAR (5 NÍVEIS) */}
+        {/* 5. ESCAPES (5 NÍVEIS PADRONIZADOS) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-5">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-2.5 anim-card-5">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 truncate">
-              Doces, Salgadinhos & Escapes
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              Escapes
             </h3>
             {escapeMacros.calories > 0 && (
-              <span className="text-[11px] font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
+              <span className="text-[11px] font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200 whitespace-nowrap shrink-0">
                 +{escapeMacros.calories} kcal
               </span>
             )}
@@ -2550,85 +2493,93 @@ export const NutritionScreen: React.FC = () => {
               return (
                 <div
                   key={item.key}
-                  className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 ${
+                  className={`p-3 rounded-2xl border transition-all ${
                     count > 0
                       ? 'bg-amber-50/40 border-amber-300 shadow-2xs'
-                      : 'bg-slate-50/60 border-slate-200/80'
+                      : 'bg-slate-50/80 border-slate-200/90'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="min-w-[52px] h-10 px-2 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
-                      {item.emoji}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-black text-slate-900 truncate">
-                        {item.title}
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                        {item.emoji}
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-                        {item.examples}
-                      </p>
-                      <MacroPills
-                        calories={item.kcal}
-                        protein={item.prot}
-                        carbs={item.carbs}
-                        fat={item.fat}
-                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-black text-slate-900 leading-snug">
+                          {item.title}
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium leading-snug mt-0.5">
+                          {item.examples}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Stepper de Escape */}
+                    <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustEscape(item.key, -1)}
+                        disabled={count <= 0}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30 active:scale-90 transition-transform"
+                        aria-label={`Diminuir ${item.title}`}
+                      >
+                        -
+                      </button>
+                      <span className="w-5 text-center font-black text-xs text-slate-900">
+                        {count}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustEscape(item.key, 1, item.title)}
+                        className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-90 transition-transform"
+                        aria-label={`Adicionar ${item.title}`}
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
 
-                  {/* Stepper de Escape */}
-                  <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustEscape(item.key, -1)}
-                      disabled={count <= 0}
-                      className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30 active:scale-90 transition-transform"
-                      aria-label={`Diminuir ${item.title}`}
-                    >
-                      -
-                    </button>
-                    <span className="w-5 text-center font-black text-xs text-slate-900">
-                      {count}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustEscape(item.key, 1, item.title)}
-                      className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs active:scale-90 transition-transform"
-                      aria-label={`Adicionar ${item.title}`}
-                    >
-                      +
-                    </button>
-                  </div>
+                  <MacroPills
+                    calories={item.kcal}
+                    protein={item.prot}
+                    carbs={item.carbs}
+                    fat={item.fat}
+                  />
                 </div>
               );
             })}
 
             {/* Caso exista besteiraCount legado salvo no dia, exibir para permitir ajuste */}
             {(currentData.escapes?.besteiraCount || 0) > 0 && (
-              <div className="p-2.5 rounded-2xl border border-amber-300 bg-amber-50/40 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-xs font-black text-slate-900 truncate">
-                    🍩 Escape Rápido (Atalho)
+              <div className="p-3 rounded-2xl border border-amber-300 bg-amber-50/40">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                      🍩
+                    </div>
+                    <div className="text-xs font-black text-slate-900">
+                      Escape Rápido (Atalho)
+                    </div>
                   </div>
-                  <MacroPills calories={600} protein={6} carbs={65} fat={30} />
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
+                    <button
+                      onClick={() => handleAdjustEscape('besteiraCount', -1)}
+                      className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
+                    >
+                      -
+                    </button>
+                    <span className="w-5 text-center font-black text-xs">
+                      {currentData.escapes.besteiraCount}
+                    </span>
+                    <button
+                      onClick={() => handleAdjustEscape('besteiraCount', 1)}
+                      className="w-7 h-7 rounded-lg bg-slate-900 text-white font-bold text-xs"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
-                  <button
-                    onClick={() => handleAdjustEscape('besteiraCount', -1)}
-                    className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
-                  >
-                    -
-                  </button>
-                  <span className="w-5 text-center font-black text-xs">
-                    {currentData.escapes.besteiraCount}
-                  </span>
-                  <button
-                    onClick={() => handleAdjustEscape('besteiraCount', 1)}
-                    className="w-7 h-7 rounded-lg bg-amber-600 text-white font-bold text-xs"
-                  >
-                    +
-                  </button>
-                </div>
+                <MacroPills calories={600} protein={6} carbs={65} fat={30} />
               </div>
             )}
           </div>

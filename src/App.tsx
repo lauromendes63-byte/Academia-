@@ -34,6 +34,7 @@ export const AppContent: React.FC = () => {
     remoteVersion,
     isUpdating,
     dismissed,
+    checkForUpdate,
     applyUpdate,
     dismissBanner
   } = useAppUpdate();
@@ -110,6 +111,7 @@ export const AppContent: React.FC = () => {
   // Smooth Tab Switcher (Uses Native View Transitions if supported, or CSS slide)
   const handleTabChange = (newTab: TabType) => {
     if (newTab === activeTab) return;
+    checkForUpdate(false);
     const oldIdx = TAB_ORDER.indexOf(activeTab);
     const newIdx = TAB_ORDER.indexOf(newTab);
     const direction = newIdx >= oldIdx ? 'forward' : 'backward';

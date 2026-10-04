@@ -21,72 +21,25 @@ interface ExerciseGuideData {
 function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGuideData {
   const lower = exerciseName.toLowerCase();
 
-  // 1. Puxada / Barra Fixa no Graviton
-  if (lower.includes('puxada alta') || lower.includes('pulley')) {
+  // ==========================================================================
+  // 1. RESOLUÇÃO PRIORITÁRIA PELO NOME ATIVO DO EXERCÍCIO (INCLUINDO SUBSTITUTOS)
+  // ==========================================================================
+
+  // Rosca Bayesiana na Polia (pull_4 no seedData)
+  if (lower.includes('bayesiana') || lower.includes('baiana') || lower.includes('rosca direta polia')) {
     return {
-      gifUrl: '/exercises/pull_1_pulldown.gif',
-      primaryMuscle: 'Grande Dorsal & Redondo Maior',
+      gifUrl: '/exercises/pull_5.gif',
+      primaryMuscle: 'Bíceps (Cabeça Longa & Pico)',
       steps: [
-        'Abaixe os ombros (deprima as escápulas) antes de puxar a barra.',
-        'Traga a barra em direção à parte alta do peito conduzindo pelos cotovelos.',
-        'Suba controlando o peso até alongar totalmente a dorsal no topo.'
+        'Dê um passo à frente da polia baixa deixando o braço alongado atrás da linha do tronco.',
+        'Mantenha o cotovelo fixo e flexione o antebraço à frente contraindo forte o bíceps.',
+        'Retorne devagar sentindo o alongamento completo sem mover o ombro.'
       ]
     };
   }
 
-  if (exerciseId === 'pull_1' || lower.includes('barra fixa')) {
-    return {
-      gifUrl: '/exercises/pull_1.gif',
-      primaryMuscle: 'Grande Dorsal & Redondo Maior',
-      steps: [
-        'Deprima as escápulas (abaixe os ombros) antes de dobrar os cotovelos.',
-        'Suba conduzindo os cotovelos em direção às costelas mantendo o peito aberto.',
-        'Desça controlando o movimento até alongar totalmente a dorsal.'
-      ]
-    };
-  }
-
-  // 2. Remada Baixa na Polia
-  if (exerciseId === 'pull_2' || lower.includes('remada baixa') || lower.includes('triângulo')) {
-    return {
-      gifUrl: '/exercises/pull_2.gif',
-      primaryMuscle: 'Meio das Costas & Dorsal',
-      steps: [
-        'Mantenha a coluna neutra e o tronco firme em 90°.',
-        'Puxe até a linha do abdômen fechando as escápulas atrás.',
-        'Estenda os braços à frente alongando as costas sem curvar a lombar.'
-      ]
-    };
-  }
-
-  // 3. Remada Articulada Máquina
-  if (exerciseId === 'pull_3' || lower.includes('remada articulada') || lower.includes('cavalinho')) {
-    return {
-      gifUrl: '/exercises/pull_3.gif',
-      primaryMuscle: 'Dorsal & Trapézio Médio',
-      steps: [
-        'Apoie o peitoral firmemente no suporte da máquina.',
-        'Traga os cotovelos para trás passando da linha do tronco.',
-        'Retorne devagar mantendo a tensão contínua nas costas.'
-      ]
-    };
-  }
-
-  // 4. Crucifixo Invertido no Peck Deck
-  if (exerciseId === 'pull_4' || lower.includes('crucifixo inverso') || lower.includes('crucifixo invertido') || lower.includes('face pull')) {
-    return {
-      gifUrl: '/exercises/pull_4.gif',
-      primaryMuscle: 'Deltoide Posterior',
-      steps: [
-        'Ajuste o banco para que as mãos fiquem na altura dos ombros.',
-        'Abra os braços para trás com os cotovelos levemente flexionados.',
-        'Volte controlando o peso sem deixar as placas baterem.'
-      ]
-    };
-  }
-
-  // 5. Rosca Bayesiana / Rosca no Banco Inclinado
-  if (lower.includes('inclinado')) {
+  // Rosca no Banco Inclinado
+  if (lower.includes('rosca') && lower.includes('inclinado')) {
     return {
       gifUrl: '/exercises/pull_5_incline.gif',
       primaryMuscle: 'Bíceps (Cabeça Longa)',
@@ -98,96 +51,208 @@ function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGui
     };
   }
 
-  if (exerciseId === 'pull_5' || lower.includes('bayesiana') || lower.includes('baiana')) {
-    return {
-      gifUrl: '/exercises/pull_5.gif',
-      primaryMuscle: 'Bíceps (Cabeça Longa)',
-      steps: [
-        'Dê um passo à frente da polia baixa deixando o braço alongado atrás do tronco.',
-        'Mantenha o cotovelo fixo e flexione o antebraço à frente contraindo o bíceps.',
-        'Retorne devagar sentindo o alongamento sem mover o ombro.'
-      ]
-    };
-  }
-
-  // 6. Rosca Martelo / Rosca Scott Máquina
-  if (lower.includes('martelo')) {
-    return {
-      gifUrl: '/exercises/pull_6_hammer.gif',
-      primaryMuscle: 'Braquial & Braquiorradial',
-      steps: [
-        'Segure os halteres em pegada neutra (palmas voltadas uma para a outra).',
-        'Suba os pesos mantendo os cotovelos colados ao lado do tronco.',
-        'Desça de forma controlada sem balançar o corpo.'
-      ]
-    };
-  }
-
-  if (exerciseId === 'pull_6' || lower.includes('scott')) {
+  // Rosca Scott
+  if (lower.includes('scott')) {
     return {
       gifUrl: '/exercises/pull_6.gif',
       primaryMuscle: 'Bíceps Braquial',
       steps: [
         'Apoie toda a parte de trás dos braços no banco Scott sem deixar folga.',
         'Suba contraindo o bíceps sem desencostar os cotovelos do apoio.',
-        'Desça até quase estender o braço mantendo tensão na parte baixa.'
+        'Desça até quase estender o braço mantendo tensão contínua.'
       ]
     };
   }
 
-  // 7. Supino Inclinado c/ Halteres
-  if (exerciseId === 'push_1' || (lower.includes('supino') && lower.includes('inclinado'))) {
+  // Rosca Martelo (pull_5 no seedData)
+  if (lower.includes('martelo') || lower.includes('rosca inversa')) {
+    return {
+      gifUrl: '/exercises/pull_6_hammer.gif',
+      primaryMuscle: 'Braquial & Antebraço',
+      steps: [
+        'Segure os pesos em pegada neutra (palmas voltadas uma para a outra).',
+        'Suba mantendo os cotovelos colados ao lado do tronco.',
+        'Desça de forma controlada sem balançar o tronco.'
+      ]
+    };
+  }
+
+  // Crucifixo Invertido no Peck Deck / Face Pull (pull_3 no seedData)
+  if (
+    lower.includes('crucifixo invertido') ||
+    lower.includes('crucifixo inverso') ||
+    lower.includes('face pull') ||
+    lower.includes('posterior')
+  ) {
+    return {
+      gifUrl: '/exercises/pull_4.gif',
+      primaryMuscle: 'Deltoide Posterior',
+      steps: [
+        'Ajuste o banco para que as mãos fiquem exatamente na altura dos ombros.',
+        'Abra os braços para trás conduzindo pelos cotovelos levemente flexionados.',
+        'Retorne controlando o peso sem deixar as placas baterem.'
+      ]
+    };
+  }
+
+  // Puxada Alta / Pulley
+  if (lower.includes('puxada') || lower.includes('puxador') || lower.includes('pulley')) {
+    return {
+      gifUrl: '/exercises/pull_1_pulldown.gif',
+      primaryMuscle: 'Grande Dorsal & Costas',
+      steps: [
+        'Abaixe os ombros (deprima as escápulas) antes de puxar a barra.',
+        'Traga a barra até a parte alta do peito conduzindo pelos cotovelos.',
+        'Suba controlando o peso até alongar totalmente a dorsal.'
+      ]
+    };
+  }
+
+  // Barra Fixa no Graviton (pull_1 no seedData)
+  if (lower.includes('barra fixa') || exerciseId === 'pull_1') {
+    return {
+      gifUrl: '/exercises/pull_1.gif',
+      primaryMuscle: 'Grande Dorsal & Costas',
+      steps: [
+        'Deprima as escápulas (abaixe os ombros) antes de flexionar os cotovelos.',
+        'Suba conduzindo os cotovelos em direção às costelas mantendo o peito aberto.',
+        'Desça controlando o movimento até alongar totalmente a dorsal.'
+      ]
+    };
+  }
+
+  // Remada Articulada / Unilateral / Curvada
+  if (lower.includes('remada articulada') || lower.includes('cavalinho') || lower.includes('remada curvada')) {
+    return {
+      gifUrl: '/exercises/pull_3.gif',
+      primaryMuscle: 'Dorsal & Meio das Costas',
+      steps: [
+        'Mantenha o tronco firme e a coluna alinhada.',
+        'Traga os cotovelos para trás passando da linha do tronco.',
+        'Retorne devagar mantendo a tensão contínua nas costas.'
+      ]
+    };
+  }
+
+  // Remada Baixa na Polia (pull_2 no seedData)
+  if (lower.includes('remada') || exerciseId === 'pull_2') {
+    return {
+      gifUrl: '/exercises/pull_2.gif',
+      primaryMuscle: 'Costas (Espessura & Dorsal)',
+      steps: [
+        'Mantenha a coluna neutra, peito estufado e tronco firme em 90°.',
+        'Puxe o triângulo até o abdômen fechando bem as escápulas atrás.',
+        'Estenda os braços à frente alongando a dorsal sem curvar a lombar.'
+      ]
+    };
+  }
+
+  // Supino Inclinado c/ Halteres (push_2 no seedData)
+  if (lower.includes('supino') && lower.includes('inclinado')) {
     return {
       gifUrl: '/exercises/push_1.gif',
       primaryMuscle: 'Peitoral Superior (Clavicular)',
       steps: [
-        'Banco entre 30° e 45° com escápulas fechadas e cotovelos a ~45° do tronco.',
+        'Ajuste o banco entre 30° e 45° com escápulas fechadas e cotovelos a ~45°.',
         'Desça os halteres controladamente até a linha da clavícula.',
         'Empurre para cima alinhando os pesos sobre a parte alta do peito.'
       ]
     };
   }
 
-  // 8. Supino Máquina
-  if (exerciseId === 'push_2' || lower.includes('supino máquina') || lower.includes('supino reto')) {
+  // Supino Máquina
+  if (lower.includes('supino máquina')) {
     return {
       gifUrl: '/exercises/push_2.gif',
       primaryMuscle: 'Peitoral Maior',
       steps: [
         'Mantenha as costas firmes no encosto e os ombros baixos.',
-        'Empurre as manoplas até quase estender os cotovelos contraindo o peitoral.',
-        'Retorne devagar alongando bem o peito sem soltar o peso.'
+        'Empurre as manoplas contraindo o peitoral sem desencostar as escápulas.',
+        'Retorne devagar alongando bem o peito.'
       ]
     };
   }
 
-  // 9. Elevação Lateral
-  if (lower.includes('elevação lateral') && lower.includes('polia')) {
+  // Supino Reto Barra ou Halteres (push_1 no seedData)
+  if (lower.includes('supino') || lower.includes('flexão')) {
+    return {
+      gifUrl: '/exercises/push_bench_press.gif',
+      primaryMuscle: 'Peitoral Maior',
+      steps: [
+        'Feche as escápulas contra o banco e mantenha os pés firmes no chão.',
+        'Desça a barra controladamente até a linha média do esterno (peitoral).',
+        'Empurre com firmeza mantendo os cotovelos levemente angulados (~45°-60°).'
+      ]
+    };
+  }
+
+  // Crucifixo no Peck Deck / Crossover (push_4 no seedData)
+  if (lower.includes('crucifixo') || lower.includes('peck deck') || lower.includes('crossover')) {
+    return {
+      gifUrl: '/exercises/push_pec_deck.gif',
+      primaryMuscle: 'Peitoral Maior (Isolamento)',
+      steps: [
+        'Apoie as costas no banco e mantenha os cotovelos levemente flexionados.',
+        'Feche os braços à frente esmagando o peitoral por 1 segundo no centro.',
+        'Abra de forma controlada alongando o peito sem jogar os ombros para frente.'
+      ]
+    };
+  }
+
+  // Elevação Lateral na Polia Baixa (push_3 no seedData)
+  if (lower.includes('elevação') && lower.includes('polia')) {
     return {
       gifUrl: '/exercises/push_3_cable.gif',
       primaryMuscle: 'Deltoide Lateral',
       steps: [
         'Posicione-se ao lado da polia baixa mantendo o tronco firme.',
         'Eleve o braço lateralmente até a linha do ombro guiando pelo cotovelo.',
-        'Desça controlando a resistência contínua do cabo.'
+        'Desça controlando a tensão contínua do cabo.'
       ]
     };
   }
 
-  if (exerciseId === 'push_3' || lower.includes('elevação lateral')) {
+  // Elevação Lateral c/ Halteres
+  if (lower.includes('elevação')) {
     return {
       gifUrl: '/exercises/push_3.gif',
       primaryMuscle: 'Deltoide Lateral',
       steps: [
-        'Incline-se levemente à frente com os cotovelos sutilmente flexionados.',
+        'Incline-se sutilmente à frente com os cotovelos levemente flexionados.',
         'Suba os braços até a linha dos ombros sem encolher o trapézio.',
         'Desça controlando o peso até próximo da lateral da coxa.'
       ]
     };
   }
 
-  // 10. Tríceps Corda na Polia
-  if (exerciseId === 'push_4' || lower.includes('tríceps corda') || lower.includes('testa')) {
+  // Mergulho Paralelas no Graviton (push_5 no seedData)
+  if (lower.includes('mergulho') || lower.includes('paralelas') || exerciseId === 'push_5') {
+    return {
+      gifUrl: '/exercises/push_5.gif',
+      primaryMuscle: 'Peitoral Inferior & Tríceps',
+      steps: [
+        'Mantenha os ombros baixos (longe das orelhas) e incline levemente o tronco à frente.',
+        'Desça flexionando os cotovelos de forma controlada até cerca de 90°.',
+        'Empurre as barras para baixo estendendo os braços com firmeza.'
+      ]
+    };
+  }
+
+  // Tríceps Francês / Testa (push_7 no seedData)
+  if (lower.includes('francês') || lower.includes('testa')) {
+    return {
+      gifUrl: '/exercises/push_french_press.gif',
+      primaryMuscle: 'Tríceps (Cabeça Longa)',
+      steps: [
+        'Mantenha os braços elevados e os cotovelos apontados para frente (sem abrir).',
+        'Flexione os antebraços atrás da cabeça alongando bem o tríceps.',
+        'Estenda completamente os cotovelos mantendo o tronco firme.'
+      ]
+    };
+  }
+
+  // Tríceps Polia Alta c/ Corda / Pulley (push_6 no seedData)
+  if (lower.includes('tríceps')) {
     return {
       gifUrl: '/exercises/push_4.gif',
       primaryMuscle: 'Tríceps Braquial',
@@ -199,49 +264,50 @@ function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGui
     };
   }
 
-  // 11. Mergulho Paralelas no Graviton
-  if (exerciseId === 'push_5' || lower.includes('mergulho') || lower.includes('paralelas')) {
+  // Abdominal na Polia Alta c/ Corda (lower1_6 e lower2_6 no seedData)
+  if (lower.includes('abdominal') || lower.includes('prancha') || exerciseId === 'lower1_6' || exerciseId === 'lower2_6') {
     return {
-      gifUrl: '/exercises/push_5.gif',
-      primaryMuscle: 'Peitoral Inferior & Tríceps',
+      gifUrl: '/exercises/abs_cable_crunch.gif',
+      primaryMuscle: 'Reto Abdominal',
       steps: [
-        'Mantenha os ombros baixos (longe das orelhas) e o tronco levemente inclinado.',
-        'Desça dobrando os cotovelos de forma controlada até cerca de 90°.',
-        'Empurre as barras para baixo estendendo os braços com firmeza.'
+        'Ajoelhe-se de frente para a polia segurando a corda firme ao lado da cabeça.',
+        'Curve a coluna para baixo aproximando as costelas do quadril (sem sentar nos calcanhares).',
+        'Retorne devagar alongando o abdômen sob tensão.'
       ]
     };
   }
 
-  // 12. Agachamento Hack Machine / Leg Press
-  if (lower.includes('leg press')) {
+  // Leg Press 45° (lower1_1, lower1_4, lower2_2 no seedData)
+  if (lower.includes('leg press') || lower.includes('leg 45')) {
     return {
       gifUrl: '/exercises/leg2_2.gif',
       primaryMuscle: 'Quadríceps & Glúteos',
       steps: [
-        'Mantenha o quadril e a lombar totalmente colados no banco.',
-        'Desça a plataforma flexionando os joelhos em direção ao peito.',
+        'Mantenha o quadril e a lombar totalmente apoiados no encosto.',
+        'Desça a plataforma flexionando os joelhos de forma controlada.',
         'Empurre pelos calcanhares sem travar os joelhos no topo.'
       ]
     };
   }
 
-  if (exerciseId === 'leg1_1' || lower.includes('hack') || lower.includes('agachamento')) {
+  // Agachamento Hack / Smith / Búlgaro / Sumô
+  if (lower.includes('hack') || lower.includes('agachamento') || lower.includes('búlgaro') || lower.includes('passada')) {
     return {
       gifUrl: '/exercises/leg1_1.gif',
       primaryMuscle: 'Quadríceps & Glúteos',
       steps: [
-        'Apoie totalmente a coluna e os ombros no suporte do Hack.',
-        'Desça flexionando os joelhos na direção da ponta dos pés até ~90°.',
+        'Mantenha a coluna firme e o abdômen contraído.',
+        'Desça flexionando os joelhos alinhados com a ponta dos pés até ~90°.',
         'Suba empurrando firme pelo meio do pé e calcanhar.'
       ]
     };
   }
 
-  // 13. Cadeira Extensora
-  if (exerciseId === 'leg1_2' || lower.includes('extensora')) {
+  // Cadeira Extensora (lower1_2 e lower2_4 no seedData)
+  if (lower.includes('extensora') || lower.includes('sissy')) {
     return {
       gifUrl: '/exercises/leg1_2.gif',
-      primaryMuscle: 'Quadríceps',
+      primaryMuscle: 'Quadríceps Isolado',
       steps: [
         'Alinhe o joelho com o eixo da máquina e segure firme nos apoios.',
         'Estenda totalmente os joelhos contraindo forte o quadríceps no topo.',
@@ -250,8 +316,8 @@ function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGui
     };
   }
 
-  // 14. Cadeira Flexora / Mesa Flexora
-  if (exerciseId === 'leg2_3' || lower.includes('mesa flexora')) {
+  // Mesa Flexora
+  if (lower.includes('mesa flexora')) {
     return {
       gifUrl: '/exercises/leg2_3.gif',
       primaryMuscle: 'Posterior de Coxa',
@@ -263,33 +329,34 @@ function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGui
     };
   }
 
-  if (exerciseId === 'leg1_3' || lower.includes('flexora')) {
+  // Cadeira Flexora (lower1_3 e lower2_3 no seedData)
+  if (lower.includes('flexora')) {
     return {
       gifUrl: '/exercises/leg1_3.gif',
       primaryMuscle: 'Posterior de Coxa',
       steps: [
-        'Encoste bem a lombar e ajuste a trava sobre as coxas.',
+        'Encoste bem a lombar e ajuste a trava firme sobre as coxas.',
         'Puxe o rolo para baixo e para trás flexionando ao máximo os joelhos.',
         'Retorne de forma controlada sem soltar o peso.'
       ]
     };
   }
 
-  // 15. Stiff / RDL
-  if (exerciseId === 'leg2_1' || lower.includes('stiff') || lower.includes('rdl') || lower.includes('terra')) {
+  // Stiff / RDL (lower2_1 no seedData)
+  if (lower.includes('stiff') || lower.includes('rdl') || lower.includes('good morning') || lower.includes('elevação pélvica')) {
     return {
       gifUrl: '/exercises/leg2_1.gif',
       primaryMuscle: 'Posterior de Coxa & Glúteo',
       steps: [
         'Destrave levemente os joelhos e mantenha a coluna 100% reta.',
-        'Desça a barra rente às pernas projetando o quadril para trás.',
-        'Suba contraindo glúteos e posterior assim que sentir o alongamento máximo.'
+        'Desça os pesos rente às pernas projetando o quadril para trás.',
+        'Suba contraindo glúteos e posterior ao atingir o alongamento máximo.'
       ]
     };
   }
 
-  // 16. Panturrilha Sentado vs Em Pé
-  if (exerciseId === 'leg2_4' || lower.includes('sentado')) {
+  // Panturrilha Sentado
+  if (lower.includes('panturrilha') && lower.includes('sentado')) {
     return {
       gifUrl: '/exercises/leg2_4.gif',
       primaryMuscle: 'Panturrilhas (Sóleo)',
@@ -301,12 +368,13 @@ function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGui
     };
   }
 
+  // Panturrilha em Pé (lower1_5 e lower2_5 no seedData)
   return {
     gifUrl: '/exercises/leg1_4.gif',
     primaryMuscle: 'Panturrilhas (Gastrocnêmio)',
     steps: [
       'Mantenha os joelhos estendidos (sem travar) e o tronco alinhado.',
-      'Desça o calcanhar o máximo possível alongando a panturrilha.',
+      'Desça o calcanhar o máximo possível fazendo pausa de 1-2s no fundo.',
       'Suba o máximo que conseguir na ponta dos pés contraindo no topo.'
     ]
   };
@@ -317,7 +385,6 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
   onClose,
   exerciseId,
   exerciseName,
-  muscleGroup,
   gripOrForm
 }) => {
   if (!isOpen || typeof document === 'undefined') return null;
@@ -330,21 +397,23 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom duration-200"
+        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Limpo */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <span className="inline-block text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 mb-1">
-              {muscleGroup} • {guide.primaryMuscle}
+        {/* TOPO LIMPO */}
+        <div className="px-5 pt-4 pb-3 border-b border-slate-100 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/60 mb-1">
+              {guide.primaryMuscle}
             </span>
-            <h3 className="text-base font-black text-slate-900 leading-snug">
+            <h3 className="text-base font-black text-slate-900 leading-tight">
               {exerciseName}
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {gripOrForm}
-            </p>
+            {gripOrForm && (
+              <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                {gripOrForm}
+              </p>
+            )}
           </div>
 
           <button
@@ -352,45 +421,46 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
               triggerHaptic('light');
               onClose();
             }}
-            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center shrink-0 active:scale-90 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center active:scale-90 transition-all shrink-0"
+            title="Fechar"
             aria-label="Fechar"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* GIF Real Animado do Exercício */}
-        <div className="rounded-2xl bg-white border border-slate-200/80 p-3 flex items-center justify-center overflow-hidden shadow-2xs">
-          <img
-            src={guide.gifUrl}
-            alt={`Execução de ${exerciseName}`}
-            className="w-48 h-48 object-contain select-none"
-            loading="eager"
-          />
-        </div>
+        {/* CORPO COM GIF ANIMADO REAL SUAVIZADO + 3 PASSOS DIRETOS */}
+        <div className="p-4 space-y-3.5 max-h-[80vh] overflow-y-auto">
+          <div className="w-full h-56 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-center overflow-hidden p-2 shadow-2xs">
+            <img
+              src={guide.gifUrl}
+              alt={`Execução de ${exerciseName}`}
+              className="h-full w-auto object-contain select-none"
+              loading="eager"
+            />
+          </div>
 
-        {/* 3 Passos Diretos e Limpos */}
-        <div className="mt-4 space-y-2">
-          {guide.steps.map((step, idx) => (
-            <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
-              <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-700 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5 border border-blue-100">
-                {idx + 1}
-              </span>
-              <span className="font-medium">{step}</span>
-            </div>
-          ))}
-        </div>
+          <div className="space-y-2">
+            {guide.steps.map((step, idx) => (
+              <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
+                <span className="w-5 h-5 rounded-full bg-slate-900 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                  {idx + 1}
+                </span>
+                <span className="font-medium">{step}</span>
+              </div>
+            ))}
+          </div>
 
-        {/* Botão Fechar */}
-        <button
-          onClick={() => {
-            triggerHaptic('light');
-            onClose();
-          }}
-          className="mt-4 w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-[0.98] transition-all cursor-pointer"
-        >
-          Fechar
-        </button>
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              onClose();
+            }}
+            className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs active:scale-[0.98] transition-all cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
       </div>
     </div>,
     document.body
