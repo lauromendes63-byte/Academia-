@@ -8,7 +8,8 @@ import { SettingsScreen } from './screens/SettingsScreen';
 
 import { db } from './db/db';
 import { triggerHaptic } from './utils/audio';
-import { CheckCircle2, X } from 'lucide-react';
+import { useAppUpdate } from './utils/appUpdate';
+import { CheckCircle2, X, Sparkles, RefreshCw } from 'lucide-react';
 
 const TAB_ORDER: TabType[] = ['treino', 'nutricao', 'evolucao', 'ajustes'];
 
@@ -27,6 +28,15 @@ export const AppContent: React.FC = () => {
   const [navDirection, setNavDirection] = useState<'forward' | 'backward'>('forward');
   const [quickNotification, setQuickNotification] = useState<string | null>(null);
   const [isDbReady, setIsDbReady] = useState(false);
+
+  const {
+    updateAvailable,
+    remoteVersion,
+    isUpdating,
+    dismissed,
+    applyUpdate,
+    dismissBanner
+  } = useAppUpdate();
 
   useEffect(() => {
     initializeDatabase()
@@ -141,6 +151,62 @@ export const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100">
+      {/* Banner flutuante de Nova Versão Disponível (1 toque para atualizar) */}
+      {updateAvailable && !dismissed && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed top-3 left-3 right-3 z-50 max-w-md mx-auto rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-xl shadow-blue-900/25 border border-blue-400/40 flex items-center justify-between gap-2 p-2.5 pl-3.5 animate-in fade-in slide-in-from-top-3 duration-200"
+        >
+          <button
+            type="button"
+            onClick={applyUpdate}
+            disabled={isUpdating}
+            className="flex-1 flex items-center gap-2.5 text-left min-w-0 active:scale-[0.99] transition-transform cursor-pointer"
+          >
+            <span className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/20">
+              {isUpdating ? (
+                <RefreshCw className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 text-amber-300" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black tracking-tight truncate">
+                  {isUpdating ? 'Atualizando aplicativo...' : 'Nova versão disponível!'}
+                </span>
+                {remoteVersion && (
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-white/20 text-white shrink-0">
+                    v{remoteVersion}
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] font-medium text-blue-100 block truncate">
+                {isUpdating
+                  ? 'Aplicando melhorias, aguarde um instante...'
+                  : 'Toque aqui para atualizar agora'}
+              </span>
+            </div>
+            <span className="px-2.5 py-1.5 rounded-xl bg-white text-blue-700 font-black text-[11px] shrink-0 shadow-xs">
+              {isUpdating ? '...' : 'Atualizar'}
+            </span>
+          </button>
+
+          {!isUpdating && (
+            <button
+              type="button"
+              onClick={dismissBanner}
+              className="w-7 h-7 rounded-xl text-blue-200 hover:text-white hover:bg-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-all"
+              aria-label="Adiar atualização"
+              title="Agora não"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </aside>
+      )}
+
       {/* Toast flutuante para atalhos rápidos do celular */}
       {quickNotification && (
         <aside

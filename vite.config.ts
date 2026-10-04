@@ -3,13 +3,44 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const APP_VERSION = '2.1.0'
+const BUILD_ID = `${APP_VERSION}-${Date.now().toString(36)}`
+const BUILD_TIME = new Date().toLocaleDateString('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric'
+})
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_BUILD_ID__: JSON.stringify(BUILD_ID),
+    __APP_BUILD_TIME__: JSON.stringify(BUILD_TIME)
+  },
   plugins: [
     react(),
     tailwindcss(),
+    {
+      name: 'emit-version-json',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify(
+            {
+              version: APP_VERSION,
+              buildId: BUILD_ID,
+              buildTime: BUILD_TIME
+            },
+            null,
+            2
+          )
+        })
+      }
+    },
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         name: 'Academia+ | Treino & Nutrição',
@@ -74,9 +105,9 @@ export default defineConfig({
         ]
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+        globIgnores: ['**/version.json'],
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

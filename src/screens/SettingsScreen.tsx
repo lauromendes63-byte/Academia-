@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { db, exportAllData, importAllData, initializeDatabase } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
+import { useAppUpdate } from '../utils/appUpdate';
 import {
   Download,
   Upload,
@@ -10,7 +11,8 @@ import {
   CheckCircle2,
   HardDrive,
   Flame,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 
 export const SettingsScreen: React.FC = () => {
@@ -18,6 +20,18 @@ export const SettingsScreen: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const {
+    version,
+    buildTime,
+    updateAvailable,
+    remoteVersion,
+    isChecking,
+    isUpdating,
+    lastCheckedAt,
+    checkForUpdate,
+    applyUpdate
+  } = useAppUpdate();
 
   const currentCalorieMode = profile?.calorieMode || 'recomposicao';
 
@@ -123,7 +137,7 @@ export const SettingsScreen: React.FC = () => {
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
             <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
-              Ajustes do Sistema
+              Ajustes do Sistema • v{version}
             </span>
           </div>
           <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
@@ -318,11 +332,81 @@ export const SettingsScreen: React.FC = () => {
 
         {/* 4. PWA & DEPLOY STATUS */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 anim-card-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Smartphone className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-              Instalação & Funcionamento Offline
-            </h3>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 truncate">
+                Instalação & Funcionamento Offline
+              </h3>
+            </div>
+            <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+              v{version}
+            </span>
+          </div>
+
+          {/* Linha enxuta de Versão e Atualização com 1 toque */}
+          <div
+            className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+              updateAvailable
+                ? 'bg-blue-50/90 border-blue-300 text-blue-950 shadow-2xs'
+                : 'bg-slate-50 border-slate-200/80 text-slate-800'
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-black text-slate-900">
+                  Versão do App: v{version}
+                </span>
+                {updateAvailable ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    <span>Nova versão{remoteVersion ? ` v${remoteVersion}` : ''}</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Atualizado
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                {updateAvailable
+                  ? 'Toque ao lado para aplicar a atualização agora.'
+                  : lastCheckedAt
+                  ? `Verificado às ${lastCheckedAt} • Build ${buildTime}`
+                  : `Build de ${buildTime} • Sincronização automática`}
+              </p>
+            </div>
+
+            {updateAvailable ? (
+              <button
+                type="button"
+                onClick={applyUpdate}
+                disabled={isUpdating}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
+                <span>{isUpdating ? 'Atualizando...' : 'Atualizar'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  triggerHaptic('light');
+                  const found = await checkForUpdate(true);
+                  if (!found) {
+                    setMessage({
+                      text: `Você já está na versão mais recente (v${version})!`,
+                      type: 'success'
+                    });
+                  }
+                }}
+                disabled={isChecking}
+                className="px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/90 font-bold text-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all shadow-2xs cursor-pointer"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 text-slate-500 ${isChecking ? 'animate-spin' : ''}`} />
+                <span>{isChecking ? 'Buscando...' : 'Verificar'}</span>
+              </button>
+            )}
           </div>
 
           <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 space-y-1.5">
@@ -354,6 +438,13 @@ export const SettingsScreen: React.FC = () => {
             <RefreshCcw className="w-3.5 h-3.5" />
             <span>Restaurar Rotinas ABCD de Fábrica</span>
           </button>
+        </div>
+
+        {/* RODAPÉ DISCRETO DE VERSÃO */}
+        <div className="pt-3 pb-1 text-center">
+          <span className="text-[11px] font-bold text-slate-400">
+            Academia+ v{version} • Atualizado em {buildTime}
+          </span>
         </div>
       </div>
     </div>
