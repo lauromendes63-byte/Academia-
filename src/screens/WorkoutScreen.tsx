@@ -255,12 +255,12 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
   return (
     <div
-      className="pb-36 pt-1 max-w-lg mx-auto px-4 touch-pan-y"
+      className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4 touch-pan-y"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* HEADER PREMIUM CENTRALIZADO (Sem barra redundante de 0/15 séries) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-3 mb-3 -mx-4 px-4 border-b border-slate-200/60">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-3 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/60">
         <div className="relative flex items-center justify-between mb-2.5">
           {/* Spacer esquerdo para centralização exata */}
           <div className="w-8 shrink-0" />

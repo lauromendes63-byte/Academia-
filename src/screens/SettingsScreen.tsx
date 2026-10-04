@@ -130,9 +130,9 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <div className="pb-36 pt-2 max-w-lg mx-auto px-4">
+    <div className="pb-36 pt-2 max-w-lg mx-auto px-2.5 sm:px-4">
       {/* HEADER CENTRALIZADO PREMIUM */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/60">
         <div className="text-center min-w-0 px-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />

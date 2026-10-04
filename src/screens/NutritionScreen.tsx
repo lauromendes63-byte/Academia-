@@ -417,7 +417,7 @@ export function getResolvedSnackConfig(log: NutritionLog): CustomMealConfig {
 }
 
 // ============================================================================
-// COMPONENTE DE BADGES DE MACROS SEMÂNTICOS (SEM SIGLAS P / C / G CONFUSAS)
+// COMPONENTE DE BADGES DE MACROS SEMÂNTICOS (LINHA ÚNICA, SEM SIGLAS P/C/G)
 // ============================================================================
 const MacroPills: React.FC<{
   calories: number;
@@ -425,26 +425,23 @@ const MacroPills: React.FC<{
   carbs?: number;
   fat?: number;
   unitLabel?: string;
-}> = ({ calories, protein, carbs, fat, unitLabel }) => (
-  <div className="flex items-center gap-1.5 flex-wrap mt-1">
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-200/80 text-slate-800">
-      {calories} kcal{unitLabel ? ` / ${unitLabel}` : ''}
+}> = ({ calories, protein, carbs, fat }) => (
+  <div className="flex items-center gap-1 flex-wrap mt-1">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-extrabold bg-slate-200/80 text-slate-800 whitespace-nowrap leading-tight">
+      {calories} kcal
     </span>
     {protein !== undefined && protein > 0 && (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 whitespace-nowrap leading-tight">
         {protein}g Prot
       </span>
     )}
     {carbs !== undefined && carbs > 0 && (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60 whitespace-nowrap leading-tight">
         {carbs}g Carbo
       </span>
     )}
     {fat !== undefined && fat > 0 && (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200/60">
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-purple-50 text-purple-800 border border-purple-200/60 whitespace-nowrap leading-tight">
         {fat}g Gord
       </span>
     )}
@@ -457,12 +454,11 @@ const MacroPills: React.FC<{
 const CustomMealBuilder: React.FC<{
   emoji: string;
   title: string;
-  subtitle: string;
   config: CustomMealConfig;
   onChange: (patch: Partial<CustomMealConfig>) => void;
   allowShake?: boolean;
   defaultOpen?: boolean;
-}> = ({ emoji, title, subtitle, config, onChange, allowShake, defaultOpen = true }) => {
+}> = ({ emoji, title, config, onChange, allowShake, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const macros = calculateCustomMealMacros(config);
   const isEaten =
@@ -481,31 +477,31 @@ const CustomMealBuilder: React.FC<{
           triggerHaptic('light');
           setIsOpen(!isOpen);
         }}
-        className="w-full p-3.5 bg-white hover:bg-slate-50/80 flex items-center justify-between gap-2 text-left transition-colors"
+        className="w-full p-3 bg-white hover:bg-slate-50/80 flex items-center justify-between gap-2 text-left transition-colors"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/70 flex items-center justify-center text-base shrink-0 shadow-2xs">
+          <div className="min-w-[52px] h-10 px-2 rounded-xl bg-slate-100 border border-slate-200/70 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
             {emoji}
           </div>
           <div className="min-w-0">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 truncate">
               {title}
             </h4>
-            <p className="text-[10px] text-slate-500 font-medium truncate">
+            <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap truncate">
               {isEaten
-                ? `${macros.calories} kcal • ${macros.protein}g Proteína • ${macros.carbs}g Carbo`
-                : subtitle}
+                ? `${macros.calories} kcal • ${macros.protein}g Prot • ${macros.carbs}g Carbo`
+                : '0 kcal • 0g Prot'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {isEaten ? (
-            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
               {macros.calories} kcal
             </span>
           ) : (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 whitespace-nowrap">
               Vazio
             </span>
           )}
@@ -518,15 +514,15 @@ const CustomMealBuilder: React.FC<{
       </button>
 
       {isOpen && (
-        <div className="p-3 pt-2 space-y-2 border-t border-slate-100 animate-in fade-in duration-150">
+        <div className="p-2.5 pt-2 space-y-2 border-t border-slate-100 animate-in fade-in duration-150">
           {/* 1. Café c/ Leite */}
           <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
             <div className="min-w-0 pr-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm">☕🥛</span>
-                <span className="text-xs font-black text-slate-900">Café com Leite</span>
+                <span className="text-sm whitespace-nowrap shrink-0">☕🥛</span>
+                <span className="text-xs font-black text-slate-900 truncate">Café com Leite</span>
               </div>
-              <MacroPills calories={95} protein={6} carbs={9} fat={4} unitLabel="caneca" />
+              <MacroPills calories={95} protein={6} carbs={9} fat={4} />
             </div>
 
             <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
@@ -560,10 +556,10 @@ const CustomMealBuilder: React.FC<{
           <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
             <div className="min-w-0 pr-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm">🌮🧀</span>
-                <span className="text-xs font-black text-slate-900">Tapioca com Queijo</span>
+                <span className="text-sm whitespace-nowrap shrink-0">🌮🧀</span>
+                <span className="text-xs font-black text-slate-900 truncate">Tapioca com Queijo</span>
               </div>
-              <MacroPills calories={240} protein={10} carbs={33} fat={8} unitLabel="un" />
+              <MacroPills calories={240} protein={10} carbs={33} fat={8} />
             </div>
 
             <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
@@ -594,8 +590,8 @@ const CustomMealBuilder: React.FC<{
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 pr-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm">🍳🥚</span>
-                  <span className="text-xs font-black text-slate-900">
+                  <span className="text-sm whitespace-nowrap shrink-0">🍳🥚</span>
+                  <span className="text-xs font-black text-slate-900 truncate">
                     Ovos ({config.eggType === 'fritos' ? 'Fritos' : 'Mexidos'})
                   </span>
                 </div>
@@ -603,7 +599,6 @@ const CustomMealBuilder: React.FC<{
                   calories={config.eggType === 'fritos' ? 90 : 80}
                   protein={6}
                   fat={config.eggType === 'fritos' ? 7 : 6}
-                  unitLabel="ovo"
                 />
               </div>
 
@@ -633,23 +628,23 @@ const CustomMealBuilder: React.FC<{
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => onChange({ eggType: 'mexidos' })}
-                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
+                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all whitespace-nowrap ${
                   config.eggType === 'mexidos'
                     ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                🍳 Mexidos (~80 kcal)
+                🍳 Mexidos (80 kcal)
               </button>
               <button
                 onClick={() => onChange({ eggType: 'fritos' })}
-                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
+                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all whitespace-nowrap ${
                   config.eggType === 'fritos'
                     ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                🥚 Fritos (~90 kcal)
+                🥚 Fritos (90 kcal)
               </button>
             </div>
           </div>
@@ -659,14 +654,14 @@ const CustomMealBuilder: React.FC<{
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 pr-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm">
+                  <span className="text-sm shrink-0">
                     {config.fruitType === 'banana'
                       ? '🍌'
                       : config.fruitType === 'laranja'
                       ? '🍊'
                       : '🍎'}
                   </span>
-                  <span className="text-xs font-black text-slate-900">Fruta Fresca</span>
+                  <span className="text-xs font-black text-slate-900 truncate">Fruta Fresca</span>
                 </div>
                 <MacroPills
                   calories={
@@ -684,7 +679,6 @@ const CustomMealBuilder: React.FC<{
                       ? 15
                       : 19
                   }
-                  unitLabel="un"
                 />
               </div>
 
@@ -714,7 +708,7 @@ const CustomMealBuilder: React.FC<{
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 onClick={() => onChange({ fruitType: 'banana' })}
-                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center whitespace-nowrap ${
                   config.fruitType === 'banana'
                     ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -724,7 +718,7 @@ const CustomMealBuilder: React.FC<{
               </button>
               <button
                 onClick={() => onChange({ fruitType: 'laranja' })}
-                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center whitespace-nowrap ${
                   config.fruitType === 'laranja'
                     ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -734,7 +728,7 @@ const CustomMealBuilder: React.FC<{
               </button>
               <button
                 onClick={() => onChange({ fruitType: 'maca' })}
-                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center whitespace-nowrap ${
                   config.fruitType === 'maca'
                     ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -750,10 +744,10 @@ const CustomMealBuilder: React.FC<{
             <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
               <div className="min-w-0 pr-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm">🥤⚡</span>
-                  <span className="text-xs font-black text-slate-900">Shake Proteico</span>
+                  <span className="text-sm whitespace-nowrap shrink-0">🥤⚡</span>
+                  <span className="text-xs font-black text-slate-900 truncate">Shake Proteico</span>
                 </div>
-                <MacroPills calories={210} protein={25} carbs={20} fat={3} unitLabel="shake" />
+                <MacroPills calories={210} protein={25} carbs={20} fat={3} />
               </div>
 
               <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
@@ -799,17 +793,17 @@ const ChurrascoBuilder: React.FC<{
   const preview = calculateChurrascoMacros(config);
 
   return (
-    <div className="p-3.5 rounded-2xl border border-amber-200/90 bg-amber-50/30 space-y-3 animate-in fade-in duration-150">
+    <div className="p-3 rounded-2xl border border-amber-200/90 bg-amber-50/30 space-y-2.5 animate-in fade-in duration-150">
       {/* Resumo Estimado do Churrasquinho */}
-      <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-2xs flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-          <span>🔥🍢</span> Total do Churrasquinho:
+      <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-2xs flex items-center justify-between gap-2">
+        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
+          <span>🔥🍢</span> Total do Churrasco:
         </span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-black text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-lg">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] font-black text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-lg whitespace-nowrap">
             {preview.calories} kcal
           </span>
-          <span className="text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+          <span className="text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60 whitespace-nowrap">
             {preview.protein}g Prot
           </span>
         </div>
@@ -818,43 +812,45 @@ const ChurrascoBuilder: React.FC<{
       {/* 1. Escolha do Corte do Espeto */}
       <div>
         <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
-          1. Corte do Espeto (~110g carne assada/espeto)
+          1. Corte do Espeto
         </span>
         <div className="grid grid-cols-3 gap-1.5">
           {[
-            { id: 'alcatra', label: '🥩 Alcatra', sub: '220 kcal • 31g Prot' },
-            { id: 'maminha', label: '🥩 Maminha', sub: '235 kcal • 29g Prot' },
-            { id: 'fraldinha', label: '🥩 Fraldinha', sub: '260 kcal • 27g Prot' }
+            { id: 'alcatra', label: '🥩 Alcatra', sub: '110g • 31g Prot' },
+            { id: 'maminha', label: '🥩 Maminha', sub: '110g • 29g Prot' },
+            { id: 'fraldinha', label: '🥩 Fraldinha', sub: '110g • 27g Prot' }
           ].map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onChange({ cut: item.id as any })}
-              className={`p-2 rounded-xl border text-center transition-all active:scale-95 ${
+              className={`px-1.5 py-2 rounded-xl border text-center transition-all active:scale-95 ${
                 config.cut === item.id
                   ? 'border-amber-600 bg-white text-amber-950 font-black shadow-2xs ring-1 ring-amber-500'
                   : 'border-slate-200 bg-white/80 text-slate-700 hover:bg-white'
               }`}
             >
-              <div className="text-xs font-black truncate">{item.label}</div>
-              <div className="text-[9px] text-slate-500 mt-0.5">{item.sub}</div>
+              <div className="text-[11px] font-black whitespace-nowrap">{item.label}</div>
+              <div className="text-[9.5px] text-slate-500 font-semibold whitespace-nowrap mt-0.5">
+                {item.sub}
+              </div>
             </button>
           ))}
         </div>
       </div>
 
       {/* 2. Quantidade de Espetos & Porções de Baião de Dois */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase">
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between gap-1">
+          <div className="min-w-0">
+            <div className="text-[9.5px] font-bold text-slate-400 uppercase whitespace-nowrap">
               🍢 Espetos
             </div>
-            <div className="text-xs font-black text-slate-900">
+            <div className="text-xs font-black text-slate-900 whitespace-nowrap">
               {config.skewerCount}x {config.skewerCount === 1 ? 'espeto' : 'espetos'}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => onChange({ skewerCount: Math.max(1, config.skewerCount - 1) })}
@@ -874,16 +870,16 @@ const ChurrascoBuilder: React.FC<{
           </div>
         </div>
 
-        <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase">
-              🍛 Baião de Dois
+        <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between gap-1">
+          <div className="min-w-0">
+            <div className="text-[9.5px] font-bold text-slate-400 uppercase whitespace-nowrap">
+              🍛 Baião
             </div>
-            <div className="text-xs font-black text-slate-900">
+            <div className="text-xs font-black text-slate-900 whitespace-nowrap">
               {config.baiaoPortions}x {config.baiaoPortions === 1 ? 'porção' : 'porções'}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => onChange({ baiaoPortions: Math.max(0, config.baiaoPortions - 1) })}
@@ -905,11 +901,11 @@ const ChurrascoBuilder: React.FC<{
       </div>
 
       {/* 3. Acompanhamentos: Vinagrete & Farofa */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         <button
           type="button"
           onClick={() => onChange({ hasVinagrete: !config.hasVinagrete })}
-          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between gap-1 transition-all whitespace-nowrap ${
             config.hasVinagrete
               ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
               : 'border-slate-200 bg-white text-slate-500'
@@ -924,7 +920,7 @@ const ChurrascoBuilder: React.FC<{
         <button
           type="button"
           onClick={() => onChange({ hasFarofa: !config.hasFarofa })}
-          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between gap-1 transition-all whitespace-nowrap ${
             config.hasFarofa
               ? 'border-amber-300 bg-amber-50 text-amber-900'
               : 'border-slate-200 bg-white text-slate-500'
@@ -1358,9 +1354,9 @@ export const NutritionScreen: React.FC = () => {
   }[] = [
     {
       key: 'chocSmallCount',
-      emoji: '🍫',
+      emoji: '🍫🍬',
       title: 'Doce Pequeno / Bombom',
-      examples: 'Quadradinho de chocolate (25g), Sonho de Valsa, 3x Bis',
+      examples: 'Bombom, quadradinho 25g, 3x Bis',
       kcal: 130,
       prot: 1,
       carbs: 16,
@@ -1371,7 +1367,7 @@ export const NutritionScreen: React.FC = () => {
       key: 'snickersBarCount',
       emoji: '🍬🍫',
       title: 'Barra de Chocolate / Snickers',
-      examples: 'Snickers (45g), KitKat, Twix, barra recheada média',
+      examples: 'Snickers, KitKat, Twix, barra média',
       kcal: 250,
       prot: 4,
       carbs: 30,
@@ -1382,7 +1378,7 @@ export const NutritionScreen: React.FC = () => {
       key: 'iceCreamCount',
       emoji: '🍦🍰',
       title: 'Sorvete / Eskibom / Bolo',
-      examples: 'Eskibom, picolé c/ cobertura, copo de sorvete ou fatia de bolo',
+      examples: 'Eskibom, picolé, sorvete ou fatia de bolo',
       kcal: 380,
       prot: 5,
       carbs: 44,
@@ -1393,7 +1389,7 @@ export const NutritionScreen: React.FC = () => {
       key: 'saltySnackCount',
       emoji: '🥨🍪',
       title: 'Salgadinho / Biscoito / Salgado',
-      examples: 'Pacote médio Doritos/Cheetos (85g), cookies ou coxinha/pastel',
+      examples: 'Doritos, Cheetos, biscoito ou salgado',
       kcal: 450,
       prot: 6,
       carbs: 52,
@@ -1403,8 +1399,8 @@ export const NutritionScreen: React.FC = () => {
     {
       key: 'superBesteiraCount',
       emoji: '🍕🍻',
-      title: 'Exagero / Refeição Livre Pesada',
-      examples: 'Rodízio, combo fast-food duplo + sobremesa ou bebida + petiscos',
+      title: 'Exagero / Refeição Livre',
+      examples: 'Rodízio, combo duplo ou bebida + petiscos',
       kcal: 1200,
       prot: 35,
       carbs: 120,
@@ -1414,9 +1410,9 @@ export const NutritionScreen: React.FC = () => {
   ];
 
   return (
-    <div className="pb-36 pt-1 max-w-lg mx-auto px-4">
+    <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
       {/* HEADER CENTRALIZADO PREMIUM */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/60">
         <div className="flex items-center justify-between mb-2">
           <div className="w-16 shrink-0 flex items-center">
             {isToday ? (
@@ -1485,16 +1481,16 @@ export const NutritionScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-3.5">
+      <div className="space-y-3">
         {/* ========================================================= */}
-        {/* 1. PAINEL DE METAS & MACROS DO DIA (PADRÃO MACROFACTOR) */}
+        {/* 1. PAINEL DE METAS & MACROS DO DIA */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-3.5 anim-card-1">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3 anim-card-1">
           {/* TRACKER DE PROTEÍNA */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
                   <Target className="w-4 h-4 stroke-[2.5]" />
                 </div>
                 <div>
@@ -1536,11 +1532,11 @@ export const NutritionScreen: React.FC = () => {
               <span>
                 {remainingProtein > 0 ? (
                   <>
-                    Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para blindar a massa magra
+                    Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para a meta
                   </>
                 ) : (
                   <span className="text-emerald-700 font-bold">
-                    ✨ Meta proteica batida com sucesso!
+                    ✨ Meta proteica batida!
                   </span>
                 )}
               </span>
@@ -1551,12 +1547,12 @@ export const NutritionScreen: React.FC = () => {
           <div className="pt-2.5 border-t border-slate-100">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
                   <Flame className="w-4 h-4 fill-current" />
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Balanço Calórico ({calorieMode === 'recomposicao' ? 'Déficit' : 'Manutenção'})
+                    Calorias ({calorieMode === 'recomposicao' ? 'Déficit' : 'Manutenção'})
                   </span>
                   <div className="flex items-baseline gap-1">
                     <h2 className="text-lg font-black text-slate-900 leading-none">
@@ -1578,7 +1574,7 @@ export const NutritionScreen: React.FC = () => {
               >
                 {remainingCalories >= 0
                   ? `Restam ${remainingCalories} kcal`
-                  : `+${Math.abs(remainingCalories)} kcal acima`}
+                  : `+${Math.abs(remainingCalories)} kcal`}
               </span>
             </div>
 
@@ -1596,11 +1592,11 @@ export const NutritionScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Breakdown de Macros Semânticos (Sem abreviações soltas) */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+          {/* Breakdown de Macros Semânticos */}
+          <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-center">
             <div className="p-2 rounded-2xl bg-blue-50/60 border border-blue-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-blue-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-blue-700 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
                 <span>Proteínas</span>
               </div>
               <div className="text-sm font-black text-blue-950 mt-0.5">
@@ -1608,8 +1604,8 @@ export const NutritionScreen: React.FC = () => {
               </div>
             </div>
             <div className="p-2 rounded-2xl bg-amber-50/60 border border-amber-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-amber-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-amber-800 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                 <span>Carboidratos</span>
               </div>
               <div className="text-sm font-black text-amber-950 mt-0.5">
@@ -1617,8 +1613,8 @@ export const NutritionScreen: React.FC = () => {
               </div>
             </div>
             <div className="p-2 rounded-2xl bg-purple-50/60 border border-purple-100/80">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-purple-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-purple-800 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
                 <span>Gorduras</span>
               </div>
               <div className="text-sm font-black text-purple-950 mt-0.5">
@@ -1631,27 +1627,27 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 2. SUPLEMENTAÇÃO & PROTEÍNA RÁPIDA (WHEY + LEITE) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
+          <div className="flex items-center gap-2 mb-0.5">
+            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 truncate">
               Suplementação & Proteína Rápida
             </h3>
           </div>
 
           {/* WHEY PROTEIN */}
-          <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 pr-1">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-base shrink-0">
+          <div className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
                 ⚡🥤
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-black text-slate-900">Whey Protein</div>
-                <MacroPills calories={95} protein={20} unitLabel="scoop" />
+                <div className="text-xs font-black text-slate-900 truncate">Whey Protein</div>
+                <MacroPills calories={95} protein={20} />
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => handleAdjustWheyScoops(-1)}
                 disabled={wheyScoops <= 0}
@@ -1660,7 +1656,7 @@ export const NutritionScreen: React.FC = () => {
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-              <div className="w-6 text-center font-black text-xs text-slate-900">
+              <div className="w-5 text-center font-black text-xs text-slate-900">
                 {wheyScoops}
               </div>
               <button
@@ -1674,18 +1670,18 @@ export const NutritionScreen: React.FC = () => {
           </div>
 
           {/* COPO DE LEITE */}
-          <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 pr-1">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-base shrink-0">
+          <div className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
                 🥛🐄
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-black text-slate-900">Copo de Leite (200ml)</div>
-                <MacroPills calories={110} protein={6} carbs={9} fat={5} unitLabel="copo" />
+                <div className="text-xs font-black text-slate-900 truncate">Copo de Leite (200ml)</div>
+                <MacroPills calories={110} protein={6} carbs={9} fat={5} />
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => handleAdjustMilkGlasses(-1)}
                 disabled={milkGlasses <= 0}
@@ -1694,7 +1690,7 @@ export const NutritionScreen: React.FC = () => {
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-              <div className="w-6 text-center font-black text-xs text-slate-900">
+              <div className="w-5 text-center font-black text-xs text-slate-900">
                 {milkGlasses}
               </div>
               <button
@@ -1711,9 +1707,9 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 3. REFEIÇÕES DO DIA (CAFÉ, ALMOÇO, LANCHE, JANTAR) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-4 anim-card-3">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3.5 anim-card-3">
           <div className="flex items-center gap-2">
-            <UtensilsCrossed className="w-4 h-4 text-blue-600" />
+            <UtensilsCrossed className="w-4 h-4 text-blue-600 shrink-0" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
               Refeições do Dia
             </h3>
@@ -1723,27 +1719,26 @@ export const NutritionScreen: React.FC = () => {
           <CustomMealBuilder
             emoji="☕🍳"
             title="Café da Manhã"
-            subtitle="Café c/ leite, ovos, tapioca ou fruta"
             config={breakfastConfig}
             onChange={handleUpdateBreakfastConfig}
             defaultOpen={true}
           />
 
           {/* 3.2 ALMOÇO: PRATO CASEIRO OU CHURRASQUINHO */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3.5 space-y-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                <div className="min-w-[52px] h-10 px-2 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
                   {lunchType === 'churrasquinho' ? '🍢🔥' : '🍽️🥩'}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 truncate">
                     Almoço Principal
                   </h4>
-                  <p className="text-[10px] text-slate-500 font-medium truncate">
+                  <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap truncate">
                     {currentData.meals.lunch
-                      ? `${lunchMacros.calories} kcal • ${lunchMacros.protein}g Proteína • ${lunchMacros.carbs}g Carbo`
-                      : 'Selecione Prato Caseiro ou Churrasquinho'}
+                      ? `${lunchMacros.calories} kcal • ${lunchMacros.protein}g Prot • ${lunchMacros.carbs}g Carbo`
+                      : `~${(lunchType === 'churrasquinho' ? currentLunchChurrascoPreview : currentLunchPlatePreview).calories} kcal • ${(lunchType === 'churrasquinho' ? currentLunchChurrascoPreview : currentLunchPlatePreview).protein}g Prot`}
                   </p>
                 </div>
               </div>
@@ -1751,7 +1746,7 @@ export const NutritionScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleSelectLunchType(lunchType)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all flex items-center gap-1 shrink-0 active:scale-95 ${
+                className={`px-2.5 py-1.5 rounded-full text-[10px] font-black transition-all flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95 ${
                   currentData.meals.lunch
                     ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
@@ -1769,7 +1764,7 @@ export const NutritionScreen: React.FC = () => {
             </div>
 
             {/* SELETOR DE MODALIDADE DO ALMOÇO: PRATO CASEIRO vs CHURRASQUINHO */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
                 onClick={() => {
@@ -1785,16 +1780,16 @@ export const NutritionScreen: React.FC = () => {
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <div className="flex items-center justify-between text-xs font-black">
+                <div className="flex items-center justify-between text-xs font-black whitespace-nowrap">
                   <span>🍽️ Prato Caseiro</span>
                   {currentData.meals.lunch === 'caseiro' && (
-                    <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />
+                    <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3] shrink-0" />
                   )}
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                  Arroz, feijão, carne/frango e salada
+                <div className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap truncate">
+                  Arroz, feijão e proteína
                 </div>
-                <div className="text-[10px] font-extrabold text-blue-700 mt-1">
+                <div className="text-[10px] font-extrabold text-blue-700 mt-1 whitespace-nowrap">
                   ~{currentLunchPlatePreview.calories} kcal • {currentLunchPlatePreview.protein}g Prot
                 </div>
               </button>
@@ -1814,16 +1809,16 @@ export const NutritionScreen: React.FC = () => {
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <div className="flex items-center justify-between text-xs font-black">
+                <div className="flex items-center justify-between text-xs font-black whitespace-nowrap">
                   <span>🍢 Churrasquinho</span>
                   {currentData.meals.lunch === 'churrasquinho' && (
-                    <Check className="w-3.5 h-3.5 text-amber-600 stroke-[3]" />
+                    <Check className="w-3.5 h-3.5 text-amber-600 stroke-[3] shrink-0" />
                   )}
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                  Espetinhos + Baião + Vinagrete
+                <div className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap truncate">
+                  Espeto, baião e vinagrete
                 </div>
-                <div className="text-[10px] font-extrabold text-amber-800 mt-1">
+                <div className="text-[10px] font-extrabold text-amber-800 mt-1 whitespace-nowrap">
                   ~{currentLunchChurrascoPreview.calories} kcal • {currentLunchChurrascoPreview.protein}g Prot
                 </div>
               </button>
@@ -1831,29 +1826,31 @@ export const NutritionScreen: React.FC = () => {
 
             {/* BUILDER DO PRATO CASEIRO */}
             {lunchType === 'caseiro' && (
-              <div className="p-3 rounded-2xl border border-slate-200 bg-white space-y-3 animate-in fade-in duration-150">
+              <div className="p-2.5 rounded-2xl border border-slate-200 bg-white space-y-2.5 animate-in fade-in duration-150">
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
                     1. Proteína Principal
                   </span>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
-                      { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g • 28g Prot' },
-                      { id: 'frango', label: '🍗 Filé Frango', sub: '~120g • 32g Prot' },
-                      { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g • 26g Prot' }
+                      { id: 'carne', label: '🥩 Bovino', sub: '100g • 28g Prot' },
+                      { id: 'frango', label: '🍗 Frango', sub: '120g • 32g Prot' },
+                      { id: 'peixe', label: '🐟 Peixe', sub: '120g • 26g Prot' }
                     ].map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => handleUpdateLunchConfig({ proteinType: item.id as any })}
-                        className={`p-2 rounded-xl border text-center transition-all ${
+                        className={`px-1.5 py-2 rounded-xl border text-center transition-all ${
                           lunchConfig.proteinType === item.id
-                            ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-2xs'
+                            ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-2xs ring-1 ring-blue-500/40'
                             : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <div className="text-xs font-black truncate">{item.label}</div>
-                        <div className="text-[9px] text-slate-500 mt-0.5">{item.sub}</div>
+                        <div className="text-[11px] font-black whitespace-nowrap">{item.label}</div>
+                        <div className="text-[9.5px] text-slate-500 font-semibold whitespace-nowrap mt-0.5">
+                          {item.sub}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1862,7 +1859,7 @@ export const NutritionScreen: React.FC = () => {
                 <div className="grid grid-cols-3 gap-1.5">
                   {/* Porções de Proteína */}
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">
                       {lunchConfig.proteinType === 'carne' ? '🥩 Bifes' : '🍗 Filés'}
                     </div>
                     <div className="flex items-center justify-between mt-1">
@@ -1898,7 +1895,7 @@ export const NutritionScreen: React.FC = () => {
 
                   {/* Arroz */}
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">
                       🍚 Arroz
                     </div>
                     <div className="flex items-center justify-between mt-1">
@@ -1934,7 +1931,7 @@ export const NutritionScreen: React.FC = () => {
 
                   {/* Feijão */}
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">
                       🫘 Feijão
                     </div>
                     <div className="flex items-center justify-between mt-1">
@@ -1972,15 +1969,15 @@ export const NutritionScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleUpdateLunchConfig({ hasSalad: !lunchConfig.hasSalad })}
-                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 transition-all whitespace-nowrap ${
                     lunchConfig.hasSalad
                       ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
                       : 'border-slate-200 bg-slate-50 text-slate-500'
                   }`}
                 >
-                  <span>🥗🍅 Salada Verde Completa</span>
+                  <span>🥗🍅 Salada Verde</span>
                   <span className="text-[10px] font-black">
-                    {lunchConfig.hasSalad ? 'INCLUSA (+35 kcal)' : 'NÃO INCLUSA'}
+                    {lunchConfig.hasSalad ? 'INCLUSA (+35 kcal)' : 'SEM SALADA'}
                   </span>
                 </button>
               </div>
@@ -1999,7 +1996,6 @@ export const NutritionScreen: React.FC = () => {
           <CustomMealBuilder
             emoji="🥪🍌"
             title="Lanche da Tarde"
-            subtitle="Fruta, ovos, tapioca ou shake proteico"
             config={snackConfig}
             onChange={handleUpdateSnackConfig}
             allowShake={true}
@@ -2007,26 +2003,26 @@ export const NutritionScreen: React.FC = () => {
           />
 
           {/* 3.4 JANTAR COMPLETO (5 OPÇÕES REALISTAS) */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3.5 space-y-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                <div className="min-w-[52px] h-10 px-2 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
                   🌙🍽️
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 truncate">
                     Jantar
                   </h4>
-                  <p className="text-[10px] text-slate-500 font-medium truncate">
+                  <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap truncate">
                     {currentData.meals.dinner
-                      ? `${dinnerMacros.calories} kcal • ${dinnerMacros.protein}g Proteína • ${dinnerMacros.carbs}g Carbo`
-                      : 'Escolha entre Prato, Baguete, Churrasquinho, Burger ou Pizza'}
+                      ? `${dinnerMacros.calories} kcal • ${dinnerMacros.protein}g Prot • ${dinnerMacros.carbs}g Carbo`
+                      : '0 kcal • 0g Prot'}
                   </p>
                 </div>
               </div>
 
               {currentData.meals.dinner && (
-                <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0">
+                <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0 whitespace-nowrap">
                   {dinnerMacros.calories} kcal
                 </span>
               )}
@@ -2083,13 +2079,13 @@ export const NutritionScreen: React.FC = () => {
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-xs font-black">
+                    <div className="flex items-center justify-between text-xs font-black whitespace-nowrap">
                       <span className="truncate">
                         {opt.emoji} {opt.title}
                       </span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0 stroke-[3]" />}
                     </div>
-                    <div className="text-[10px] font-bold text-slate-500 mt-1">
+                    <div className="text-[10px] font-bold text-slate-500 mt-1 whitespace-nowrap">
                       ~{opt.kcal} kcal • {opt.prot}g Prot
                     </div>
                   </button>
@@ -2099,7 +2095,7 @@ export const NutritionScreen: React.FC = () => {
 
             {/* 1. BUILDER JANTAR: SANDUÍCHE BAGUETE */}
             {currentData.meals.dinner === 'subway' && (
-              <div className="p-3 rounded-2xl border border-blue-200 bg-white space-y-3 animate-in fade-in duration-150">
+              <div className="p-2.5 rounded-2xl border border-blue-200 bg-white space-y-2.5 animate-in fade-in duration-150">
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
                     Tamanho da Baguete
@@ -2107,7 +2103,7 @@ export const NutritionScreen: React.FC = () => {
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       onClick={() => handleUpdateSubwayConfig({ size: '15cm' })}
-                      className={`py-2 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2 rounded-xl text-xs font-black border transition-all whitespace-nowrap ${
                         dinnerSubwayConfig.size === '15cm'
                           ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
                           : 'border-slate-200 bg-slate-50 text-slate-700'
@@ -2117,7 +2113,7 @@ export const NutritionScreen: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleUpdateSubwayConfig({ size: '30cm' })}
-                      className={`py-2 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2 rounded-xl text-xs font-black border transition-all whitespace-nowrap ${
                         dinnerSubwayConfig.size === '30cm'
                           ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
                           : 'border-slate-200 bg-slate-50 text-slate-700'
@@ -2137,8 +2133,8 @@ export const NutritionScreen: React.FC = () => {
                         : 'border-slate-200 bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <div>🍗 Frango Teriyaki</div>
-                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                    <div className="whitespace-nowrap truncate">🍗 Frango Teriyaki</div>
+                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5 whitespace-nowrap">
                       {dinnerSubwayConfig.size === '30cm'
                         ? '920 kcal • 64g Prot'
                         : '460 kcal • 32g Prot'}
@@ -2152,8 +2148,8 @@ export const NutritionScreen: React.FC = () => {
                         : 'border-slate-200 bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <div>🥩 Carne / Tiras</div>
-                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                    <div className="whitespace-nowrap truncate">🥩 Carne / Tiras</div>
+                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5 whitespace-nowrap">
                       {dinnerSubwayConfig.size === '30cm'
                         ? '980 kcal • 60g Prot'
                         : '490 kcal • 30g Prot'}
@@ -2165,31 +2161,33 @@ export const NutritionScreen: React.FC = () => {
 
             {/* 2. BUILDER JANTAR: PRATO CASEIRO */}
             {currentData.meals.dinner === 'caseiro' && (
-              <div className="p-3 rounded-2xl border border-blue-200 bg-white space-y-3 animate-in fade-in duration-150">
+              <div className="p-2.5 rounded-2xl border border-blue-200 bg-white space-y-2.5 animate-in fade-in duration-150">
                 <div className="grid grid-cols-3 gap-1.5">
                   {[
-                    { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g' },
-                    { id: 'frango', label: '🍗 Filé Frango', sub: '~120g' },
-                    { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g' }
+                    { id: 'carne', label: '🥩 Bovino', sub: '100g • 28g Prot' },
+                    { id: 'frango', label: '🍗 Frango', sub: '120g • 32g Prot' },
+                    { id: 'peixe', label: '🐟 Peixe', sub: '120g • 26g Prot' }
                   ].map((item) => (
                     <button
                       key={item.id}
                       onClick={() => handleUpdateDinnerPlateConfig({ proteinType: item.id as any })}
-                      className={`p-2 rounded-xl border text-center transition-all ${
+                      className={`px-1.5 py-2 rounded-xl border text-center transition-all ${
                         dinnerPlateConfig.proteinType === item.id
-                          ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold'
+                          ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold ring-1 ring-blue-500/40'
                           : 'border-slate-200 bg-slate-50 text-slate-700'
                       }`}
                     >
-                      <div className="text-xs font-black truncate">{item.label}</div>
-                      <div className="text-[9px] text-slate-400 mt-0.5">{item.sub}</div>
+                      <div className="text-[11px] font-black whitespace-nowrap">{item.label}</div>
+                      <div className="text-[9.5px] text-slate-500 font-semibold whitespace-nowrap mt-0.5">
+                        {item.sub}
+                      </div>
                     </button>
                   ))}
                 </div>
 
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-700">
+                    <span className="text-[10px] font-black text-slate-700 whitespace-nowrap">
                       🥩 {dinnerPlateConfig.proteinPortions}x
                     </span>
                     <div className="flex gap-1">
@@ -2217,7 +2215,7 @@ export const NutritionScreen: React.FC = () => {
                   </div>
 
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-700">
+                    <span className="text-[10px] font-black text-slate-700 whitespace-nowrap">
                       🍚 {dinnerPlateConfig.ricePortions}x
                     </span>
                     <div className="flex gap-1">
@@ -2245,7 +2243,7 @@ export const NutritionScreen: React.FC = () => {
                   </div>
 
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-700">
+                    <span className="text-[10px] font-black text-slate-700 whitespace-nowrap">
                       🫘 {dinnerPlateConfig.beanPortions}x
                     </span>
                     <div className="flex gap-1">
@@ -2283,14 +2281,14 @@ export const NutritionScreen: React.FC = () => {
               />
             )}
 
-            {/* 4. BUILDER JANTAR: HAMBÚRGUER / PODRÃO (NOVO!) */}
+            {/* 4. BUILDER JANTAR: HAMBÚRGUER / PODRÃO */}
             {currentData.meals.dinner === 'burger' && (
-              <div className="p-3.5 rounded-2xl border border-amber-200 bg-white space-y-3 animate-in fade-in duration-150">
+              <div className="p-3 rounded-2xl border border-amber-200 bg-white space-y-2.5 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
-                  <span className="text-xs font-black text-slate-900">
+                  <span className="text-xs font-black text-slate-900 whitespace-nowrap">
                     🍔 Total do Lanche:
                   </span>
-                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
+                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200 whitespace-nowrap">
                     {currentBurgerPreview.calories} kcal • {currentBurgerPreview.protein}g Prot
                   </span>
                 </div>
@@ -2299,8 +2297,8 @@ export const NutritionScreen: React.FC = () => {
                   {[
                     {
                       id: 'artesanal_simples',
-                      label: '🍔 Hambúrguer Artesanal Simples',
-                      desc: 'Pão brioche, 1 blend 160g, queijo e molho',
+                      label: '🍔 Artesanal Simples',
+                      desc: 'Brioche, 1 blend 160g, queijo e molho',
                       kcal: 620,
                       prot: 34,
                       carbs: 42,
@@ -2309,7 +2307,7 @@ export const NutritionScreen: React.FC = () => {
                     {
                       id: 'artesanal_duplo',
                       label: '🍔🥓 Artesanal Duplo + Bacon',
-                      desc: 'Pão brioche, 2 blends 160g, duplo queijo e bacon',
+                      desc: 'Brioche, 2 blends 160g, duplo queijo e bacon',
                       kcal: 940,
                       prot: 58,
                       carbs: 45,
@@ -2318,7 +2316,7 @@ export const NutritionScreen: React.FC = () => {
                     {
                       id: 'podrao_xtudo',
                       label: '🍔🍳 Clássico "Podrão" / X-Tudo',
-                      desc: 'Pão, carne, ovo, presunto, queijo, bacon, batata palha e maionese',
+                      desc: 'Pão, carne, ovo, queijo, bacon, batata palha e maionese',
                       kcal: 1050,
                       prot: 46,
                       carbs: 62,
@@ -2336,12 +2334,12 @@ export const NutritionScreen: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-slate-900">{b.label}</span>
+                        <span className="text-xs font-black text-slate-900 truncate">{b.label}</span>
                         {dinnerBurgerConfig.style === b.id && (
-                          <Check className="w-4 h-4 text-amber-600 stroke-[3]" />
+                          <Check className="w-4 h-4 text-amber-600 stroke-[3] shrink-0" />
                         )}
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{b.desc}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">{b.desc}</p>
                       <MacroPills calories={b.kcal} protein={b.prot} carbs={b.carbs} fat={b.fat} />
                     </button>
                   ))}
@@ -2352,45 +2350,45 @@ export const NutritionScreen: React.FC = () => {
                   onClick={() =>
                     handleUpdateBurgerConfig({ hasFries: !dinnerBurgerConfig.hasFries })
                   }
-                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 transition-all whitespace-nowrap ${
                     dinnerBurgerConfig.hasFries
                       ? 'border-orange-400 bg-orange-50 text-orange-950'
                       : 'border-slate-200 bg-slate-50 text-slate-500'
                   }`}
                 >
-                  <span>🍟🥤 + Batata Frita / Acompanhamento</span>
+                  <span>🍟🥤 Batata Frita / Combo</span>
                   <span className="text-[10px] font-black">
-                    {dinnerBurgerConfig.hasFries ? 'INCLUSO (+380 kcal)' : 'NÃO INCLUSO'}
+                    {dinnerBurgerConfig.hasFries ? 'INCLUSO (+380 kcal)' : 'SEM BATATA'}
                   </span>
                 </button>
               </div>
             )}
 
-            {/* 5. BUILDER JANTAR: PIZZA POR FATIAS (NOVO!) */}
+            {/* 5. BUILDER JANTAR: PIZZA POR FATIAS */}
             {currentData.meals.dinner === 'pizza' && (
-              <div className="p-3.5 rounded-2xl border border-amber-200 bg-white space-y-3 animate-in fade-in duration-150">
+              <div className="p-3 rounded-2xl border border-amber-200 bg-white space-y-2.5 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
-                  <span className="text-xs font-black text-slate-900">
+                  <span className="text-xs font-black text-slate-900 whitespace-nowrap">
                     🍕 Total ({dinnerPizzaConfig.slices}{' '}
                     {dinnerPizzaConfig.slices === 1 ? 'fatia' : 'fatias'}):
                   </span>
-                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
+                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200 whitespace-nowrap">
                     {currentPizzaPreview.calories} kcal • {currentPizzaPreview.protein}g Prot
                   </span>
                 </div>
 
                 {/* Contador de Fatias */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
                     <span className="text-xs font-black text-slate-900 block">
                       🍕 Quantidade de Fatias
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      Cada fatia tem ~{dinnerPizzaConfig.flavorType === 'proteica' ? 285 : 320} kcal
+                      ~{dinnerPizzaConfig.flavorType === 'proteica' ? 285 : 320} kcal por fatia
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs shrink-0">
                     <button
                       type="button"
                       onClick={() =>
@@ -2399,11 +2397,11 @@ export const NutritionScreen: React.FC = () => {
                         })
                       }
                       disabled={dinnerPizzaConfig.slices <= 1}
-                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm disabled:opacity-30 active:scale-90"
+                      className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm disabled:opacity-30 active:scale-90"
                     >
                       -
                     </button>
-                    <span className="w-8 text-center font-black text-sm text-slate-900">
+                    <span className="w-7 text-center font-black text-sm text-slate-900">
                       {dinnerPizzaConfig.slices}
                     </span>
                     <button
@@ -2414,7 +2412,7 @@ export const NutritionScreen: React.FC = () => {
                         })
                       }
                       disabled={dinnerPizzaConfig.slices >= 10}
-                      className="w-8 h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black text-sm disabled:opacity-30 active:scale-90"
+                      className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black text-sm disabled:opacity-30 active:scale-90"
                     >
                       +
                     </button>
@@ -2422,7 +2420,7 @@ export const NutritionScreen: React.FC = () => {
                 </div>
 
                 {/* Tipo de Sabor */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleUpdatePizzaConfig({ flavorType: 'proteica' })}
@@ -2432,12 +2430,12 @@ export const NutritionScreen: React.FC = () => {
                         : 'border-slate-200 bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <div className="text-xs font-black">🍗🍕 Frango / Portuguesa</div>
-                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                      Frango c/ Catupiry, Atum, Lombo
+                    <div className="text-xs font-black whitespace-nowrap truncate">🍗🍕 Frango / Atum</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap truncate">
+                      Frango c/ Catupiry, Portuguesa
                     </div>
-                    <div className="text-[10px] font-extrabold text-blue-700 mt-1">
-                      285 kcal • 14g Prot / fatia
+                    <div className="text-[10px] font-extrabold text-blue-700 mt-1 whitespace-nowrap">
+                      285 kcal • 14g Prot
                     </div>
                   </button>
 
@@ -2450,12 +2448,12 @@ export const NutritionScreen: React.FC = () => {
                         : 'border-slate-200 bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <div className="text-xs font-black">🧀🍕 Calabresa / Queijos</div>
-                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    <div className="text-xs font-black whitespace-nowrap truncate">🧀🍕 Calabresa / Queijo</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap truncate">
                       Mussarela, 4 Queijos, Pepperoni
                     </div>
-                    <div className="text-[10px] font-extrabold text-amber-800 mt-1">
-                      320 kcal • 12g Prot / fatia
+                    <div className="text-[10px] font-extrabold text-amber-800 mt-1 whitespace-nowrap">
+                      320 kcal • 12g Prot
                     </div>
                   </button>
                 </div>
@@ -2467,11 +2465,11 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 4. HIDRATAÇÃO DIÁRIA (META 4.0L) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs anim-card-4">
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs anim-card-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center text-base">
-                💧
+              <div className="min-w-[52px] h-10 px-2 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0">
+                💧🥤
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
@@ -2512,19 +2510,19 @@ export const NutritionScreen: React.FC = () => {
             <button
               onClick={() => handleAdjustWater(-250)}
               disabled={currentData.waterMl <= 0}
-              className="py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold active:scale-95 transition-all disabled:opacity-40 min-h-[40px]"
+              className="py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold active:scale-95 transition-all disabled:opacity-40 min-h-[40px] whitespace-nowrap"
             >
               -250 ml
             </button>
             <button
               onClick={() => handleAdjustWater(250)}
-              className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold active:scale-95 transition-all min-h-[40px]"
+              className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
             >
               🥤 +250 ml
             </button>
             <button
               onClick={() => handleAdjustWater(500)}
-              className="py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold active:scale-95 transition-all min-h-[40px]"
+              className="py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
             >
               💧 +500 ml
             </button>
@@ -2534,19 +2532,14 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 5. CONTROLE DE ESCAPES CALÓRICOS GRANULAR (5 NÍVEIS) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Acompanhamento Realista Sem Culpa
-              </span>
-              <h3 className="text-sm font-black text-slate-900 leading-tight">
-                Doces, Salgadinhos & Escapes
-              </h3>
-            </div>
+        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-5">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 truncate">
+              Doces, Salgadinhos & Escapes
+            </h3>
             {escapeMacros.calories > 0 && (
-              <span className="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                +{escapeMacros.calories} kcal em escapes
+              <span className="text-[11px] font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
+                +{escapeMacros.calories} kcal
               </span>
             )}
           </div>
@@ -2557,23 +2550,21 @@ export const NutritionScreen: React.FC = () => {
               return (
                 <div
                   key={item.key}
-                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 ${
+                  className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 ${
                     count > 0
                       ? 'bg-amber-50/40 border-amber-300 shadow-2xs'
                       : 'bg-slate-50/60 border-slate-200/80'
                   }`}
                 >
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs mt-0.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="min-w-[52px] h-10 px-2 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center whitespace-nowrap text-base leading-none shrink-0 shadow-2xs">
                       {item.emoji}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-black text-slate-900">
-                          {item.title}
-                        </span>
+                      <div className="text-xs font-black text-slate-900 truncate">
+                        {item.title}
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
                         {item.examples}
                       </p>
                       <MacroPills
@@ -2614,14 +2605,14 @@ export const NutritionScreen: React.FC = () => {
 
             {/* Caso exista besteiraCount legado salvo no dia, exibir para permitir ajuste */}
             {(currentData.escapes?.besteiraCount || 0) > 0 && (
-              <div className="p-3 rounded-2xl border border-amber-300 bg-amber-50/40 flex items-center justify-between gap-2">
+              <div className="p-2.5 rounded-2xl border border-amber-300 bg-amber-50/40 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-black text-slate-900">
+                  <div className="text-xs font-black text-slate-900 truncate">
                     🍩 Escape Rápido (Atalho)
                   </div>
                   <MacroPills calories={600} protein={6} carbs={65} fat={30} />
                 </div>
-                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
                   <button
                     onClick={() => handleAdjustEscape('besteiraCount', -1)}
                     className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
