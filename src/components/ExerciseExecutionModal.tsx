@@ -1,14 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 import { triggerHaptic } from '../utils/audio';
-import {
-  X,
-  CheckCircle2,
-  AlertTriangle,
-  Sparkles,
-  Activity,
-  Target,
-  ShieldCheck
-} from 'lucide-react';
 
 interface ExerciseExecutionModalProps {
   isOpen: boolean;
@@ -17,306 +10,726 @@ interface ExerciseExecutionModalProps {
   exerciseName: string;
   muscleGroup: string;
   gripOrForm: string;
-  isAssisted?: boolean;
 }
 
-interface BiomechanicsGuide {
-  movementPattern: 'pull_vertical' | 'pull_horizontal' | 'rear_delt' | 'biceps_cable' | 'biceps_curl' | 'leg_press' | 'knee_ext' | 'knee_flex' | 'calf' | 'abs_crunch' | 'chest_press' | 'lateral_raise' | 'pec_fly' | 'dip_graviton' | 'triceps_push' | 'triceps_overhead' | 'hip_hinge';
-  primaryMuscles: string[];
-  secondaryMuscles: string[];
-  cadence: string;
+type MotionPattern =
+  | 'vertical_pull'
+  | 'horizontal_row'
+  | 'rear_delt_fly'
+  | 'bayesian_curl'
+  | 'preacher_curl'
+  | 'incline_press'
+  | 'flat_press'
+  | 'lateral_raise'
+  | 'triceps_pushdown'
+  | 'parallel_dip'
+  | 'squat_hack'
+  | 'leg_extension'
+  | 'leg_curl'
+  | 'hip_hinge'
+  | 'calf_raise';
+
+interface ExerciseGuideData {
+  pattern: MotionPattern;
+  primaryMuscle: string;
+  concentricLabel: string;
+  eccentricLabel: string;
   steps: [string, string, string];
-  goldenTip: string;
-  commonMistake: string;
 }
 
-function getExerciseGuide(id: string, name: string): BiomechanicsGuide {
-  const lower = name.toLowerCase();
+function getExerciseGuide(exerciseId: string, exerciseName: string): ExerciseGuideData {
+  const lower = exerciseName.toLowerCase();
 
-  if (id === 'pull_1' || lower.includes('barra fixa') || lower.includes('puxador')) {
+  if (exerciseId === 'pull_1' || lower.includes('barra fixa') || lower.includes('puxada')) {
     return {
-      movementPattern: 'pull_vertical',
-      primaryMuscles: ['Grande Dorsal (Latíssimo)', 'Redondo Maior'],
-      secondaryMuscles: ['Bíceps Braquial', 'Trapézio Inferior'],
-      cadence: '1s subida • 1s contração • 2.5s descida',
+      pattern: 'vertical_pull',
+      primaryMuscle: 'Grande Dorsal & Redondo Maior',
+      concentricLabel: 'Puxada até o peito (1s)',
+      eccentricLabel: 'Subida alongando a dorsal (2s)',
       steps: [
-        'Segure na barra com pegada pronada aberta (ou neutra), deite os ombros longe das orelhas (depressão escapular) antes de dobrar os cotovelos.',
-        'Puxe o corpo para cima direcionando os cotovelos em direção aos bolsos da calça até o queixo passar a linha das mãos.',
-        'Desça controlando o movimento por 2 a 3 segundos até alongar completamente a dorsal no fundo.'
-      ],
-      goldenTip: 'Pense em "puxar com os cotovelos" para baixo e não com as mãos; isso desliga o excesso de bíceps e isola a dorsal.',
-      commonMistake: 'Encolher os ombros no topo ou soltar o corpo rápido demais na descida perdendo a tensão excêntrica.'
+        'Deprima as escápulas (abaixe os ombros) antes de dobrar os cotovelos.',
+        'Puxe conduzindo os cotovelos em direção às costelas mantendo o peito aberto.',
+        'Retorne controlando o peso até alongar totalmente a dorsal no topo.'
+      ]
     };
   }
 
-  if (id === 'pull_2' || lower.includes('remada')) {
+  if (exerciseId === 'pull_2' || lower.includes('remada baixa') || lower.includes('triângulo')) {
     return {
-      movementPattern: 'pull_horizontal',
-      primaryMuscles: ['Meio das Costas (Romboides)', 'Grande Dorsal'],
-      secondaryMuscles: ['Trapézio Médio', 'Deltoide Posterior', 'Bíceps'],
-      cadence: '1s puxada • 1s pausa colado ao abdômen • 2s volta',
+      pattern: 'horizontal_row',
+      primaryMuscle: 'Meio das Costas & Dorsal',
+      concentricLabel: 'Puxada ao abdômen (1s)',
+      eccentricLabel: 'Retorno controlado (2s)',
       steps: [
-        'Sente-se com os joelhos semifletidos, coluna neutra firme e peito estufado.',
-        'Traga o triângulo em direção à linha do umbigo, fechando bem as escápulas atrás no final da puxada.',
-        'Retorne deixando as escápulas abrirem levemente à frente para alongar as costas, sem curvar a lombar.'
-      ],
-      goldenTip: 'Mantenha o tronco fixo em 90°; quem faz o curso é a escápula e o cotovelo, não o balanço da lombar.',
-      commonMistake: 'Jogar o tronco para trás usando impulso da lombar para puxar mais peso.'
+        'Mantenha a coluna neutra e o tronco firme em 90° com o banco.',
+        'Puxe o puxador até a linha do umbigo fechando as escápulas atrás.',
+        'Estenda os braços à frente deixando as escápulas abrirem sem curvar a lombar.'
+      ]
     };
   }
 
-  if (id === 'pull_3' || lower.includes('crucifixo invertido') || lower.includes('face pull')) {
+  if (exerciseId === 'pull_3' || lower.includes('remada articulada') || lower.includes('cavalinho')) {
     return {
-      movementPattern: 'rear_delt',
-      primaryMuscles: ['Deltoide Posterior'],
-      secondaryMuscles: ['Trapézio Médio', 'Infraespinhal'],
-      cadence: '1s abertura • 1s pico atrás • 2s retorno',
+      pattern: 'horizontal_row',
+      primaryMuscle: 'Dorsal & Trapézio Médio',
+      concentricLabel: 'Remada esmagando as costas (1s)',
+      eccentricLabel: 'Retorno controlado (2s)',
       steps: [
-        'Ajuste o banco para que os apoios fiquem exatamente na linha horizontal dos seus ombros.',
-        'Empurre os braços para trás mantendo uma leve flexão nos cotovelos (sem dobrar e esticar o tríceps).',
-        'Pare na linha das costas sentindo a queimação atrás do ombro e retorne devagar sem deixar as placas baterem.'
-      ],
-      goldenTip: 'Evite juntar/esmagar as escápulas demais no início; pense em abrir os braços em um arco amplo para isolar o posterior de ombro.',
-      commonMistake: 'Deixar o banco baixo demais e acabar puxando com o trapézio superior.'
+        'Apoie o peitoral firmemente no suporte da máquina.',
+        'Traga os cotovelos para trás passando da linha do tronco.',
+        'Volte devagar mantendo a tensão contínua nas costas.'
+      ]
     };
   }
 
-  if (id === 'pull_4' || lower.includes('bayesiana')) {
+  if (exerciseId === 'pull_4' || lower.includes('crucifixo inverso') || lower.includes('face pull')) {
     return {
-      movementPattern: 'biceps_cable',
-      primaryMuscles: ['Bíceps Braquial (Cabeça Longa)'],
-      secondaryMuscles: ['Braquial', 'Antebraço'],
-      cadence: '1s subida • 1s aperto no topo • 2.5s descida alongando',
+      pattern: 'rear_delt_fly',
+      primaryMuscle: 'Deltoide Posterior',
+      concentricLabel: 'Abertura na linha dos ombros (1s)',
+      eccentricLabel: 'Retorno controlado (2s)',
       steps: [
-        'De costas para a polia baixa, dê um passo à frente para que o cabo puxe seu braço levemente para trás da linha do tronco.',
-        'Mantendo o cotovelo apontado para o chão (e levemente atrás do corpo), flexione o antebraço até a contração máxima.',
-        'Desça devagar deixando a polia alongar totalmente o bíceps lá atrás antes da próxima repetição.'
-      ],
-      goldenTip: 'A mágica da Rosca Bayesiana é o estiramento máximo da cabeça longa do bíceps com o braço atrás do tronco. Crave o cotovelo no lugar!',
-      commonMistake: 'Jogar o cotovelo para frente durante a subida, transformando o exercício numa elevação frontal de ombro.'
+        'Ajuste o banco para que as mãos fiquem exatamente na altura dos ombros.',
+        'Abra os braços para trás mantendo os cotovelos levemente flexionados.',
+        'Retorne sem deixar as placas de peso baterem no final.'
+      ]
     };
   }
 
-  if (id === 'pull_5' || lower.includes('martelo') || lower.includes('rosca')) {
+  if (exerciseId === 'pull_5' || lower.includes('bayesiana') || lower.includes('baiana') || lower.includes('inclinado')) {
     return {
-      movementPattern: 'biceps_curl',
-      primaryMuscles: ['Braquial', 'Braquiorradial (Antebraço)'],
-      secondaryMuscles: ['Bíceps Braquial'],
-      cadence: '1s subida • 1s pico • 2s descida',
+      pattern: 'bayesian_curl',
+      primaryMuscle: 'Bíceps (Cabeça Longa)',
+      concentricLabel: 'Flexão do cotovelo à frente (1s)',
+      eccentricLabel: 'Alongamento atrás do tronco (2s)',
       steps: [
-        'Em pé, segure os halteres com as palmas das mãos voltadas uma para a outra (pegada neutra / martelo).',
-        'Suba o haltere mantendo o cotovelo colado na lateral da costela até contrair totalmente.',
-        'Desça de forma controlada até estender o braço, sem balançar o quadril.'
-      ],
-      goldenTip: 'Aperte o cabo do haltere com firmeza; isso maximiza o recrutamento do braquiorradial e dá aspecto denso ao braço.',
-      commonMistake: 'Usar impulso do quadril ou girar o punho no meio do caminho.'
+        'Dê um passo à frente da polia baixa deixando o braço alongado atrás do corpo.',
+        'Trave o cotovelo fixo e flexione o antebraço para frente contraindo o bíceps.',
+        'Retorne devagar sentindo o alongamento máximo sem mover o ombro.'
+      ]
     };
   }
 
-  if (id === 'lower2_1' || lower.includes('stiff') || lower.includes('rdl')) {
+  if (exerciseId === 'pull_6' || lower.includes('scott') || lower.includes('martelo')) {
     return {
-      movementPattern: 'hip_hinge',
-      primaryMuscles: ['Isquiotibiais (Posterior de Coxa)', 'Glúteo Máximo'],
-      secondaryMuscles: ['Eretores da Espinha', 'Core'],
-      cadence: '2.5s descida controlada • 1s subida firme',
+      pattern: 'preacher_curl',
+      primaryMuscle: 'Bíceps Braquial & Braquiorradial',
+      concentricLabel: 'Subida contraindo o bíceps (1s)',
+      eccentricLabel: 'Descida controlada no apoio (2s)',
       steps: [
-        'Pés na largura do quadril, joelhos destravados (levemente flexionados em ~15° fixos) e coluna 100% alinhada.',
-        'Inicie o movimento empurrando o quadril para trás (como se fosse fechar uma porta com o glúteo), deslizando os halteres rente à coxa e canela.',
-        'Desça até sentir o alongamento máximo do posterior (geralmente no meio da canela) e suba contraindo o glúteo.'
-      ],
-      goldenTip: 'O movimento acaba quando seu quadril para de ir para trás. Descer além disso só dobra a lombar sem acionar mais o posterior!',
-      commonMistake: 'Afastar os halteres da perna ou arredondar as costas olhando para cima.'
+        'Apoie toda a parte de trás dos braços no banco Scott sem deixar folga.',
+        'Suba o peso contraindo forte o bíceps sem desencostar os cotovelos.',
+        'Desça até quase estender o braço mantendo tensão na parte baixa.'
+      ]
     };
   }
 
-  if (lower.includes('leg press')) {
-    const isGluteFocus = lower.includes('altos') || id === 'lower2_2';
-    const isUnilateral = lower.includes('unilateral') || id === 'lower1_4';
+  if (exerciseId === 'push_1' || (lower.includes('supino') && lower.includes('inclinado'))) {
     return {
-      movementPattern: 'leg_press',
-      primaryMuscles: isGluteFocus
-        ? ['Glúteo Máximo', 'Posterior & Adutores']
-        : ['Quadríceps (Vasto Lateral, Medial e Reto Femoral)'],
-      secondaryMuscles: ['Glúteo Máximo', 'Adutores'],
-      cadence: '2.5s descida • 0.5s transição • 1.5s empurrada',
+      pattern: 'incline_press',
+      primaryMuscle: 'Peitoral Superior (Clavicular)',
+      concentricLabel: 'Empurrar acima do peito (1s)',
+      eccentricLabel: 'Descida controlada (2s)',
       steps: [
-        isGluteFocus
-          ? 'Posicione os pés na parte alta da plataforma e mais afastados, pontas levemente para fora.'
-          : isUnilateral
-          ? 'Posicione apenas uma perna centralizada/firme na plataforma e mantenha o quadril totalmente encaixado no banco.'
-          : 'Posicione os pés na largura dos ombros no centro/base da plataforma e cole o quadril e a lombar no encosto.',
-        'Destrave e desça a plataforma controlando o peso até atingir 90° ou mais de flexão nos joelhos, sem deixar o quadril descolar do banco.',
-        'Empurre a plataforma fazendo força pelo calcanhar e meio do pé, parando um pouco antes de trancar totalmente os joelhos.'
-      ],
-      goldenTip: 'Use as alças laterais do assento para "puxar" seu quadril para baixo contra o banco durante toda a série.',
-      commonMistake: 'Tirar a lombar do encosto no fundo ou empurrar os próprios joelhos com as mãos.'
+        'Banco entre 30° e 45° com escápulas fechadas e cotovelos a ~45° do tronco.',
+        'Desça os halteres controladamente até a linha da clavícula.',
+        'Empurre para cima alinhando os pesos sobre a parte alta do peito.'
+      ]
     };
   }
 
-  if (lower.includes('extensora')) {
+  if (exerciseId === 'push_2' || lower.includes('supino máquina') || lower.includes('supino reto')) {
     return {
-      movementPattern: 'knee_ext',
-      primaryMuscles: ['Quadríceps Isolado (4 Cabeças)'],
-      secondaryMuscles: [],
-      cadence: '1s subida • 1.5s pico travado no topo • 2s descida',
+      pattern: 'flat_press',
+      primaryMuscle: 'Peitoral Maior',
+      concentricLabel: 'Empurrar contraindo o peito (1s)',
+      eccentricLabel: 'Retorno alongando o peitoral (2s)',
       steps: [
-        'Ajuste o encosto para que a dobra do seu joelho fique exatamente alinhada ao eixo de rotação da máquina.',
-        'Chute para cima até estender 100% os joelhos e segure 1 segundo cheio no topo esmagando a coxa.',
-        'Desça controlando o peso até o final da amplitude, sem deixar as placas baterem.'
-      ],
-      goldenTip: 'A parte mais importante da Cadeira Extensora é o 1 segundo de parada isométrica no topo de cada repetição!',
-      commonMistake: 'Chutar o peso usando impulso balístico e não travar no topo.'
+        'Mantenha as costas coladas no encosto e os ombros baixos.',
+        'Empurre as manoplas até quase estender os cotovelos contraindo o peitoral.',
+        'Retorne controlando a fase negativa sem soltar o peso.'
+      ]
     };
   }
 
-  if (lower.includes('flexora')) {
+  if (exerciseId === 'push_3' || lower.includes('elevação lateral')) {
     return {
-      movementPattern: 'knee_flex',
-      primaryMuscles: ['Isquiotibiais (Posterior de Coxa)'],
-      secondaryMuscles: ['Gastrocnêmio (Panturrilha)'],
-      cadence: '1s flexão • 1s contração embaixo • 2.5s subida',
+      pattern: 'lateral_raise',
+      primaryMuscle: 'Deltoide Lateral',
+      concentricLabel: 'Elevação até a linha do ombro (1s)',
+      eccentricLabel: 'Descida resistindo ao peso (2s)',
       steps: [
-        'Ajuste o rolo logo acima do calcanhar e trave bem o apoio de coxa para o corpo não subir.',
-        'Puxe o rolo para baixo o máximo possível aproximando o calcanhar do banco.',
-        'Retorne devagar controlando toda a subida até alongar completamente o posterior.'
-      ],
-      goldenTip: 'Mantenha a ponta dos pés puxada para cima (dorsiflexão) para aumentar a tensão na cadeia posterior.',
-      commonMistake: 'Tirar o quadril do banco tentando roubar nas últimas repetições.'
+        'Incline-se sutilmente à frente e eleve os braços no plano da escápula.',
+        'Suba guiando pelos cotovelos até a altura dos ombros, sem encolher o trapézio.',
+        'Desça devagar parando um pouco antes de encostar na coxa.'
+      ]
     };
   }
 
-  if (lower.includes('panturrilha')) {
+  if (exerciseId === 'push_4' || lower.includes('tríceps corda') || lower.includes('testa')) {
     return {
-      movementPattern: 'calf',
-      primaryMuscles: ['Gastrocnêmio (Medial e Lateral)'],
-      secondaryMuscles: ['Sóleo'],
-      cadence: '1s subida • 1s topo • 2s descida • 2s pausa no fundo!',
+      pattern: 'triceps_pushdown',
+      primaryMuscle: 'Tríceps Braquial',
+      concentricLabel: 'Extensão total dos cotovelos (1s)',
+      eccentricLabel: 'Subida até 90° (2s)',
       steps: [
-        'Apoie apenas a parte da frente dos pés (metatarso) no degrau, mantendo os joelhos estendidos (sem hiperestender).',
-        'Desça o calcanhar ao máximo possível e FAÇA UMA PAUSA DE 2 SEGUNDOS no fundo para eliminar o reflexo elástico do tendão.',
-        'Suba na ponta dos pés até a contração máxima e segure 1 segundo no topo.'
-      ],
-      goldenTip: 'A pausa de 2 segundos lá no fundo alongando é o que força a fibra muscular da panturrilha a trabalhar em vez do tendão de Aquiles!',
-      commonMistake: 'Fazer repetições curtas e rápidas quicando ("bombeando") sem amplitude.'
+        'Cole os cotovelos ao lado das costelas e mantenha-os fixos.',
+        'Estenda o antebraço para baixo abrindo a corda no final do movimento.',
+        'Retorne controladamente até cerca de 90° sem mover os ombros.'
+      ]
     };
   }
 
-  if (lower.includes('abdominal')) {
+  if (exerciseId === 'push_5' || lower.includes('mergulho') || lower.includes('paralelas')) {
     return {
-      movementPattern: 'abs_crunch',
-      primaryMuscles: ['Reto Abdominal (Gomos)'],
-      secondaryMuscles: ['Oblíquos'],
-      cadence: '1.5s enrolando • 1s soltando o ar • 2s subindo',
+      pattern: 'parallel_dip',
+      primaryMuscle: 'Peitoral Inferior & Tríceps',
+      concentricLabel: 'Empurrar até estender (1s)',
+      eccentricLabel: 'Descida controlada até 90° (2s)',
       steps: [
-        'Ajoelhe-se de frente (ou de costas) para a polia alta segurando a corda firme ao lado das têmporas/orelhas.',
-        'Mantenha o quadril fixo e enrole a coluna para baixo, aproximando as costelas da pelve enquanto solta todo o ar.',
-        'Retorne devagar esticando o abdômen sem sentar nos calcanhares.'
-      ],
-      goldenTip: 'Imagine que sua coluna é um tapete enrolando vértebra por vértebra; não desça com as costas retas.',
-      commonMistake: 'Sentar nos calcanhares usando o peso do quadril para puxar a corda em vez de dobrar o abdômen.'
+        'Mantenha os ombros baixos (longe das orelhas) e o tronco levemente inclinado.',
+        'Desça dobrando os cotovelos até formarem 90°.',
+        'Empurre as barras para baixo estendendo os braços com firmeza.'
+      ]
     };
   }
 
-  if (lower.includes('supino')) {
-    const isIncline = lower.includes('inclinado');
+  if (exerciseId === 'leg1_1' || exerciseId === 'leg2_2' || lower.includes('hack') || lower.includes('leg press') || lower.includes('agachamento')) {
     return {
-      movementPattern: 'chest_press',
-      primaryMuscles: isIncline
-        ? ['Peitoral Superior (Clavicular)']
-        : ['Peitoral Maior (Esternal)'],
-      secondaryMuscles: ['Deltoide Anterior', 'Tríceps Braquial'],
-      cadence: '2s descida controlada • 1s empurrada firme',
+      pattern: 'squat_hack',
+      primaryMuscle: 'Quadríceps & Glúteos',
+      concentricLabel: 'Subida empurrando pelo calcanhar (1s)',
+      eccentricLabel: 'Descida profunda controlada (2s)',
       steps: [
-        isIncline
-          ? 'Ajuste o banco em 30° a 45°, feche as escápulas atrás e firme os pés no chão.'
-          : 'Deite no banco reto, feche as escápulas para trás e para baixo criando uma base sólida para os ombros.',
-        'Desça os halteres/barra com os cotovelos a ~45°-60° em relação ao tronco (nunca 90° abertos) até alongar o peitoral.',
-        'Empurre para cima convergindo levemente sem desencostar os ombros do banco no topo.'
-      ],
-      goldenTip: 'Mantenha o peito sempre mais alto que os ombros durante toda a série através da retração escapular.',
-      commonMistake: 'Abrir os cotovelos na linha do pescoço (90°), sobrecarregando o manguito rotador.'
+        'Mantenha lombar e quadril totalmente apoiados no encosto durante toda a série.',
+        'Desça flexionando os joelhos na direção da ponta dos pés até ~90°.',
+        'Empurre a plataforma sem travar os joelhos de forma brusca no topo.'
+      ]
     };
   }
 
-  if (lower.includes('elevação lateral')) {
+  if (exerciseId === 'leg1_2' || lower.includes('extensora')) {
     return {
-      movementPattern: 'lateral_raise',
-      primaryMuscles: ['Deltoide Lateral (Largura do Ombro)'],
-      secondaryMuscles: ['Supraespinhal'],
-      cadence: '1s subida • 0.5s topo • 2s descida',
+      pattern: 'leg_extension',
+      primaryMuscle: 'Quadríceps (Reto Femoral & Vastos)',
+      concentricLabel: 'Extensão completa + 1s no topo',
+      eccentricLabel: 'Descida controlada (2s)',
       steps: [
-        'De lado para a polia baixa, segure o puxador com o cabo passando pela frente ou por trás das pernas.',
-        'Eleve o braço no plano escapular (~20° à frente da linha lateral do corpo) até a altura do ombro.',
-        'Desça controlando a resistência contínua do cabo sem relaxar no fundo.'
-      ],
-      goldenTip: 'Pense em empurrar a parede longe com o punho/cotovelo, e não em levantar o peso para o teto (evita ativar o trapézio).',
-      commonMistake: 'Subir acima da linha da cabeça ou dar impulso com o tronco.'
+        'Alinhe o eixo da cadeira com a linha do seu joelho e segure firme nas alças.',
+        'Chute para cima até estender totalmente os joelhos e segure 1 segundo no topo.',
+        'Desça controlando o peso sem deixá-lo despencar.'
+      ]
     };
   }
 
-  if (lower.includes('peck deck') || lower.includes('crucifixo')) {
+  if (exerciseId === 'leg1_3' || exerciseId === 'leg2_3' || lower.includes('flexora')) {
     return {
-      movementPattern: 'pec_fly',
-      primaryMuscles: ['Peitoral Maior (Fibras Internas & Alongamento)'],
-      secondaryMuscles: ['Deltoide Anterior'],
-      cadence: '1s fechamento • 1.5s esmagando no meio • 2s abrindo',
+      pattern: 'leg_curl',
+      primaryMuscle: 'Posterior de Coxa (Isquiotibiais)',
+      concentricLabel: 'Flexão máxima dos joelhos (1s)',
+      eccentricLabel: 'Retorno lento alongando (2s)',
       steps: [
-        'Ajuste o assento para que suas mãos fiquem na linha do meio do peito e cole as escápulas no encosto.',
-        'Feche os braços em arco pensando em encostar um bíceps no outro e segure 1 a 2 segundos esmagando o peitoral.',
-        'Abra controlando o movimento até a linha do tronco, sentindo o peitoral alongar.'
-      ],
-      goldenTip: 'A pausa de 1.5s com as alças unidas na frente gera recrutamento máximo das fibras do peitoral.',
-      commonMistake: 'Tirar as costas do encosto e projetar os ombros para frente ao fechar.'
+        'Mantenha o quadril pressionado contra o banco sem levantar a lombar.',
+        'Flexione os joelhos puxando o rolo o máximo possível para trás.',
+        'Volte devagar controlando toda a fase excêntrica.'
+      ]
     };
   }
 
-  if (id === 'push_5' || lower.includes('mergulho') || lower.includes('paralelas')) {
+  if (exerciseId === 'leg2_1' || lower.includes('stiff') || lower.includes('terra') || lower.includes('rdl')) {
     return {
-      movementPattern: 'dip_graviton',
-      primaryMuscles: ['Peitoral Inferior', 'Tríceps Braquial'],
-      secondaryMuscles: ['Deltoide Anterior'],
-      cadence: '2s descida • 1s subida forte',
+      pattern: 'hip_hinge',
+      primaryMuscle: 'Posterior de Coxa & Glúteo',
+      concentricLabel: 'Subida estendendo o quadril (1s)',
+      eccentricLabel: 'Descida projetando o quadril atrás (2s)',
       steps: [
-        'Apoie os joelhos na plataforma do Graviton, segure firme nas barras paralelas e incline o tronco ~20° para frente.',
-        'Desça controlando o corpo até os ombros ficarem na linha dos cotovelos (90°), alongando o peitoral inferior.',
-        'Empurre as barras para baixo até estender os braços mantendo o peito aberto.'
-      ],
-      goldenTip: 'Incline levemente o tronco à frente para focar no peitoral inferior; tronco reto foca mais no tríceps.',
-      commonMistake: 'Descer além da mobilidade do ombro ou encolher o pescoço entre os ombros.'
+        'Destrave levemente os joelhos e mantenha a coluna 100% reta.',
+        'Desça deslizando a barra/halteres rente à coxa enquanto joga o quadril para trás.',
+        'Suba contraindo glúteos e posterior assim que sentir o alongamento máximo.'
+      ]
     };
   }
 
-  if (id === 'push_6' || lower.includes('corda') || lower.includes('pulley')) {
-    return {
-      movementPattern: 'triceps_push',
-      primaryMuscles: ['Tríceps (Cabeça Lateral e Medial)'],
-      secondaryMuscles: ['Ancôneo'],
-      cadence: '1s descida • 1s abrindo a corda embaixo • 2s subida',
-      steps: [
-        'Fique em pé com leve inclinação do tronco à frente e cole os cotovelos na lateral do corpo.',
-        'Estenda os antebraços para baixo e, no final do movimento, afaste as pontas da corda contraindo forte o tríceps.',
-        'Suba devagar apenas o antebraço até ~90°, mantendo o cotovelo imóvel como uma dobradiça.'
-      ],
-      goldenTip: 'O cotovelo não deve ir para frente nem para trás; apenas o antebraço se move.',
-      commonMistake: 'Subir os cotovelos na volta e jogar o peso do corpo sobre a corda.'
-    };
-  }
-
-  // Default / Triceps Francês
   return {
-    movementPattern: 'triceps_overhead',
-    primaryMuscles: ['Tríceps (Cabeça Longa)'],
-    secondaryMuscles: ['Cabeça Lateral e Medial'],
-    cadence: '2s descida atrás da cabeça • 1s extensão completa',
+    pattern: 'calf_raise',
+    primaryMuscle: 'Panturrilhas (Gastrocnêmio & Sóleo)',
+    concentricLabel: 'Ponta dos pés no topo + 1s',
+    eccentricLabel: 'Descida alongando o calcanhar (2s)',
     steps: [
-      'Com o braço elevado acima da cabeça (na polia ou c/ haltere), mantenha o cotovelo apontado para cima/frente.',
-      'Deixe o peso descer atrás da cabeça flexionando completamente o cotovelo para alongar a cabeça longa do tríceps.',
-      'Estenda o braço até o topo mantendo os cotovelos fechados.'
-    ],
-    goldenTip: 'A cabeça longa do tríceps é a maior porção do braço e só é totalmente esticada quando o cotovelo está elevado acima do ombro!',
-    commonMistake: 'Deixar os cotovelos abrirem demais para os lados durante a força.'
+      'Apoie a parte frontal do pé na plataforma deixando o calcanhar livre.',
+      'Desça o calcanhar o máximo possível alongando bem a panturrilha.',
+      'Suba o máximo que conseguir na ponta dos pés e segure 1 segundo no topo.'
+    ]
   };
 }
+
+/**
+ * Renderiza uma animação biomecânica fluida a 60fps com boneco articulado + equipamento.
+ * `t` varia suavemente entre 0 (alongado/início) e 1 (contração máxima).
+ */
+const BiomechanicalCanvas: React.FC<{
+  pattern: MotionPattern;
+  concentricLabel: string;
+  eccentricLabel: string;
+}> = ({ pattern, concentricLabel, eccentricLabel }) => {
+  const [phase, setPhase] = useState(0); // 0 -> 1 -> 0
+  const [isConcentric, setIsConcentric] = useState(true);
+
+  useEffect(() => {
+    let rafId: number;
+    const startTime = performance.now();
+    // Ciclo completo de 3.2s: 1.1s concêntrica, 0.35s pico, 1.45s excêntrica, 0.3s base
+    const cycleMs = 3200;
+
+    const tick = (now: number) => {
+      const elapsed = (now - startTime) % cycleMs;
+      let t = 0;
+      let conc = true;
+
+      if (elapsed < 1100) {
+        // Subida / Contração (easeInOutCubic)
+        const p = elapsed / 1100;
+        t = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        conc = true;
+      } else if (elapsed < 1450) {
+        // Pico de contração isométrica
+        t = 1;
+        conc = true;
+      } else if (elapsed < 2900) {
+        // Descida controlada (excêntrica)
+        const p = (elapsed - 1450) / 1450;
+        const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        t = 1 - eased;
+        conc = false;
+      } else {
+        t = 0;
+        conc = false;
+      }
+
+      setPhase(t);
+      setIsConcentric(conc);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  const lerp = (a: number, b: number) => a + (b - a) * phase;
+
+  return (
+    <div className="relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
+      {/* Indicador de fase ao vivo */}
+      <div className="flex items-center justify-between px-3.5 py-2 bg-slate-950/70 border-b border-slate-800/80 text-[11px] font-bold">
+        <div className="flex items-center gap-2">
+          <span
+            className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+              isConcentric ? 'bg-blue-400 shadow-[0_0_8px_#60a5fa]' : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+            }`}
+          />
+          <span className="text-white">
+            {isConcentric ? concentricLabel : eccentricLabel}
+          </span>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+          {Math.round(phase * 100)}%
+        </span>
+      </div>
+
+      {/* Área Gráfica Biomecânica Ampla */}
+      <div className="h-48 w-full flex items-center justify-center relative px-4">
+        <svg viewBox="0 0 300 180" className="w-full h-full">
+          {/* Grade de referência */}
+          <line x1="20" y1="158" x2="280" y2="158" stroke="#334155" strokeWidth="2" strokeLinecap="round" />
+          <line x1="20" y1="30" x2="280" y2="30" stroke="#1e293b" strokeWidth="1" strokeDasharray="4 4" />
+          <line x1="20" y1="95" x2="280" y2="95" stroke="#1e293b" strokeWidth="1" strokeDasharray="4 4" />
+
+          {/* 1. PUXADA VERTICAL / BARRA FIXA */}
+          {pattern === 'vertical_pull' && (() => {
+            const barY = lerp(38, 86);
+            const elbowXLeft = lerp(112, 102);
+            const elbowXRight = lerp(188, 198);
+            const elbowY = lerp(60, 108);
+            const handXLeft = 104;
+            const handXRight = 196;
+
+            return (
+              <g>
+                {/* Estrutura da polia superior */}
+                <line x1="150" y1="10" x2="150" y2={barY} stroke="#64748b" strokeWidth="2.5" strokeDasharray="3 2" />
+                {/* Banco e pernas fixas */}
+                <rect x="132" y="138" width="36" height="8" rx="4" fill="#475569" />
+                <line x1="150" y1="146" x2="150" y2="158" stroke="#475569" strokeWidth="6" />
+                {/* Tronco + Dorsal ativada */}
+                <path
+                  d="M128 88 L172 88 L163 136 L137 136 Z"
+                  fill="#3b82f6"
+                  fillOpacity={lerp(0.25, 0.85)}
+                  stroke="#60a5fa"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                />
+                {/* Cabeça */}
+                <circle cx="150" cy="70" r="11" fill="#e2e8f0" />
+                {/* Braço Esquerdo (Ombro -> Cotovelo -> Mão) */}
+                <polyline
+                  points={`128,90 ${elbowXLeft},${elbowY} ${handXLeft},${barY}`}
+                  fill="none"
+                  stroke="#f8fafc"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Braço Direito */}
+                <polyline
+                  points={`172,90 ${elbowXRight},${elbowY} ${handXRight},${barY}`}
+                  fill="none"
+                  stroke="#f8fafc"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Barra */}
+                <line x1="88" y1={barY} x2="212" y2={barY} stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+              </g>
+            );
+          })()}
+
+          {/* 2. REMADA HORIZONTAL */}
+          {(pattern === 'horizontal_row' || pattern === 'rear_delt_fly') && (() => {
+            const handX = lerp(92, 162);
+            const elbowX = lerp(132, 196);
+            const elbowY = pattern === 'rear_delt_fly' ? lerp(80, 74) : lerp(88, 96);
+            const handY = pattern === 'rear_delt_fly' ? 78 : 88;
+            const weightY = lerp(125, 65);
+
+            return (
+              <g>
+                {/* Coluna da polia à esquerda */}
+                <rect x="44" y="30" width="12" height="128" rx="4" fill="#334155" />
+                {/* Bloco de peso subindo e descendo */}
+                <rect x="40" y={weightY} width="20" height="16" rx="3" fill="#38bdf8" />
+                {/* Cabo */}
+                <line x1="56" y1={handY} x2={handX} y2={handY} stroke="#94a3b8" strokeWidth="2.5" />
+                {/* Banco */}
+                <line x1="150" y1="132" x2="225" y2="132" stroke="#475569" strokeWidth="6" strokeLinecap="round" />
+                {/* Pernas apoiadas */}
+                <polyline points="175,130 120,122 72,145" fill="none" stroke="#64748b" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Tronco firme em 90° */}
+                <line x1="175" y1="130" x2="175" y2="74" stroke="#60a5fa" strokeWidth="14" strokeLinecap="round" />
+                {/* Costas / Deltoide posterior brilhando */}
+                <circle cx="180" cy="86" r={lerp(7, 12)} fill="#3b82f6" fillOpacity={lerp(0.3, 0.9)} />
+                {/* Cabeça */}
+                <circle cx="175" cy="54" r="11" fill="#e2e8f0" />
+                {/* Braço puxando */}
+                <polyline
+                  points={`175,78 ${elbowX},${elbowY} ${handX},${handY}`}
+                  fill="none"
+                  stroke="#f8fafc"
+                  strokeWidth="6.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx={handX} cy={handY} r="4.5" fill="#38bdf8" />
+              </g>
+            );
+          })()}
+
+          {/* 3. ROSCA BAYESIANA / ROSCA SCOTT */}
+          {(pattern === 'bayesian_curl' || pattern === 'preacher_curl') && (() => {
+            const shoulderX = 160;
+            const shoulderY = 72;
+            const elbowX = pattern === 'bayesian_curl' ? 148 : 174;
+            const elbowY = 108;
+            // Ângulo do antebraço: de estendido para flexionado
+            const angle = pattern === 'bayesian_curl'
+              ? lerp(125, 25) * (Math.PI / 180)
+              : lerp(70, -35) * (Math.PI / 180);
+            const handX = elbowX + Math.cos(angle) * 38;
+            const handY = elbowY + Math.sin(angle) * 38;
+
+            return (
+              <g>
+                {/* Polia baixa atrás (se bayesiana) ou Banco Scott */}
+                {pattern === 'bayesian_curl' ? (
+                  <>
+                    <rect x="65" y="40" width="10" height="118" rx="3" fill="#334155" />
+                    <line x1="75" y1="145" x2={handX} y2={handY} stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="3 2" />
+                  </>
+                ) : (
+                  <path d="M165 158 L165 98 L195 118" fill="none" stroke="#475569" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                )}
+                {/* Pernas e Tronco */}
+                <line x1="160" y1="118" x2="152" y2="156" stroke="#64748b" strokeWidth="8" strokeLinecap="round" />
+                <line x1="160" y1="118" x2="172" y2="156" stroke="#475569" strokeWidth="8" strokeLinecap="round" />
+                <line x1="160" y1="72" x2="160" y2="118" stroke="#64748b" strokeWidth="14" strokeLinecap="round" />
+                {/* Cabeça */}
+                <circle cx="162" cy="52" r="11" fill="#e2e8f0" />
+                {/* Braço (Úmero fixo) + Bíceps ativado */}
+                <line x1={shoulderX} y1={shoulderY} x2={elbowX} y2={elbowY} stroke="#94a3b8" strokeWidth="7" strokeLinecap="round" />
+                <circle
+                  cx={(shoulderX + elbowX) / 2 + 4}
+                  cy={(shoulderY + elbowY) / 2}
+                  r={lerp(5, 9.5)}
+                  fill="#3b82f6"
+                  fillOpacity={lerp(0.35, 0.95)}
+                />
+                {/* Antebraço se movendo */}
+                <line x1={elbowX} y1={elbowY} x2={handX} y2={handY} stroke="#f8fafc" strokeWidth="6.5" strokeLinecap="round" />
+                {/* Halter / Manopla */}
+                <circle cx={handX} cy={handY} r="6" fill="#38bdf8" />
+              </g>
+            );
+          })()}
+
+          {/* 4. SUPINO INCLINADO / RETO */}
+          {(pattern === 'incline_press' || pattern === 'flat_press') && (() => {
+            const handY = lerp(92, 42);
+            const handX = lerp(142, 152);
+            const elbowX = lerp(136, 147);
+            const elbowY = lerp(114, 68);
+
+            return (
+              <g>
+                {/* Banco inclinado ou reto */}
+                {pattern === 'incline_press' ? (
+                  <polyline points="95,68 158,125 205,125" fill="none" stroke="#475569" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                ) : (
+                  <line x1="90" y1="118" x2="205" y2="118" stroke="#475569" strokeWidth="7" strokeLinecap="round" />
+                )}
+                <line x1="120" y1="118" x2="120" y2="158" stroke="#334155" strokeWidth="6" />
+                <line x1="190" y1="125" x2="190" y2="158" stroke="#334155" strokeWidth="6" />
+                {/* Tronco e Peitoral ativado */}
+                <line
+                  x1={pattern === 'incline_press' ? 118 : 112}
+                  y1={pattern === 'incline_press' ? 84 : 108}
+                  x2="165"
+                  y2="116"
+                  stroke="#60a5fa"
+                  strokeWidth="14"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="136"
+                  cy={pattern === 'incline_press' ? 92 : 104}
+                  r={lerp(6, 11)}
+                  fill="#3b82f6"
+                  fillOpacity={lerp(0.3, 0.9)}
+                />
+                {/* Cabeça */}
+                <circle
+                  cx={pattern === 'incline_press' ? 104 : 96}
+                  cy={pattern === 'incline_press' ? 72 : 104}
+                  r="10"
+                  fill="#e2e8f0"
+                />
+                {/* Braço empurrando */}
+                <polyline
+                  points={`132,${pattern === 'incline_press' ? 92 : 106} ${elbowX},${elbowY} ${handX},${handY}`}
+                  fill="none"
+                  stroke="#f8fafc"
+                  strokeWidth="6.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Halter no topo */}
+                <line x1={handX - 12} y1={handY} x2={handX + 12} y2={handY} stroke="#38bdf8" strokeWidth="6" strokeLinecap="round" />
+              </g>
+            );
+          })()}
+
+          {/* 5. ELEVAÇÃO LATERAL */}
+          {pattern === 'lateral_raise' && (() => {
+            const angle = lerp(75, 2) * (Math.PI / 180);
+            const leftHandX = 128 - Math.cos(angle) * 48;
+            const leftHandY = 82 + Math.sin(angle) * 48;
+            const rightHandX = 172 + Math.cos(angle) * 48;
+            const rightHandY = 82 + Math.sin(angle) * 48;
+
+            return (
+              <g>
+                {/* Tronco e Pernas */}
+                <line x1="142" y1="122" x2="138" y2="156" stroke="#64748b" strokeWidth="7" strokeLinecap="round" />
+                <line x1="158" y1="122" x2="162" y2="156" stroke="#64748b" strokeWidth="7" strokeLinecap="round" />
+                <path d="M132 80 L168 80 L160 124 L140 124 Z" fill="#475569" />
+                {/* Cabeça */}
+                <circle cx="150" cy="60" r="11" fill="#e2e8f0" />
+                {/* Ombros (Deltoides Laterais) em destaque */}
+                <circle cx="128" cy="82" r={lerp(6, 10)} fill="#3b82f6" fillOpacity={lerp(0.35, 0.95)} />
+                <circle cx="172" cy="82" r={lerp(6, 10)} fill="#3b82f6" fillOpacity={lerp(0.35, 0.95)} />
+                {/* Braços subindo lateralmente */}
+                <line x1="128" y1="82" x2={leftHandX} y2={leftHandY} stroke="#f8fafc" strokeWidth="6" strokeLinecap="round" />
+                <line x1="172" y1="82" x2={rightHandX} y2={rightHandY} stroke="#f8fafc" strokeWidth="6" strokeLinecap="round" />
+                {/* Halteres */}
+                <circle cx={leftHandX} cy={leftHandY} r="5.5" fill="#38bdf8" />
+                <circle cx={rightHandX} cy={rightHandY} r="5.5" fill="#38bdf8" />
+              </g>
+            );
+          })()}
+
+          {/* 6. TRÍCEPS CORDA / MERGULHO */}
+          {(pattern === 'triceps_pushdown' || pattern === 'parallel_dip') && (() => {
+            if (pattern === 'parallel_dip') {
+              const bodyY = lerp(52, 24);
+              const elbowY = lerp(68, 82);
+              return (
+                <g>
+                  {/* Barras paralelas fixas */}
+                  <line x1="105" y1="92" x2="195" y2="92" stroke="#475569" strokeWidth="5" strokeLinecap="round" />
+                  <line x1="115" y1="92" x2="115" y2="158" stroke="#334155" strokeWidth="5" />
+                  <line x1="185" y1="92" x2="185" y2="158" stroke="#334155" strokeWidth="5" />
+                  {/* Cabeça e Tronco subindo e descendo */}
+                  <circle cx="150" cy={bodyY} r="10" fill="#e2e8f0" />
+                  <line x1="150" y1={bodyY + 12} x2="146" y2={bodyY + 56} stroke="#3b82f6" strokeWidth="14" strokeLinecap="round" />
+                  <line x1="146" y1={bodyY + 56} x2="138" y2={bodyY + 92} stroke="#64748b" strokeWidth="8" strokeLinecap="round" />
+                  {/* Braços empurrando nas paralelas */}
+                  <polyline
+                    points={`138,${bodyY + 18} 122,${elbowY} 130,92`}
+                    fill="none"
+                    stroke="#f8fafc"
+                    strokeWidth="6.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <polyline
+                    points={`162,${bodyY + 18} 178,${elbowY} 170,92`}
+                    fill="none"
+                    stroke="#f8fafc"
+                    strokeWidth="6.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              );
+            }
+
+            // Tríceps Polia
+            const elbowX = 152;
+            const elbowY = 98;
+            const angle = lerp(-15, 78) * (Math.PI / 180);
+            const handX = elbowX - Math.cos(angle) * 36;
+            const handY = elbowY + Math.sin(angle) * 36;
+
+            return (
+              <g>
+                {/* Polia alta à esquerda */}
+                <rect x="72" y="24" width="10" height="134" rx="3" fill="#334155" />
+                <line x1="82" y1="30" x2={handX} y2={handY} stroke="#94a3b8" strokeWidth="2.5" />
+                {/* Corpo */}
+                <line x1="162" y1="118" x2="158" y2="156" stroke="#64748b" strokeWidth="8" strokeLinecap="round" />
+                <line x1="162" y1="70" x2="162" y2="118" stroke="#475569" strokeWidth="14" strokeLinecap="round" />
+                <circle cx="160" cy="52" r="11" fill="#e2e8f0" />
+                {/* Braço fixo + Tríceps brilhando */}
+                <line x1="158" y1="72" x2={elbowX} y2={elbowY} stroke="#94a3b8" strokeWidth="7" strokeLinecap="round" />
+                <circle cx="158" cy="84" r={lerp(5, 9)} fill="#3b82f6" fillOpacity={lerp(0.3, 0.95)} />
+                {/* Antebraço estendendo para baixo */}
+                <line x1={elbowX} y1={elbowY} x2={handX} y2={handY} stroke="#f8fafc" strokeWidth="6.5" strokeLinecap="round" />
+                <circle cx={handX} cy={handY} r="5" fill="#38bdf8" />
+              </g>
+            );
+          })()}
+
+          {/* 7. HACK SQUAT / LEG PRESS / AGACHAMENTO */}
+          {pattern === 'squat_hack' && (() => {
+            const hipY = lerp(118, 82);
+            const shoulderY = hipY - 38;
+            const kneeX = lerp(116, 138);
+            const kneeY = lerp(96, 114);
+
+            return (
+              <g>
+                {/* Trilho inclinado do Hack */}
+                <line x1="130" y1="154" x2="185" y2="36" stroke="#334155" strokeWidth="5" strokeLinecap="round" />
+                {/* Cabeça e Tronco apoiados */}
+                <circle cx="162" cy={shoulderY - 14} r="10" fill="#e2e8f0" />
+                <line x1="162" y1={shoulderY} x2="152" y2={hipY} stroke="#475569" strokeWidth="14" strokeLinecap="round" />
+                {/* Coxa (Quadríceps ativado) */}
+                <line x1="152" y1={hipY} x2={kneeX} y2={kneeY} stroke="#3b82f6" strokeWidth="11" strokeLinecap="round" />
+                {/* Panturrilha e Pé firme na plataforma */}
+                <line x1={kneeX} y1={kneeY} x2="122" y2="148" stroke="#f8fafc" strokeWidth="8" strokeLinecap="round" />
+                <line x1="102" y1="152" x2="140" y2="146" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+              </g>
+            );
+          })()}
+
+          {/* 8. CADEIRA EXTENSORA / FLEXORA */}
+          {(pattern === 'leg_extension' || pattern === 'leg_curl') && (() => {
+            const kneeX = 132;
+            const kneeY = 104;
+            // Extensora: perna sobe até horizontal (0 rad); Flexora: perna dobra para trás
+            const angle = pattern === 'leg_extension'
+              ? lerp(80, 4) * (Math.PI / 180)
+              : lerp(8, 82) * (Math.PI / 180);
+            const footX = kneeX - Math.cos(angle) * 44;
+            const footY = kneeY + Math.sin(angle) * 44;
+
+            return (
+              <g>
+                {/* Assento e Encosto da Cadeira */}
+                <polyline points="130,108 182,108 192,56" fill="none" stroke="#475569" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="162" y1="108" x2="162" y2="158" stroke="#334155" strokeWidth="6" />
+                {/* Tronco e Cabeça */}
+                <circle cx="182" cy="46" r="10" fill="#e2e8f0" />
+                <line x1="182" y1="62" x2="174" y2="102" stroke="#64748b" strokeWidth="13" strokeLinecap="round" />
+                {/* Coxa apoiada com músculo alvo brilhando */}
+                <line x1="174" y1="104" x2={kneeX} y2={kneeY} stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" />
+                {/* Perna articulando */}
+                <line x1={kneeX} y1={kneeY} x2={footX} y2={footY} stroke="#f8fafc" strokeWidth="7.5" strokeLinecap="round" />
+                {/* Rolo estofado no tornozelo */}
+                <circle cx={footX} cy={footY} r="6.5" fill="#38bdf8" />
+              </g>
+            );
+          })()}
+
+          {/* 9. STIFF / RDL (DOBRADIÇA DE QUADRIL) */}
+          {pattern === 'hip_hinge' && (() => {
+            const hipX = lerp(176, 152);
+            const hipY = 106;
+            const shoulderX = lerp(122, 152);
+            const shoulderY = lerp(94, 62);
+            const barX = lerp(128, 146);
+            const barY = lerp(132, 102);
+
+            return (
+              <g>
+                {/* Pernas semirrígidas */}
+                <line x1="150" y1="154" x2="154" y2="128" stroke="#64748b" strokeWidth="8" strokeLinecap="round" />
+                <line x1="154" y1="128" x2={hipX} y2={hipY} stroke="#3b82f6" strokeWidth="11" strokeLinecap="round" />
+                {/* Tronco reto inclinando pelo quadril */}
+                <line x1={hipX} y1={hipY} x2={shoulderX} y2={shoulderY} stroke="#e2e8f0" strokeWidth="13" strokeLinecap="round" />
+                <circle cx={shoulderX - 8} cy={shoulderY - 12} r="10" fill="#e2e8f0" />
+                {/* Braço segurando a barra rente à perna */}
+                <line x1={shoulderX} y1={shoulderY} x2={barX} y2={barY} stroke="#94a3b8" strokeWidth="5.5" strokeLinecap="round" />
+                <circle cx={barX} cy={barY} r="9" fill="#38bdf8" stroke="#0f172a" strokeWidth="2" />
+              </g>
+            );
+          })()}
+
+          {/* 10. PANTURRILHA */}
+          {pattern === 'calf_raise' && (() => {
+            const heelY = lerp(148, 124);
+            const bodyOffset = lerp(0, -18);
+
+            return (
+              <g>
+                {/* Degrau / Step */}
+                <rect x="112" y="144" width="42" height="14" rx="3" fill="#475569" />
+                {/* Perna e Panturrilha contraindo */}
+                <line x1="150" y1={52 + bodyOffset} x2="150" y2={98 + bodyOffset} stroke="#64748b" strokeWidth="14" strokeLinecap="round" />
+                <circle cx="150" cy={34 + bodyOffset} r="10" fill="#e2e8f0" />
+                <line x1="150" y1={98 + bodyOffset} x2="154" y2={heelY} stroke="#f8fafc" strokeWidth="8.5" strokeLinecap="round" />
+                {/* Gastrocnêmio brilhando */}
+                <circle cx="156" cy={112 + bodyOffset} r={lerp(5, 9.5)} fill="#3b82f6" fillOpacity={lerp(0.35, 0.95)} />
+                {/* Pé articulando na ponta */}
+                <line x1="154" y1={heelY} x2="132" y2="144" stroke="#38bdf8" strokeWidth="6" strokeLinecap="round" />
+              </g>
+            );
+          })()}
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
   isOpen,
@@ -324,40 +737,30 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
   exerciseId,
   exerciseName,
   muscleGroup,
-  gripOrForm,
-  isAssisted
+  gripOrForm
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const guide = getExerciseGuide(exerciseId, exerciseName);
-  const isGraviton = isAssisted || exerciseName.toLowerCase().includes('graviton');
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-200"
+        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* TOP HEADER */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        {/* Header Limpo e Direto */}
+        <div className="flex items-start justify-between gap-3 mb-3.5">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-                <Activity className="w-3 h-3 text-blue-600" />
-                {muscleGroup}
-              </span>
-              {isGraviton && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  ⚡ Graviton (Contrapeso)
-                </span>
-              )}
-            </div>
-            <h2 className="text-lg font-black text-slate-900 leading-tight">
+            <span className="inline-block text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 mb-1">
+              {muscleGroup} • {guide.primaryMuscle}
+            </span>
+            <h3 className="text-base font-black text-slate-900 leading-snug">
               {exerciseName}
-            </h2>
+            </h3>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               {gripOrForm}
             </p>
@@ -368,195 +771,44 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
               triggerHaptic('light');
               onClose();
             }}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 active:scale-90 transition-all"
-            aria-label="Fechar guia"
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center shrink-0 active:scale-90 transition-all"
+            aria-label="Fechar"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* ========================================================= */}
-        {/* ANIMAÇÃO BIOMECÂNICA EM LOOP (100% OFFLINE & FLUIDA) */}
-        {/* ========================================================= */}
-        <div className="relative rounded-2xl bg-slate-900 text-white p-4 mb-4 overflow-hidden border border-slate-800 shadow-inner">
-          <style>{`
-            @keyframes kineticRep {
-              0%, 100% { transform: translateY(0px) scale(1); }
-              40% { transform: translateY(-16px) scale(1.03); }
-              55% { transform: translateY(-16px) scale(1.05); }
-            }
-            @keyframes kineticArc {
-              0%, 100% { stroke-dashoffset: 60; opacity: 0.45; }
-              45%, 55% { stroke-dashoffset: 0; opacity: 1; }
-            }
-            @keyframes musclePulse {
-              0%, 100% { opacity: 0.55; r: 10px; }
-              45%, 55% { opacity: 1; r: 14px; }
-            }
-            .anim-kinetic-limb {
-              animation: kineticRep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-            }
-            .anim-kinetic-arc {
-              stroke-dasharray: 60;
-              animation: kineticArc 3.2s ease-in-out infinite;
-            }
-            .anim-muscle-node {
-              animation: musclePulse 3.2s ease-in-out infinite;
-            }
-          `}</style>
+        {/* Animação Biomecânica 60fps */}
+        <BiomechanicalCanvas
+          pattern={guide.pattern}
+          concentricLabel={guide.concentricLabel}
+          eccentricLabel={guide.eccentricLabel}
+        />
 
-          <div className="flex items-center justify-between gap-3">
-            {/* SVG Biomechanical Vector Monitor */}
-            <div className="w-28 h-28 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center justify-center shrink-0 relative">
-              <svg viewBox="0 0 120 120" className="w-24 h-24 overflow-visible">
-                {/* Grid reference */}
-                <line x1="15" y1="100" x2="105" y2="100" stroke="#334155" strokeWidth="2" strokeLinecap="round" />
-                <line x1="60" y1="15" x2="60" y2="100" stroke="#1e293b" strokeDasharray="3 3" strokeWidth="1.5" />
-
-                {/* Trajectory Vector Arc */}
-                <path
-                  d="M 35 80 Q 60 25 85 80"
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  className="anim-kinetic-arc"
-                />
-
-                {/* Animated Biomechanical Figure / Force Vector */}
-                <g className="anim-kinetic-limb">
-                  {/* Target Muscle Glow */}
-                  <circle
-                    cx="60"
-                    cy="56"
-                    r="12"
-                    fill="#ef4444"
-                    className="anim-muscle-node"
-                  />
-                  {/* Joint & Limb Structure */}
-                  <line x1="60" y1="30" x2="60" y2="78" stroke="#f8fafc" strokeWidth="4.5" strokeLinecap="round" />
-                  <line x1="38" y1="62" x2="60" y2="46" stroke="#60a5fa" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="82" y1="62" x2="60" y2="46" stroke="#60a5fa" strokeWidth="4" strokeLinecap="round" />
-                  <circle cx="60" cy="24" r="6" fill="#f8fafc" />
-                  {/* Resistance / Cable / Bar Indicator */}
-                  <rect x="30" y="58" width="60" height="5" rx="2.5" fill="#10b981" />
-                </g>
-              </svg>
-
-              <span className="absolute bottom-1.5 left-2 right-2 text-[8px] font-black uppercase tracking-wider text-center text-emerald-400 bg-slate-900/90 py-0.5 rounded">
-                Loop Cinético
-              </span>
-            </div>
-
-            {/* Muscle Activation & Cadence Info */}
-            <div className="flex-1 min-w-0 space-y-2">
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                  Músculo Alvo Principal (Foco)
-                </span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {guide.primaryMuscles.map((m) => (
-                    <span
-                      key={m}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {guide.secondaryMuscles.length > 0 && (
-                <div>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Sinergistas / Auxiliares
-                  </span>
-                  <div className="text-[11px] font-semibold text-blue-300 truncate">
-                    {guide.secondaryMuscles.join(' • ')}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-1 border-t border-slate-800 flex items-center gap-1.5 text-[10px] font-bold text-amber-300">
-                <Target className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                <span className="truncate">{guide.cadence}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AVISO ESPECIAL GRAVITON SE APLICÁVEL */}
-        {isGraviton && (
-          <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-black block text-emerald-900">
-                Mecânica Invertida do Graviton:
-              </strong>
-              <span className="text-[11px] text-emerald-800 leading-relaxed">
-                Neste aparelho, a placa de peso empurra você para cima (ajuda).{' '}
-                <strong>Diminuir o peso na máquina (-5kg)</strong> significa usar menos ajuda e fazer{' '}
-                <strong>mais força real</strong>!
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* PASSO A PASSO TÉCNICO (3 ETAPAS) */}
-        {/* ========================================================= */}
-        <div className="space-y-2 mb-4">
-          <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-            Passo a Passo da Execução
-          </h3>
+        {/* 3 Passos Enxutos sem Poluição Visual */}
+        <div className="mt-4 space-y-2">
           {guide.steps.map((step, idx) => (
-            <div
-              key={idx}
-              className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
-            >
-              <span className="w-5 h-5 rounded-lg bg-blue-600 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+            <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
+              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
                 {idx + 1}
               </span>
-              <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                {step}
-              </p>
+              <span className="font-medium">{step}</span>
             </div>
           ))}
         </div>
 
-        {/* ========================================================= */}
-        {/* DICA DE OURO & ERRO A EVITAR */}
-        {/* ========================================================= */}
-        <div className="space-y-2 mb-5">
-          <div className="p-3 rounded-2xl bg-blue-50/80 border border-blue-200/80 flex items-start gap-2.5">
-            <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-blue-950 leading-relaxed">
-              <strong className="font-black text-blue-800">Dica de Ouro: </strong>
-              {guide.goldenTip}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-950 leading-relaxed">
-              <strong className="font-black text-amber-800">Evite este Erro: </strong>
-              {guide.commonMistake}
-            </div>
-          </div>
-        </div>
-
+        {/* Botão Fechar */}
         <button
           onClick={() => {
             triggerHaptic('light');
             onClose();
           }}
-          className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-sm"
+          className="mt-4 w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-[0.98] transition-all cursor-pointer"
         >
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>Entendi, Voltar ao Treino</span>
+          Fechar
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

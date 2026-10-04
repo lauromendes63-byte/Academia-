@@ -763,19 +763,12 @@ export const EvolutionScreen: React.FC = () => {
                       className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs ring-2 ring-white"
                       style={{ backgroundColor: curve.color }}
                     />
-                    <div className="min-w-0">
-                      <span className="font-bold text-slate-900 leading-snug block">
-                        {curve.name}
-                      </span>
-                      {curve.isAssisted && (
-                        <span className="text-[10px] font-bold text-purple-700 block">
-                          Graviton: menos kg de ajuda = mais força
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-bold text-slate-900 leading-snug">
+                      {curve.name}
+                    </span>
                   </div>
                   <strong className="text-slate-900 font-black shrink-0 text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-                    {curve.latestWeight} kg{curve.isAssisted ? ' (Ajuda)' : ''}
+                    {curve.latestWeight} kg
                   </strong>
                 </div>
               ))}
@@ -905,11 +898,6 @@ export const EvolutionScreen: React.FC = () => {
                         <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                           {item.muscleGroup}
                         </span>
-                        {item.isAssisted && (
-                          <span className="text-[9px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
-                            Graviton (-kg = +Força)
-                          </span>
-                        )}
                         <span className="text-[10px] text-slate-400 font-semibold">
                           {item.defaultSets}× {item.targetReps}
                         </span>
@@ -920,29 +908,13 @@ export const EvolutionScreen: React.FC = () => {
                       </h4>
 
                       <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium flex-wrap">
-                        {item.isAssisted ? (
+                        <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
+                        <span>•</span>
+                        <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
+                        {(item.isAssisted ? item.bestWeight < item.latestWeight : item.bestWeight > item.latestWeight) && (
                           <>
-                            <span>Ajuda Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
                             <span>•</span>
-                            <span>Ajuda Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
-                            {item.bestWeight < item.latestWeight && (
-                              <>
-                                <span>•</span>
-                                <span className="text-amber-700 font-bold">PR (Menor ajuda): {item.bestWeight}kg</span>
-                              </>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
-                            <span>•</span>
-                            <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
-                            {item.bestWeight > item.latestWeight && (
-                              <>
-                                <span>•</span>
-                                <span className="text-amber-700 font-bold">PR: {item.bestWeight}kg</span>
-                              </>
-                            )}
+                            <span className="text-amber-700 font-bold">PR: {item.bestWeight}kg</span>
                           </>
                         )}
                       </div>
@@ -951,21 +923,10 @@ export const EvolutionScreen: React.FC = () => {
 
                   {/* Badge de Evolução em kg */}
                   <div className="shrink-0 text-right">
-                    {item.isAssisted ? (
-                      item.delta < 0 ? (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                          <TrendingUp className="w-3 h-3 stroke-[2.5]" />
-                          <span>{item.delta}kg ajuda</span>
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">
-                          {item.latestWeight}kg ajuda
-                        </span>
-                      )
-                    ) : item.delta > 0 ? (
+                    {item.hasProgress ? (
                       <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                         <TrendingUp className="w-3 h-3 stroke-[2.5]" />
-                        <span>+{item.delta}kg</span>
+                        <span>{item.delta > 0 ? `+${item.delta}kg` : `${item.delta}kg`}</span>
                       </span>
                     ) : (
                       <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">

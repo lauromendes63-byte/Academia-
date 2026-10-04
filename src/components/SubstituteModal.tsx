@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, RefreshCw } from 'lucide-react';
 import { triggerHaptic } from '../utils/audio';
 
@@ -19,7 +20,7 @@ export const SubstituteModal: React.FC<SubstituteModalProps> = ({
   substitutes,
   onSelectSubstitute
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   // Options include original exercise + substitutes
   const allOptions = [originalExerciseName, ...substitutes.filter((s) => s !== originalExerciseName)];
@@ -30,9 +31,9 @@ export const SubstituteModal: React.FC<SubstituteModalProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -104,6 +105,7 @@ export const SubstituteModal: React.FC<SubstituteModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -17,8 +17,7 @@ import {
   Dumbbell,
   Target,
   PlayCircle,
-  Trophy,
-  TrendingDown
+  Trophy
 } from 'lucide-react';
 
 interface ExerciseCardProps {
@@ -48,7 +47,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       ? 'Rosca Bayesiana na Polia'
       : log.activeExerciseName;
 
-  // Detect if the active exercise is on the Graviton (inverse progression: less counterweight = stronger!)
+  // Lógica interna invertida para o Graviton (sem poluição visual)
   const isGraviton =
     (!log.isSubstituted && exercise.isAssisted) ||
     displayName.toLowerCase().includes('graviton');
@@ -152,7 +151,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             : 'border-slate-200/80 hover:border-slate-300'
         }`}
       >
-        {/* TOP ROW: Muscle, Target Reps, Graviton Badge and Action Buttons */}
+        {/* TOP ROW: Muscle, Target Reps and Action Buttons */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex-1 min-w-0 pr-1">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -167,17 +166,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 </span>
               </span>
 
-              {isGraviton && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                  <TrendingDown className="w-2.5 h-2.5 text-emerald-600" />
-                  <span>Graviton (-kg = +Força)</span>
-                </span>
-              )}
-
               {isNewPR && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/90 whitespace-nowrap animate-in zoom-in-95 duration-150">
                   <Trophy className="w-2.5 h-2.5 text-amber-500 fill-current" />
-                  <span>{isGraviton ? 'PR (-Ajuda!)' : 'Novo PR!'}</span>
+                  <span>Novo PR!</span>
                 </span>
               )}
             </div>
@@ -210,7 +202,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 setIsExecModalOpen(true);
               }}
               className="h-8 px-2 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 flex items-center gap-1 active:scale-95 transition-all shadow-2xs"
-              title="Ver animação e execução perfeita"
+              title="Ver animação e execução"
               aria-label="Como executar"
             >
               <PlayCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -258,76 +250,40 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
 
         {/* HISTÓRICO: Linha fluida e elegante */}
-        <div className="flex items-center justify-between gap-1.5 text-[11px] text-slate-500 mb-2.5 pt-0.5">
-          <div className="flex items-center gap-1.5 truncate">
-            <History className="w-3 h-3 text-blue-600 shrink-0" />
-            <div className="truncate">
-              {lastPerformance ? (
-                <span>
-                  {isGraviton ? 'Último contrapeso: ' : 'Último: '}
-                  <strong className="text-slate-800 font-bold">
-                    {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
-                  </strong>
-                  {formattedLastDate && (
-                    <span className="text-slate-400 font-normal ml-1">
-                      ({formattedLastDate})
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="text-slate-400">
-                  {isGraviton
-                    ? '1ª sessão no Graviton (menos kg = mais difícil)'
-                    : '1ª sessão registrada nesta carga'}
-                </span>
-              )}
-            </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mb-2.5 pt-0.5">
+          <History className="w-3 h-3 text-blue-600 shrink-0" />
+          <div className="truncate">
+            {lastPerformance ? (
+              <span>
+                Último:{' '}
+                <strong className="text-slate-800 font-bold">
+                  {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
+                </strong>
+                {formattedLastDate && (
+                  <span className="text-slate-400 font-normal ml-1">
+                    ({formattedLastDate})
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-slate-400">1ª sessão registrada nesta carga</span>
+            )}
           </div>
-
-          {isGraviton && (
-            <span className="text-[10px] font-bold text-emerald-700 shrink-0">
-              Meta: reduzir kg ↓
-            </span>
-          )}
         </div>
 
-        {/* CONTROLE DE CARGA: Adaptado para Exercício Normal vs Graviton */}
-        <div
-          className={`flex items-center justify-between gap-1.5 mb-3 py-1.5 px-2.5 rounded-xl border ${
-            isGraviton
-              ? 'bg-emerald-50/40 border-emerald-200/70'
-              : 'bg-slate-50/70 border-slate-100'
-          }`}
-        >
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap min-w-0">
-            <Dumbbell
-              className={`w-3.5 h-3.5 shrink-0 ${
-                isGraviton ? 'text-emerald-600' : 'text-blue-600'
-              }`}
-            />
-            <div className="truncate">
-              <span className="block leading-none">
-                {isGraviton ? 'Contrapeso' : 'Carga'}
-              </span>
-              {isGraviton && (
-                <span className="text-[9px] font-semibold text-emerald-700 leading-none">
-                  Ajuda da máquina
-                </span>
-              )}
-            </div>
+        {/* CONTROLE DE CARGA PADRONIZADO E LIMPO */}
+        <div className="flex items-center justify-between gap-1.5 mb-3 py-1.5 px-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap">
+            <Dumbbell className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>Carga</span>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* Botão -5kg (No Graviton é Evolução / Mais Força!) */}
             <button
               onClick={() => handleAdjustWeight(-5)}
               disabled={isAborted || currentWeight <= 0}
-              className={`h-8 px-2 rounded-lg border font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs ${
-                isGraviton
-                  ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
-                  : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
-              }`}
-              title={isGraviton ? 'Diminuir 5kg de ajuda (Mais força!)' : 'Diminuir 5kg'}
+              className="h-8 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              title="Diminuir 5kg"
               aria-label="-5kg"
             >
               <Minus className="w-2.5 h-2.5" />
@@ -352,16 +308,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               <span className="ml-1 text-[10px] font-bold text-slate-400">kg</span>
             </div>
 
-            {/* Botão +5kg (No exercício normal é Evolução; no Graviton é Mais Ajuda) */}
             <button
               onClick={() => handleAdjustWeight(5)}
               disabled={isAborted}
-              className={`h-8 px-2 rounded-lg border font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs ${
-                isGraviton
-                  ? 'border-slate-200 bg-white hover:bg-slate-100 text-slate-600'
-                  : 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700'
-              }`}
-              title={isGraviton ? 'Aumentar 5kg de ajuda (Mais leve)' : 'Aumentar 5kg'}
+              className="h-8 px-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              title="Aumentar 5kg"
               aria-label="+5kg"
             >
               <Plus className="w-2.5 h-2.5" />
@@ -402,9 +353,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                     isDone ? 'text-emerald-100' : 'text-slate-400'
                   }`}
                 >
-                  {isDone
-                    ? `${set.weightKg}kg${isGraviton ? ' ajuda' : ''}`
-                    : `${exercise.targetReps}`}
+                  {isDone ? `${set.weightKg}kg` : `${exercise.targetReps}`}
                 </div>
               </button>
             );
@@ -412,7 +361,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </div>
       </div>
 
-      {/* Modal de Guia de Execução Perfeita & Animação */}
+      {/* Modal de Guia de Execução & Animação */}
       <ExerciseExecutionModal
         isOpen={isExecModalOpen}
         onClose={() => setIsExecModalOpen(false)}
@@ -420,7 +369,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         exerciseName={displayName}
         muscleGroup={exercise.muscleGroup}
         gripOrForm={exercise.gripOrForm}
-        isAssisted={isGraviton}
       />
 
       {/* Modal de Substituição Rápida */}
