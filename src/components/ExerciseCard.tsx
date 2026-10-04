@@ -5,6 +5,7 @@ import type {
   SetEntry
 } from '../types';
 import { SubstituteModal } from './SubstituteModal';
+import { ExerciseExecutionModal } from './ExerciseExecutionModal';
 import { playSetCompleteSound, triggerHaptic } from '../utils/audio';
 import {
   Check,
@@ -14,13 +15,21 @@ import {
   Plus,
   ArrowRightLeft,
   Dumbbell,
-  Target
+  Target,
+  PlayCircle,
+  Trophy,
+  TrendingDown
 } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: ExerciseDefinition;
   log: ExerciseLog;
-  lastPerformance?: { weightKg: number; reps: number; date: string } | null;
+  lastPerformance?: {
+    weightKg: number;
+    reps: number;
+    date: string;
+    bestWeightKg?: number;
+  } | null;
   onUpdateLog: (updatedLog: ExerciseLog) => void;
 }
 
@@ -31,10 +40,32 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onUpdateLog
 }) => {
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [isExecModalOpen, setIsExecModalOpen] = useState(false);
 
   const isAborted = log.abortedForFatigue;
+  const displayName =
+    log.activeExerciseName.includes('Baiana') || exercise.name.includes('Baiana')
+      ? 'Rosca Bayesiana na Polia'
+      : log.activeExerciseName;
+
+  // Detect if the active exercise is on the Graviton (inverse progression: less counterweight = stronger!)
+  const isGraviton =
+    (!log.isSubstituted && exercise.isAssisted) ||
+    displayName.toLowerCase().includes('graviton');
+
   const currentWeight =
     log.sets[0]?.weightKg ?? lastPerformance?.weightKg ?? exercise.defaultWeightKg;
+
+  // Check if current weight beats historical Personal Record (PR)
+  const referenceBest = lastPerformance?.bestWeightKg ?? lastPerformance?.weightKg;
+  const isNewPR =
+    !isAborted &&
+    referenceBest !== undefined &&
+    currentWeight > 0 &&
+    (isGraviton ? currentWeight < referenceBest : currentWeight > referenceBest);
+
+  const completedCount = log.sets.filter((s) => s.completed).length;
+  const allSetsDone = !isAborted && completedCount === log.sets.length && log.sets.length > 0;
 
   // Toggle set completion
   const handleToggleSet = (setIdx: number) => {
@@ -63,7 +94,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // Adjust weight across sets
   const handleAdjustWeight = (delta: number) => {
     triggerHaptic('light');
-    const newWeight = Math.max(0, currentWeight + delta);
+    const newWeight = Math.max(0, Number((currentWeight + delta).toFixed(1)));
     const updatedSets = log.sets.map((s) => ({
       ...s,
       weightKg: newWeight
@@ -116,10 +147,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         className={`relative bg-white rounded-2xl p-4 border transition-all duration-200 shadow-2xs ${
           isAborted
             ? 'border-red-200 bg-red-50/20 opacity-80'
+            : allSetsDone
+            ? 'border-emerald-300/90 bg-emerald-50/10 ring-1 ring-emerald-400/20'
             : 'border-slate-200/80 hover:border-slate-300'
         }`}
       >
-        {/* TOP ROW: Muscle, Target Reps, Rest Badges and Action Buttons */}
+        {/* TOP ROW: Muscle, Target Reps, Graviton Badge and Action Buttons */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex-1 min-w-0 pr-1">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -129,16 +162,39 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
                 <Target className="w-2.5 h-2.5 text-slate-500" />
-                <span>{exercise.defaultSets}× {exercise.targetReps} reps</span>
+                <span>
+                  {exercise.defaultSets}× {exercise.targetReps} reps
+                </span>
               </span>
+
+              {isGraviton && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                  <TrendingDown className="w-2.5 h-2.5 text-emerald-600" />
+                  <span>Graviton (-kg = +Força)</span>
+                </span>
+              )}
+
+              {isNewPR && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/90 whitespace-nowrap animate-in zoom-in-95 duration-150">
+                  <Trophy className="w-2.5 h-2.5 text-amber-500 fill-current" />
+                  <span>{isGraviton ? 'PR (-Ajuda!)' : 'Novo PR!'}</span>
+                </span>
+              )}
             </div>
 
-            {/* Exercise Name with legacy Baiana sanitization */}
-            <h3 className="text-base font-black text-slate-900 tracking-tight leading-snug truncate">
-              {log.activeExerciseName.includes('Baiana') || exercise.name.includes('Baiana')
-                ? 'Rosca Bayesiana na Polia'
-                : log.activeExerciseName}
-            </h3>
+            {/* Exercise Name + Clickable Execution Guide Trigger */}
+            <div className="flex items-center gap-1.5">
+              <h3
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsExecModalOpen(true);
+                }}
+                className="text-base font-black text-slate-900 tracking-tight leading-snug truncate cursor-pointer hover:text-blue-600 transition-colors"
+                title="Toque para ver animação de execução"
+              >
+                {displayName}
+              </h3>
+            </div>
 
             {/* Grip / Form Cue */}
             <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
@@ -146,8 +202,21 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             </p>
           </div>
 
-          {/* Action buttons: Substituir & Pular por Fadiga (X) */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Action buttons: Execução, Substituir & Pular por Fadiga (X) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setIsExecModalOpen(true);
+              }}
+              className="h-8 px-2 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 flex items-center gap-1 active:scale-95 transition-all shadow-2xs"
+              title="Ver animação e execução perfeita"
+              aria-label="Como executar"
+            >
+              <PlayCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="text-[10px] font-black">Técnica</span>
+            </button>
+
             <button
               onClick={() => setIsSubModalOpen(true)}
               className="w-8 h-8 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center active:scale-95 transition-all shadow-2xs"
@@ -188,44 +257,81 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </div>
         )}
 
-        {/* HISTÓRICO: Linha fluida e elegante (Sem caixa cinza pesada) */}
-        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mb-3 pt-0.5">
-          <History className="w-3 h-3 text-blue-600 shrink-0" />
-          <div className="truncate">
-            {lastPerformance ? (
-              <span>
-                Último:{' '}
-                <strong className="text-slate-800 font-bold">
-                  {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
-                </strong>
-                {formattedLastDate && (
-                  <span className="text-slate-400 font-normal ml-1">
-                    ({formattedLastDate})
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span className="text-slate-400">1ª sessão registrada nesta carga</span>
-            )}
+        {/* HISTÓRICO: Linha fluida e elegante */}
+        <div className="flex items-center justify-between gap-1.5 text-[11px] text-slate-500 mb-2.5 pt-0.5">
+          <div className="flex items-center gap-1.5 truncate">
+            <History className="w-3 h-3 text-blue-600 shrink-0" />
+            <div className="truncate">
+              {lastPerformance ? (
+                <span>
+                  {isGraviton ? 'Último contrapeso: ' : 'Último: '}
+                  <strong className="text-slate-800 font-bold">
+                    {lastPerformance.weightKg}kg × {lastPerformance.reps} reps
+                  </strong>
+                  {formattedLastDate && (
+                    <span className="text-slate-400 font-normal ml-1">
+                      ({formattedLastDate})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-slate-400">
+                  {isGraviton
+                    ? '1ª sessão no Graviton (menos kg = mais difícil)'
+                    : '1ª sessão registrada nesta carga'}
+                </span>
+              )}
+            </div>
           </div>
+
+          {isGraviton && (
+            <span className="text-[10px] font-bold text-emerald-700 shrink-0">
+              Meta: reduzir kg ↓
+            </span>
+          )}
         </div>
 
-        {/* CONTROLE DE CARGA: Linha Única sem quebra */}
-        <div className="flex items-center justify-between gap-2 mb-3 py-1 px-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap">
-            <Dumbbell className="w-3.5 h-3.5 text-blue-600" />
-            <span>Carga da Série</span>
+        {/* CONTROLE DE CARGA: Adaptado para Exercício Normal vs Graviton */}
+        <div
+          className={`flex items-center justify-between gap-1.5 mb-3 py-1.5 px-2.5 rounded-xl border ${
+            isGraviton
+              ? 'bg-emerald-50/40 border-emerald-200/70'
+              : 'bg-slate-50/70 border-slate-100'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap min-w-0">
+            <Dumbbell
+              className={`w-3.5 h-3.5 shrink-0 ${
+                isGraviton ? 'text-emerald-600' : 'text-blue-600'
+              }`}
+            />
+            <div className="truncate">
+              <span className="block leading-none">
+                {isGraviton ? 'Contrapeso' : 'Carga'}
+              </span>
+              {isGraviton && (
+                <span className="text-[9px] font-semibold text-emerald-700 leading-none">
+                  Ajuda da máquina
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Botão -5kg (No Graviton é Evolução / Mais Força!) */}
             <button
               onClick={() => handleAdjustWeight(-5)}
               disabled={isAborted || currentWeight <= 0}
-              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              className={`h-8 px-2 rounded-lg border font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs ${
+                isGraviton
+                  ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
+                  : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
+              }`}
+              title={isGraviton ? 'Diminuir 5kg de ajuda (Mais força!)' : 'Diminuir 5kg'}
               aria-label="-5kg"
             >
-              <Minus className="w-3 h-3" />
-              <span>5kg</span>
+              <Minus className="w-2.5 h-2.5" />
+              <span>5</span>
             </button>
 
             <div className="relative flex items-center">
@@ -243,17 +349,23 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 disabled={isAborted}
                 className="w-14 h-8 text-center text-sm font-black text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 shadow-2xs"
               />
-              <span className="ml-1 text-[11px] font-bold text-slate-400">kg</span>
+              <span className="ml-1 text-[10px] font-bold text-slate-400">kg</span>
             </div>
 
+            {/* Botão +5kg (No exercício normal é Evolução; no Graviton é Mais Ajuda) */}
             <button
               onClick={() => handleAdjustWeight(5)}
               disabled={isAborted}
-              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              className={`h-8 px-2 rounded-lg border font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs ${
+                isGraviton
+                  ? 'border-slate-200 bg-white hover:bg-slate-100 text-slate-600'
+                  : 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700'
+              }`}
+              title={isGraviton ? 'Aumentar 5kg de ajuda (Mais leve)' : 'Aumentar 5kg'}
               aria-label="+5kg"
             >
-              <Plus className="w-3 h-3" />
-              <span>5kg</span>
+              <Plus className="w-2.5 h-2.5" />
+              <span>5</span>
             </button>
           </div>
         </div>
@@ -290,13 +402,26 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                     isDone ? 'text-emerald-100' : 'text-slate-400'
                   }`}
                 >
-                  {isDone ? `${set.weightKg}kg` : `${exercise.targetReps}`}
+                  {isDone
+                    ? `${set.weightKg}kg${isGraviton ? ' ajuda' : ''}`
+                    : `${exercise.targetReps}`}
                 </div>
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* Modal de Guia de Execução Perfeita & Animação */}
+      <ExerciseExecutionModal
+        isOpen={isExecModalOpen}
+        onClose={() => setIsExecModalOpen(false)}
+        exerciseId={exercise.id}
+        exerciseName={displayName}
+        muscleGroup={exercise.muscleGroup}
+        gripOrForm={exercise.gripOrForm}
+        isAssisted={isGraviton}
+      />
 
       {/* Modal de Substituição Rápida */}
       <SubstituteModal
@@ -310,3 +435,4 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     </>
   );
 };
+

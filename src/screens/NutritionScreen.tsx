@@ -3,8 +3,14 @@ import { db } from '../db/db';
 import type {
   NutritionLog,
   PlateConfig,
+  ChurrascoConfig,
   SubwayConfig,
-  CustomMealConfig
+  BurgerConfig,
+  PizzaConfig,
+  CustomMealConfig,
+  DetailedEscapes,
+  LunchType,
+  DinnerType
 } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
@@ -12,11 +18,11 @@ import {
   Droplets,
   Check,
   Sparkles,
-  Cookie,
-  Pizza,
   UtensilsCrossed,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ShieldCheck,
   Plus,
   Minus,
@@ -24,7 +30,7 @@ import {
   Flame
 } from 'lucide-react';
 
-const DEFAULT_LUNCH_CONFIG: PlateConfig = {
+export const DEFAULT_LUNCH_CONFIG: PlateConfig = {
   proteinType: 'carne',
   proteinPortions: 2,
   ricePortions: 2,
@@ -32,12 +38,20 @@ const DEFAULT_LUNCH_CONFIG: PlateConfig = {
   hasSalad: true
 };
 
-const DEFAULT_SUBWAY_CONFIG: SubwayConfig = {
+export const DEFAULT_CHURRASCO_CONFIG: ChurrascoConfig = {
+  cut: 'alcatra',
+  skewerCount: 2,
+  baiaoPortions: 1,
+  hasFarofa: false,
+  hasVinagrete: true
+};
+
+export const DEFAULT_SUBWAY_CONFIG: SubwayConfig = {
   protein: 'frango_teriyaki',
   size: '15cm'
 };
 
-const DEFAULT_DINNER_PLATE_CONFIG: PlateConfig = {
+export const DEFAULT_DINNER_PLATE_CONFIG: PlateConfig = {
   proteinType: 'carne',
   proteinPortions: 2,
   ricePortions: 2,
@@ -45,8 +59,19 @@ const DEFAULT_DINNER_PLATE_CONFIG: PlateConfig = {
   hasSalad: true
 };
 
+export const DEFAULT_BURGER_CONFIG: BurgerConfig = {
+  style: 'artesanal_simples',
+  count: 1,
+  hasFries: false
+};
+
+export const DEFAULT_PIZZA_CONFIG: PizzaConfig = {
+  flavorType: 'proteica',
+  slices: 3
+};
+
 export const DEFAULT_BREAKFAST_CONFIG: CustomMealConfig = {
-  coffeeWithMilkCups: 1, // Café com leite é praticamente sempre
+  coffeeWithMilkCups: 1,
   tapiocaCount: 0,
   eggType: 'mexidos',
   eggCount: 2,
@@ -60,202 +85,269 @@ export const DEFAULT_SNACK_CONFIG: CustomMealConfig = {
   eggType: 'mexidos',
   eggCount: 0,
   fruitType: 'banana',
-  fruitCount: 0,
+  fruitCount: 1,
   shakeCount: 0
 };
 
-// HELPER: Macro calculations for Prato Caseiro (Almoço ou Jantar)
+// ============================================================================
+// CÁLCULOS NUTRICIONAIS PRECISOS (EXPORTADOS PARA EVOLUTIONSCREEN)
+// ============================================================================
+
 export function calculatePlateMacros(config: PlateConfig = DEFAULT_LUNCH_CONFIG) {
-  let p = 0;
-  let c = 0;
-  let f = 0;
-  let kcal = 0;
+  const pCount = config.proteinPortions ?? 2;
+  const rCount = config.ricePortions ?? 2;
+  const bCount = config.beanPortions ?? 1;
+  const salad = config.hasSalad ?? true;
 
-  // Proteína
-  const proteinCount = config.proteinPortions || 0;
+  let protPerPortion = { protein: 28, carbs: 0, fat: 9, calories: 195 };
   if (config.proteinType === 'frango') {
-    // Filé de peito de frango grelhado (~120g)
-    p += proteinCount * 32;
-    f += proteinCount * 3.5;
-    kcal += proteinCount * 160;
+    protPerPortion = { protein: 32, carbs: 0, fat: 4, calories: 165 };
   } else if (config.proteinType === 'peixe') {
-    // Filé de tilápia grelhada (~120g)
-    p += proteinCount * 26;
-    f += proteinCount * 3;
-    kcal += proteinCount * 140;
-  } else {
-    // Bife bovino magro grelhado (~100g)
-    p += proteinCount * 28;
-    f += proteinCount * 9;
-    kcal += proteinCount * 200;
+    protPerPortion = { protein: 26, carbs: 0, fat: 3, calories: 135 };
   }
 
-  // Arroz branco (~100g cozido por concha)
-  const riceCount = config.ricePortions || 0;
-  p += riceCount * 2.5;
-  c += riceCount * 28;
-  f += riceCount * 0.4;
-  kcal += riceCount * 130;
+  const ricePerPortion = { protein: 2.5, carbs: 28, fat: 0.5, calories: 130 };
+  const beanPerPortion = { protein: 6, carbs: 14, fat: 1, calories: 90 };
+  const saladMacros = salad
+    ? { protein: 1, carbs: 4, fat: 2, calories: 35 }
+    : { protein: 0, carbs: 0, fat: 0, calories: 0 };
 
-  // Feijão carioca (~80g cozido por concha)
-  const beanCount = config.beanPortions || 0;
-  p += beanCount * 4;
-  c += beanCount * 11;
-  f += beanCount * 0.5;
-  kcal += beanCount * 65;
+  const protein = Math.round(
+    pCount * protPerPortion.protein +
+      rCount * ricePerPortion.protein +
+      bCount * beanPerPortion.protein +
+      saladMacros.protein
+  );
+  const carbs = Math.round(
+    pCount * protPerPortion.carbs +
+      rCount * ricePerPortion.carbs +
+      bCount * beanPerPortion.carbs +
+      saladMacros.carbs
+  );
+  const fat = Math.round(
+    pCount * protPerPortion.fat +
+      rCount * ricePerPortion.fat +
+      bCount * beanPerPortion.fat +
+      saladMacros.fat
+  );
+  const calories = Math.round(
+    pCount * protPerPortion.calories +
+      rCount * ricePerPortion.calories +
+      bCount * beanPerPortion.calories +
+      saladMacros.calories
+  );
 
-  // Salada verde (folhas, tomate, azeite sutil)
-  if (config.hasSalad) {
-    p += 1;
-    c += 3;
-    f += 2;
-    kcal += 35;
+  return { protein, carbs, fat, calories };
+}
+
+export function calculateChurrascoMacros(
+  config: ChurrascoConfig = DEFAULT_CHURRASCO_CONFIG
+) {
+  const skewers = config.skewerCount ?? 2;
+  const baiao = config.baiaoPortions ?? 1;
+  const farofa = config.hasFarofa ?? false;
+  const vinagrete = config.hasVinagrete ?? true;
+
+  // Valores por espeto (~110g de carne assada pronta)
+  let cutPerSkewer = { protein: 31, carbs: 0, fat: 10, calories: 220 }; // Alcatra
+  if (config.cut === 'maminha') {
+    cutPerSkewer = { protein: 29, carbs: 0, fat: 12, calories: 235 };
+  } else if (config.cut === 'fraldinha') {
+    cutPerSkewer = { protein: 27, carbs: 0, fat: 16, calories: 260 };
   }
+
+  // Baião de dois (~130g concha/porção)
+  const baiaoPerPortion = { protein: 9, carbs: 34, fat: 6, calories: 230 };
+  const farofaMacros = farofa
+    ? { protein: 1, carbs: 15, fat: 2, calories: 75 }
+    : { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  const vinagreteMacros = vinagrete
+    ? { protein: 0.5, carbs: 5, fat: 0.5, calories: 25 }
+    : { protein: 0, carbs: 0, fat: 0, calories: 0 };
 
   return {
-    protein: Math.round(p),
-    carbs: Math.round(c),
-    fat: Math.round(f),
-    calories: Math.round(kcal)
+    protein: Math.round(
+      skewers * cutPerSkewer.protein +
+        baiao * baiaoPerPortion.protein +
+        farofaMacros.protein +
+        vinagreteMacros.protein
+    ),
+    carbs: Math.round(
+      skewers * cutPerSkewer.carbs +
+        baiao * baiaoPerPortion.carbs +
+        farofaMacros.carbs +
+        vinagreteMacros.carbs
+    ),
+    fat: Math.round(
+      skewers * cutPerSkewer.fat +
+        baiao * baiaoPerPortion.fat +
+        farofaMacros.fat +
+        vinagreteMacros.fat
+    ),
+    calories: Math.round(
+      skewers * cutPerSkewer.calories +
+        baiao * baiaoPerPortion.calories +
+        farofaMacros.calories +
+        vinagreteMacros.calories
+    )
   };
 }
 
-// HELPER: Macro calculations for Sanduíche Baguete Completo
 export function calculateSubwayMacros(config: SubwayConfig = DEFAULT_SUBWAY_CONFIG) {
-  const isDouble = config.size === '30cm';
-  const multiplier = isDouble ? 2 : 1;
-
-  let baseP = 0;
-  let baseC = 0;
-  let baseF = 0;
-  let baseKcal = 0;
-
+  const mult = config.size === '30cm' ? 2 : 1;
   if (config.protein === 'carne') {
-    // Sanduíche Carne / Bife 15cm Completo (Molho + Queijos + Salada)
-    baseP = 30;
-    baseC = 50;
-    baseF = 18;
-    baseKcal = 490;
-  } else {
-    // Sanduíche Frango Teriyaki 15cm Completo (Molho + Queijos + Salada)
-    baseP = 32;
-    baseC = 52;
-    baseF = 14;
-    baseKcal = 460;
+    return {
+      protein: 30 * mult,
+      carbs: 46 * mult,
+      fat: 20 * mult,
+      calories: 490 * mult
+    };
   }
-
   return {
-    protein: baseP * multiplier,
-    carbs: baseC * multiplier,
-    fat: baseF * multiplier,
-    calories: baseKcal * multiplier
+    protein: 32 * mult,
+    carbs: 48 * mult,
+    fat: 16 * mult,
+    calories: 460 * mult
   };
 }
 
-// HELPER: Macro calculations for Customizable Meal (Café da Manhã ou Lanche)
-export function calculateCustomMealMacros(config?: CustomMealConfig) {
-  if (!config) return { protein: 0, carbs: 0, fat: 0, calories: 0 };
+export function calculateBurgerMacros(config: BurgerConfig = DEFAULT_BURGER_CONFIG) {
+  const count = config.count ?? 1;
+  let base = { protein: 34, carbs: 42, fat: 34, calories: 620 }; // Artesanal simples
+  if (config.style === 'artesanal_duplo') {
+    base = { protein: 58, carbs: 45, fat: 58, calories: 940 };
+  } else if (config.style === 'podrao_xtudo') {
+    base = { protein: 46, carbs: 62, fat: 68, calories: 1050 };
+  }
 
-  let p = 0;
-  let c = 0;
-  let f = 0;
-  let kcal = 0;
+  const fries = config.hasFries
+    ? { protein: 4, carbs: 48, fat: 18, calories: 380 }
+    : { protein: 0, carbs: 0, fat: 0, calories: 0 };
 
-  // 1. Café com Leite (~200ml semi-desnatado)
+  return {
+    protein: base.protein * count + fries.protein,
+    carbs: base.carbs * count + fries.carbs,
+    fat: base.fat * count + fries.fat,
+    calories: base.calories * count + fries.calories
+  };
+}
+
+export function calculatePizzaMacros(config: PizzaConfig = DEFAULT_PIZZA_CONFIG) {
+  const slices = config.slices ?? 3;
+  // Por fatia média (1/8 de pizza grande)
+  const perSlice =
+    config.flavorType === 'proteica'
+      ? { protein: 14, carbs: 28, fat: 12, calories: 285 }
+      : { protein: 12, carbs: 29, fat: 17, calories: 320 };
+
+  return {
+    protein: perSlice.protein * slices,
+    carbs: perSlice.carbs * slices,
+    fat: perSlice.fat * slices,
+    calories: perSlice.calories * slices
+  };
+}
+
+export function calculateCustomMealMacros(config: CustomMealConfig) {
   const coffeeCups = config.coffeeWithMilkCups || 0;
-  p += coffeeCups * 6;
-  c += coffeeCups * 9;
-  f += coffeeCups * 4;
-  kcal += coffeeCups * 95;
-
-  // 2. Tapioca com Queijo (~50g goma + ~30g queijo)
   const tapiocas = config.tapiocaCount || 0;
-  p += tapiocas * 10;
-  c += tapiocas * 33;
-  f += tapiocas * 8;
-  kcal += tapiocas * 240;
-
-  // 3. Ovos (Mexidos ou Fritos)
   const eggs = config.eggCount || 0;
-  if (eggs > 0) {
-    if (config.eggType === 'fritos') {
-      p += eggs * 6;
-      c += eggs * 0.5;
-      f += eggs * 7;
-      kcal += eggs * 90;
-    } else {
-      p += eggs * 6;
-      c += eggs * 0.8;
-      f += eggs * 6;
-      kcal += eggs * 80;
-    }
-  }
-
-  // 4. Frutas
+  const eggType = config.eggType || 'mexidos';
   const fruits = config.fruitCount || 0;
-  if (fruits > 0) {
-    if (config.fruitType === 'laranja') {
-      p += fruits * 1.2;
-      c += fruits * 15;
-      f += fruits * 0.2;
-      kcal += fruits * 62;
-    } else if (config.fruitType === 'maca') {
-      p += fruits * 0.4;
-      c += fruits * 19;
-      f += fruits * 0.2;
-      kcal += fruits * 75;
-    } else {
-      // banana
-      p += fruits * 1.3;
-      c += fruits * 26;
-      f += fruits * 0.3;
-      kcal += fruits * 105;
-    }
-  }
-
-  // 5. Shake Proteico (opcional no lanche da tarde)
+  const fruitType = config.fruitType || 'banana';
   const shakes = config.shakeCount || 0;
-  if (shakes > 0) {
-    p += shakes * 25;
-    c += shakes * 20;
-    f += shakes * 3;
-    kcal += shakes * 210;
+
+  const coffeeP = coffeeCups * 6;
+  const coffeeC = coffeeCups * 9;
+  const coffeeF = coffeeCups * 4;
+  const coffeeKcal = coffeeCups * 95;
+
+  const tapP = tapiocas * 10;
+  const tapC = tapiocas * 33;
+  const tapF = tapiocas * 8;
+  const tapKcal = tapiocas * 240;
+
+  const eggPerUnit =
+    eggType === 'fritos'
+      ? { p: 6, c: 0.6, f: 7, kcal: 90 }
+      : { p: 6, c: 0.6, f: 5.5, kcal: 80 };
+  const eggP = eggs * eggPerUnit.p;
+  const eggC = eggs * eggPerUnit.c;
+  const eggF = eggs * eggPerUnit.f;
+  const eggKcal = eggs * eggPerUnit.kcal;
+
+  let fruitPerUnit = { p: 1.3, c: 26, f: 0.3, kcal: 105 };
+  if (fruitType === 'laranja') {
+    fruitPerUnit = { p: 1.2, c: 15, f: 0.2, kcal: 62 };
+  } else if (fruitType === 'maca') {
+    fruitPerUnit = { p: 0.4, c: 19, f: 0.2, kcal: 75 };
   }
+  const fruitP = fruits * fruitPerUnit.p;
+  const fruitC = fruits * fruitPerUnit.c;
+  const fruitF = fruits * fruitPerUnit.f;
+  const fruitKcal = fruits * fruitPerUnit.kcal;
+
+  const shakeP = shakes * 25;
+  const shakeC = shakes * 20;
+  const shakeF = shakes * 3;
+  const shakeKcal = shakes * 210;
 
   return {
-    protein: Math.round(p),
-    carbs: Math.round(c),
-    fat: Math.round(f),
-    calories: Math.round(kcal)
+    protein: Math.round(coffeeP + tapP + eggP + fruitP + shakeP),
+    carbs: Math.round(coffeeC + tapC + eggC + fruitC + shakeC),
+    fat: Math.round(coffeeF + tapF + eggF + fruitF + shakeF),
+    calories: Math.round(coffeeKcal + tapKcal + eggKcal + fruitKcal + shakeKcal)
   };
 }
 
-export function getResolvedBreakfastConfig(log?: NutritionLog): CustomMealConfig {
-  if (log?.breakfastConfig) return log.breakfastConfig;
-  const oldBreakfast = log?.meals?.breakfast;
-  const oldEggCount = log?.breakfastEggCount || 2;
+export function calculateEscapesMacros(escapes?: DetailedEscapes) {
+  if (!escapes) return { protein: 0, carbs: 0, fat: 0, calories: 0 };
 
-  if (oldBreakfast === 'ovos_fritos') {
-    return {
-      coffeeWithMilkCups: 1,
-      tapiocaCount: 0,
-      eggType: 'fritos',
-      eggCount: oldEggCount,
-      fruitType: 'banana',
-      fruitCount: 0
-    };
-  }
-  if (oldBreakfast === 'ovos_mexidos') {
-    return {
-      coffeeWithMilkCups: 1,
-      tapiocaCount: 0,
-      eggType: 'mexidos',
-      eggCount: oldEggCount,
-      fruitType: 'banana',
-      fruitCount: 0
-    };
-  }
-  if (oldBreakfast === 'cafe_tapioca') {
+  const chocSmall = escapes.chocSmallCount || 0;
+  const snickers = escapes.snickersBarCount || 0;
+  const iceCream = escapes.iceCreamCount || 0;
+  const saltySnack = escapes.saltySnackCount || 0;
+  const legacyBesteira = escapes.besteiraCount || 0;
+  const superBesteira = escapes.superBesteiraCount || 0;
+
+  return {
+    protein:
+      chocSmall * 1 +
+      snickers * 4 +
+      iceCream * 5 +
+      saltySnack * 6 +
+      legacyBesteira * 6 +
+      superBesteira * 35,
+    carbs:
+      chocSmall * 16 +
+      snickers * 30 +
+      iceCream * 44 +
+      saltySnack * 52 +
+      legacyBesteira * 65 +
+      superBesteira * 120,
+    fat:
+      chocSmall * 7 +
+      snickers * 12 +
+      iceCream * 20 +
+      saltySnack * 24 +
+      legacyBesteira * 30 +
+      superBesteira * 65,
+    calories:
+      chocSmall * 130 +
+      snickers * 250 +
+      iceCream * 380 +
+      saltySnack * 450 +
+      legacyBesteira * 600 +
+      superBesteira * 1200
+  };
+}
+
+export function getResolvedBreakfastConfig(log: NutritionLog): CustomMealConfig {
+  if (log.breakfastConfig) return log.breakfastConfig;
+  const legacyMeal = log.meals?.breakfast;
+  const legacyEggs = log.breakfastEggCount ?? 2;
+
+  if (legacyMeal === 'tapioca') {
     return {
       coffeeWithMilkCups: 1,
       tapiocaCount: 1,
@@ -265,9 +357,19 @@ export function getResolvedBreakfastConfig(log?: NutritionLog): CustomMealConfig
       fruitCount: 0
     };
   }
-  if (oldBreakfast === 'cafe_leite') {
+  if (legacyMeal === 'ovos') {
     return {
       coffeeWithMilkCups: 1,
+      tapiocaCount: 0,
+      eggType: 'mexidos',
+      eggCount: legacyEggs,
+      fruitType: 'banana',
+      fruitCount: 0
+    };
+  }
+  if (legacyMeal === '') {
+    return {
+      coffeeWithMilkCups: 0,
       tapiocaCount: 0,
       eggType: 'mexidos',
       eggCount: 0,
@@ -275,57 +377,93 @@ export function getResolvedBreakfastConfig(log?: NutritionLog): CustomMealConfig
       fruitCount: 0
     };
   }
-
   return DEFAULT_BREAKFAST_CONFIG;
 }
 
-export function getResolvedSnackConfig(log?: NutritionLog): CustomMealConfig {
-  if (log?.snackConfig) return log.snackConfig;
-  const oldSnack = log?.meals?.snack;
-  if (oldSnack === 'cafe_tapioca') {
-    return {
-      coffeeWithMilkCups: 1,
-      tapiocaCount: 1,
-      eggType: 'mexidos',
-      eggCount: 0,
-      fruitType: 'banana',
-      fruitCount: 0,
-      shakeCount: 0
-    };
-  }
-  if (oldSnack === 'shake') {
+export function getResolvedSnackConfig(log: NutritionLog): CustomMealConfig {
+  if (log.snackConfig) return log.snackConfig;
+  const legacySnack = log.meals?.snack;
+  if (legacySnack === 'fruta_whey') {
     return {
       coffeeWithMilkCups: 0,
       tapiocaCount: 0,
       eggType: 'mexidos',
       eggCount: 0,
       fruitType: 'banana',
-      fruitCount: 0,
+      fruitCount: 1,
       shakeCount: 1
     };
   }
-  if (oldSnack === 'tapioca_cafe') {
+  if (legacySnack === 'sanduiche') {
     return {
-      coffeeWithMilkCups: 0,
+      coffeeWithMilkCups: 1,
       tapiocaCount: 1,
       eggType: 'mexidos',
-      eggCount: 0,
+      eggCount: 2,
       fruitType: 'banana',
       fruitCount: 0,
       shakeCount: 0
     };
   }
-  return DEFAULT_SNACK_CONFIG;
+  return {
+    coffeeWithMilkCups: 0,
+    tapiocaCount: 0,
+    eggType: 'mexidos',
+    eggCount: 0,
+    fruitType: 'banana',
+    fruitCount: 0,
+    shakeCount: 0
+  };
 }
 
+// ============================================================================
+// COMPONENTE DE BADGES DE MACROS SEMÂNTICOS (SEM SIGLAS P / C / G CONFUSAS)
+// ============================================================================
+const MacroPills: React.FC<{
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  unitLabel?: string;
+}> = ({ calories, protein, carbs, fat, unitLabel }) => (
+  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-200/80 text-slate-800">
+      {calories} kcal{unitLabel ? ` / ${unitLabel}` : ''}
+    </span>
+    {protein !== undefined && protein > 0 && (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+        {protein}g Prot
+      </span>
+    )}
+    {carbs !== undefined && carbs > 0 && (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        {carbs}g Carbo
+      </span>
+    )}
+    {fat !== undefined && fat > 0 && (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200/60">
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+        {fat}g Gord
+      </span>
+    )}
+  </div>
+);
+
+// ============================================================================
 // COMPONENT: CustomMealBuilder para Café da Manhã e Lanche da Tarde
+// ============================================================================
 const CustomMealBuilder: React.FC<{
-  icon: string;
+  emoji: string;
   title: string;
+  subtitle: string;
   config: CustomMealConfig;
   onChange: (patch: Partial<CustomMealConfig>) => void;
   allowShake?: boolean;
-}> = ({ icon, title, config, onChange, allowShake }) => {
+  defaultOpen?: boolean;
+}> = ({ emoji, title, subtitle, config, onChange, allowShake, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const macros = calculateCustomMealMacros(config);
   const isEaten =
     config.coffeeWithMilkCups > 0 ||
@@ -335,428 +473,684 @@ const CustomMealBuilder: React.FC<{
     (config.shakeCount || 0) > 0;
 
   return (
-    <div className="border-t border-slate-100 pt-3">
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-          <span>{icon} {title}</span>
+    <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 overflow-hidden transition-all">
+      {/* Cabeçalho Acordeão da Refeição */}
+      <button
+        type="button"
+        onClick={() => {
+          triggerHaptic('light');
+          setIsOpen(!isOpen);
+        }}
+        className="w-full p-3.5 bg-white hover:bg-slate-50/80 flex items-center justify-between gap-2 text-left transition-colors"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/70 flex items-center justify-center text-base shrink-0 shadow-2xs">
+            {emoji}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 truncate">
+              {title}
+            </h4>
+            <p className="text-[10px] text-slate-500 font-medium truncate">
+              {isEaten
+                ? `${macros.calories} kcal • ${macros.protein}g Proteína • ${macros.carbs}g Carbo`
+                : subtitle}
+            </p>
+          </div>
         </div>
-        <span
-          className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-            isEaten
-              ? 'text-blue-700 bg-blue-50 border-blue-200 shadow-2xs'
-              : 'text-slate-400 bg-slate-50 border-slate-200'
-          }`}
-        >
-          {isEaten
-            ? `${macros.calories} kcal • ${macros.protein}g P • ${macros.carbs}g C • ${macros.fat}g G`
-            : 'Nenhum item marcado'}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {isEaten ? (
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {macros.calories} kcal
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+              Vazio
+            </span>
+          )}
+          {isOpen ? (
+            <ChevronUp className="w-4 h-4 text-slate-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          )}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="p-3 pt-2 space-y-2 border-t border-slate-100 animate-in fade-in duration-150">
+          {/* 1. Café c/ Leite */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
+            <div className="min-w-0 pr-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">☕🥛</span>
+                <span className="text-xs font-black text-slate-900">Café com Leite</span>
+              </div>
+              <MacroPills calories={95} protein={6} carbs={9} fat={4} unitLabel="caneca" />
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <button
+                onClick={() =>
+                  onChange({ coffeeWithMilkCups: Math.max(0, config.coffeeWithMilkCups - 1) })
+                }
+                disabled={config.coffeeWithMilkCups <= 0}
+                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                aria-label="Diminuir café com leite"
+              >
+                -
+              </button>
+              <span className="w-5 text-center font-black text-xs text-slate-900">
+                {config.coffeeWithMilkCups}
+              </span>
+              <button
+                onClick={() =>
+                  onChange({ coffeeWithMilkCups: Math.min(5, config.coffeeWithMilkCups + 1) })
+                }
+                disabled={config.coffeeWithMilkCups >= 5}
+                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                aria-label="Aumentar café com leite"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Tapioca c/ Queijo */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
+            <div className="min-w-0 pr-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">🌮🧀</span>
+                <span className="text-xs font-black text-slate-900">Tapioca com Queijo</span>
+              </div>
+              <MacroPills calories={240} protein={10} carbs={33} fat={8} unitLabel="un" />
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+              <button
+                onClick={() => onChange({ tapiocaCount: Math.max(0, config.tapiocaCount - 1) })}
+                disabled={config.tapiocaCount <= 0}
+                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                aria-label="Diminuir tapioca"
+              >
+                -
+              </button>
+              <span className="w-5 text-center font-black text-xs text-slate-900">
+                {config.tapiocaCount}
+              </span>
+              <button
+                onClick={() => onChange({ tapiocaCount: Math.min(4, config.tapiocaCount + 1) })}
+                disabled={config.tapiocaCount >= 4}
+                className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                aria-label="Aumentar tapioca"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Ovos (Mexidos ou Fritos) */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 pr-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🍳🥚</span>
+                  <span className="text-xs font-black text-slate-900">
+                    Ovos ({config.eggType === 'fritos' ? 'Fritos' : 'Mexidos'})
+                  </span>
+                </div>
+                <MacroPills
+                  calories={config.eggType === 'fritos' ? 90 : 80}
+                  protein={6}
+                  fat={config.eggType === 'fritos' ? 7 : 6}
+                  unitLabel="ovo"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => onChange({ eggCount: Math.max(0, config.eggCount - 1) })}
+                  disabled={config.eggCount <= 0}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Diminuir ovos"
+                >
+                  -
+                </button>
+                <span className="w-5 text-center font-black text-xs text-slate-900">
+                  {config.eggCount}
+                </span>
+                <button
+                  onClick={() => onChange({ eggCount: Math.min(8, config.eggCount + 1) })}
+                  disabled={config.eggCount >= 8}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Aumentar ovos"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => onChange({ eggType: 'mexidos' })}
+                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
+                  config.eggType === 'mexidos'
+                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🍳 Mexidos (~80 kcal)
+              </button>
+              <button
+                onClick={() => onChange({ eggType: 'fritos' })}
+                className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
+                  config.eggType === 'fritos'
+                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🥚 Fritos (~90 kcal)
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Frutas (Banana, Laranja ou Maçã) */}
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 pr-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">
+                    {config.fruitType === 'banana'
+                      ? '🍌'
+                      : config.fruitType === 'laranja'
+                      ? '🍊'
+                      : '🍎'}
+                  </span>
+                  <span className="text-xs font-black text-slate-900">Fruta Fresca</span>
+                </div>
+                <MacroPills
+                  calories={
+                    config.fruitType === 'banana'
+                      ? 105
+                      : config.fruitType === 'laranja'
+                      ? 62
+                      : 75
+                  }
+                  protein={1}
+                  carbs={
+                    config.fruitType === 'banana'
+                      ? 26
+                      : config.fruitType === 'laranja'
+                      ? 15
+                      : 19
+                  }
+                  unitLabel="un"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => onChange({ fruitCount: Math.max(0, config.fruitCount - 1) })}
+                  disabled={config.fruitCount <= 0}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Diminuir fruta"
+                >
+                  -
+                </button>
+                <span className="w-5 text-center font-black text-xs text-slate-900">
+                  {config.fruitCount}
+                </span>
+                <button
+                  onClick={() => onChange({ fruitCount: Math.min(4, config.fruitCount + 1) })}
+                  disabled={config.fruitCount >= 4}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Aumentar fruta"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => onChange({ fruitType: 'banana' })}
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                  config.fruitType === 'banana'
+                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🍌 Banana
+              </button>
+              <button
+                onClick={() => onChange({ fruitType: 'laranja' })}
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                  config.fruitType === 'laranja'
+                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🍊 Laranja
+              </button>
+              <button
+                onClick={() => onChange({ fruitType: 'maca' })}
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
+                  config.fruitType === 'maca'
+                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🍎 Maçã
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Shake Proteico (se permitido) */}
+          {allowShake && (
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
+              <div className="min-w-0 pr-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🥤⚡</span>
+                  <span className="text-xs font-black text-slate-900">Shake Proteico</span>
+                </div>
+                <MacroPills calories={210} protein={25} carbs={20} fat={3} unitLabel="shake" />
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() =>
+                    onChange({ shakeCount: Math.max(0, (config.shakeCount || 0) - 1) })
+                  }
+                  disabled={(config.shakeCount || 0) <= 0}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Diminuir shake"
+                >
+                  -
+                </button>
+                <span className="w-5 text-center font-black text-xs text-slate-900">
+                  {config.shakeCount || 0}
+                </span>
+                <button
+                  onClick={() =>
+                    onChange({ shakeCount: Math.min(3, (config.shakeCount || 0) + 1) })
+                  }
+                  disabled={(config.shakeCount || 0) >= 3}
+                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30 shadow-2xs active:scale-90 transition-transform"
+                  aria-label="Aumentar shake"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// COMPONENT: ChurrascoBuilder (Usado no Almoço e opcionalmente no Jantar)
+// ============================================================================
+const ChurrascoBuilder: React.FC<{
+  config: ChurrascoConfig;
+  onChange: (patch: Partial<ChurrascoConfig>) => void;
+}> = ({ config, onChange }) => {
+  const preview = calculateChurrascoMacros(config);
+
+  return (
+    <div className="p-3.5 rounded-2xl border border-amber-200/90 bg-amber-50/30 space-y-3 animate-in fade-in duration-150">
+      {/* Resumo Estimado do Churrasquinho */}
+      <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-2xs flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+          <span>🔥🍢</span> Total do Churrasquinho:
         </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-black text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-lg">
+            {preview.calories} kcal
+          </span>
+          <span className="text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+            {preview.protein}g Prot
+          </span>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {/* 1. Café c/ Leite */}
-        <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-          <div className="min-w-0 pr-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-black text-slate-900">☕ Café c/ Leite</span>
-              <span className="text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.2 rounded">
-                95 kcal • 6g P • 9g C • 4g G / caneca
-              </span>
+      {/* 1. Escolha do Corte do Espeto */}
+      <div>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
+          1. Corte do Espeto (~110g carne assada/espeto)
+        </span>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { id: 'alcatra', label: '🥩 Alcatra', sub: '220 kcal • 31g Prot' },
+            { id: 'maminha', label: '🥩 Maminha', sub: '235 kcal • 29g Prot' },
+            { id: 'fraldinha', label: '🥩 Fraldinha', sub: '260 kcal • 27g Prot' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChange({ cut: item.id as any })}
+              className={`p-2 rounded-xl border text-center transition-all active:scale-95 ${
+                config.cut === item.id
+                  ? 'border-amber-600 bg-white text-amber-950 font-black shadow-2xs ring-1 ring-amber-500'
+                  : 'border-slate-200 bg-white/80 text-slate-700 hover:bg-white'
+              }`}
+            >
+              <div className="text-xs font-black truncate">{item.label}</div>
+              <div className="text-[9px] text-slate-500 mt-0.5">{item.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Quantidade de Espetos & Porções de Baião de Dois */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase">
+              🍢 Espetos
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              {config.coffeeWithMilkCups > 0
-                ? `${config.coffeeWithMilkCups}x caneca(s) (+${config.coffeeWithMilkCups * 95} kcal, +${config.coffeeWithMilkCups * 6}g Prot)`
-                : '0 canecas marcadas'}
+            <div className="text-xs font-black text-slate-900">
+              {config.skewerCount}x {config.skewerCount === 1 ? 'espeto' : 'espetos'}
             </div>
           </div>
-
-          <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => onChange({ coffeeWithMilkCups: Math.max(0, config.coffeeWithMilkCups - 1) })}
-              disabled={config.coffeeWithMilkCups <= 0}
-              className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-              aria-label="Diminuir café com leite"
+              type="button"
+              onClick={() => onChange({ skewerCount: Math.max(1, config.skewerCount - 1) })}
+              disabled={config.skewerCount <= 1}
+              className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
             >
               -
             </button>
-            <span className="w-5 text-center font-black text-xs text-slate-900">
-              {config.coffeeWithMilkCups}
-            </span>
             <button
-              onClick={() => onChange({ coffeeWithMilkCups: Math.min(5, config.coffeeWithMilkCups + 1) })}
-              disabled={config.coffeeWithMilkCups >= 5}
-              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-              aria-label="Aumentar café com leite"
+              type="button"
+              onClick={() => onChange({ skewerCount: Math.min(5, config.skewerCount + 1) })}
+              disabled={config.skewerCount >= 5}
+              className="w-6 h-6 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-30"
             >
               +
             </button>
           </div>
         </div>
 
-        {/* 2. Tapioca c/ Queijo */}
-        <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-          <div className="min-w-0 pr-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-black text-slate-900">🌮 Tapioca c/ Queijo</span>
-              <span className="text-[9px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded">
-                240 kcal • 10g P • 33g C • 8g G / un
-              </span>
+        <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase">
+              🍛 Baião de Dois
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              {config.tapiocaCount > 0
-                ? `${config.tapiocaCount}x tapioca (+${config.tapiocaCount * 240} kcal, +${config.tapiocaCount * 10}g Prot)`
-                : '0 tapiocas marcadas'}
+            <div className="text-xs font-black text-slate-900">
+              {config.baiaoPortions}x {config.baiaoPortions === 1 ? 'porção' : 'porções'}
             </div>
           </div>
-
-          <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => onChange({ tapiocaCount: Math.max(0, config.tapiocaCount - 1) })}
-              disabled={config.tapiocaCount <= 0}
-              className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-              aria-label="Diminuir tapioca"
+              type="button"
+              onClick={() => onChange({ baiaoPortions: Math.max(0, config.baiaoPortions - 1) })}
+              disabled={config.baiaoPortions <= 0}
+              className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
             >
               -
             </button>
-            <span className="w-5 text-center font-black text-xs text-slate-900">
-              {config.tapiocaCount}
-            </span>
             <button
-              onClick={() => onChange({ tapiocaCount: Math.min(4, config.tapiocaCount + 1) })}
-              disabled={config.tapiocaCount >= 4}
-              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-              aria-label="Aumentar tapioca"
+              type="button"
+              onClick={() => onChange({ baiaoPortions: Math.min(3, config.baiaoPortions + 1) })}
+              disabled={config.baiaoPortions >= 3}
+              className="w-6 h-6 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-30"
             >
               +
             </button>
           </div>
         </div>
+      </div>
 
-        {/* 3. Ovos (Mexidos ou Fritos) */}
-        <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-slate-900">🍳 Ovos</span>
-                <span className="text-[9px] font-bold text-amber-700 bg-amber-100/70 px-1.5 py-0.2 rounded">
-                  {config.eggType === 'fritos' ? '90 kcal • 6g P • 7g G / ovo' : '80 kcal • 6g P • 6g G / ovo'}
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
-                {config.eggCount > 0
-                  ? `${config.eggCount}x ${config.eggType === 'fritos' ? 'ovo(s) frito(s)' : 'ovo(s) mexido(s)'} (+${config.eggCount * (config.eggType === 'fritos' ? 90 : 80)} kcal, +${config.eggCount * 6}g Prot)`
-                  : '0 ovos marcados'}
-              </div>
-            </div>
+      {/* 3. Acompanhamentos: Vinagrete & Farofa */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onChange({ hasVinagrete: !config.hasVinagrete })}
+          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+            config.hasVinagrete
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+              : 'border-slate-200 bg-white text-slate-500'
+          }`}
+        >
+          <span>🍅🥗 Vinagrete</span>
+          <span className="text-[10px] font-black">
+            {config.hasVinagrete ? '+25 kcal' : 'Sem'}
+          </span>
+        </button>
 
-            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => onChange({ eggCount: Math.max(0, config.eggCount - 1) })}
-                disabled={config.eggCount <= 0}
-                className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                aria-label="Diminuir ovos"
-              >
-                -
-              </button>
-              <span className="w-5 text-center font-black text-xs text-slate-900">
-                {config.eggCount}
-              </span>
-              <button
-                onClick={() => onChange({ eggCount: Math.min(6, config.eggCount + 1) })}
-                disabled={config.eggCount >= 6}
-                className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                aria-label="Aumentar ovos"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => onChange({ eggType: 'mexidos' })}
-              className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
-                config.eggType === 'mexidos'
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Mexidos (~80 kcal)
-            </button>
-            <button
-              onClick={() => onChange({ eggType: 'fritos' })}
-              className={`py-1.5 px-2 rounded-lg text-xs font-black border transition-all ${
-                config.eggType === 'fritos'
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Fritos (~90 kcal)
-            </button>
-          </div>
-        </div>
-
-        {/* 4. Frutas (Banana, Laranja ou Maçã) */}
-        <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-slate-900">🍎 Fruta</span>
-                <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.2 rounded">
-                  {config.fruitType === 'banana'
-                    ? '105 kcal • 26g C • 1.3g P'
-                    : config.fruitType === 'laranja'
-                    ? '62 kcal • 15g C • 1.2g P'
-                    : '75 kcal • 19g C • 0.4g P'}
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
-                {config.fruitCount > 0
-                  ? `${config.fruitCount}x ${config.fruitType === 'banana' ? 'banana(s)' : config.fruitType === 'laranja' ? 'laranja(s)' : 'maçã(s)'}`
-                  : '0 frutas marcadas'}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => onChange({ fruitCount: Math.max(0, config.fruitCount - 1) })}
-                disabled={config.fruitCount <= 0}
-                className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                aria-label="Diminuir fruta"
-              >
-                -
-              </button>
-              <span className="w-5 text-center font-black text-xs text-slate-900">
-                {config.fruitCount}
-              </span>
-              <button
-                onClick={() => onChange({ fruitCount: Math.min(4, config.fruitCount + 1) })}
-                disabled={config.fruitCount >= 4}
-                className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                aria-label="Aumentar fruta"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              onClick={() => onChange({ fruitType: 'banana' })}
-              className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
-                config.fruitType === 'banana'
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              🍌 Banana
-            </button>
-            <button
-              onClick={() => onChange({ fruitType: 'laranja' })}
-              className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
-                config.fruitType === 'laranja'
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              🍊 Laranja
-            </button>
-            <button
-              onClick={() => onChange({ fruitType: 'maca' })}
-              className={`py-1.5 px-1 rounded-lg text-[11px] font-black border transition-all text-center ${
-                config.fruitType === 'maca'
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-2xs'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              🍎 Maçã
-            </button>
-          </div>
-        </div>
-
-        {/* 5. Shake Proteico (se permitido) */}
-        {allowShake && (
-          <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-slate-900">🥤 Shake Proteico</span>
-                <span className="text-[9px] font-bold text-purple-700 bg-purple-100/70 px-1.5 py-0.2 rounded">
-                  210 kcal • 25g P • 20g C • 3g G
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
-                {(config.shakeCount || 0) > 0
-                  ? `${config.shakeCount}x shake (+${(config.shakeCount || 0) * 210} kcal, +${(config.shakeCount || 0) * 25}g Prot)`
-                  : '0 shakes marcados'}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => onChange({ shakeCount: Math.max(0, (config.shakeCount || 0) - 1) })}
-                disabled={(config.shakeCount || 0) <= 0}
-                className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                aria-label="Diminuir shake"
-              >
-                -
-              </button>
-              <span className="w-5 text-center font-black text-xs text-slate-900">
-                {config.shakeCount || 0}
-              </span>
-              <button
-                onClick={() => onChange({ shakeCount: Math.min(2, (config.shakeCount || 0) + 1) })}
-                disabled={(config.shakeCount || 0) >= 2}
-                className="w-6 h-6 rounded bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs disabled:opacity-30"
-                aria-label="Aumentar shake"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => onChange({ hasFarofa: !config.hasFarofa })}
+          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+            config.hasFarofa
+              ? 'border-amber-300 bg-amber-50 text-amber-900'
+              : 'border-slate-200 bg-white text-slate-500'
+          }`}
+        >
+          <span>🥣 Farofa</span>
+          <span className="text-[10px] font-black">
+            {config.hasFarofa ? '+75 kcal' : 'Sem'}
+          </span>
+        </button>
       </div>
     </div>
   );
 };
 
+// ============================================================================
+// TELA PRINCIPAL: NutritionScreen
+// ============================================================================
 export const NutritionScreen: React.FC = () => {
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
-  const [superBesteiraMessage, setSuperBesteiraMessage] = useState<string | null>(null);
+  const [escapeToast, setEscapeToast] = useState<string | null>(null);
 
-  const log = useLiveQuery(
+  const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
+  const targetProtein = userProfile?.targetProteinGrams || 185;
+  const targetCalories = userProfile?.targetCaloriesKcal || 2200;
+  const targetWaterMl = userProfile?.targetWaterMl || 4000;
+  const calorieMode = userProfile?.calorieMode || 'recomposicao';
+
+  const currentLog = useLiveQuery(
     () => db.nutritionLogs.get(selectedDate),
     [selectedDate]
   );
 
-  // Ensure database entry exists for date
+  // Initialize log for selected date if none exists
   useEffect(() => {
-    async function ensureEntry() {
+    async function ensureLogExists() {
       const existing = await db.nutritionLogs.get(selectedDate);
       if (!existing) {
-        const newLog: NutritionLog = {
+        await db.nutritionLogs.put({
           date: selectedDate,
           tookWhey: false,
           wheyScoops: 0,
+          milkGlasses: 0,
           meals: {
             breakfast: 'custom',
             lunch: '',
-            snack: '',
+            snack: 'custom',
             dinner: ''
           },
           waterMl: 0,
           escapes: {
+            chocSmallCount: 0,
+            snickersBarCount: 0,
+            iceCreamCount: 0,
+            saltySnackCount: 0,
             besteiraCount: 0,
             superBesteiraCount: 0
           },
           breakfastEggCount: 2,
-          milkGlasses: 0,
+          lunchType: 'caseiro',
           lunchConfig: DEFAULT_LUNCH_CONFIG,
+          churrascoConfig: DEFAULT_CHURRASCO_CONFIG,
           dinnerType: 'subway',
           dinnerSubwayConfig: DEFAULT_SUBWAY_CONFIG,
           dinnerPlateConfig: DEFAULT_DINNER_PLATE_CONFIG,
+          dinnerChurrascoConfig: DEFAULT_CHURRASCO_CONFIG,
+          dinnerBurgerConfig: DEFAULT_BURGER_CONFIG,
+          dinnerPizzaConfig: DEFAULT_PIZZA_CONFIG,
           breakfastConfig: DEFAULT_BREAKFAST_CONFIG,
           snackConfig: DEFAULT_SNACK_CONFIG
-        };
-        await db.nutritionLogs.put(newLog);
+        });
       }
     }
-    ensureEntry();
+    ensureLogExists();
   }, [selectedDate]);
 
-  // Current active data
-  const currentData: NutritionLog = useMemo(() => {
-    return (
-      log || {
-        date: selectedDate,
-        tookWhey: false,
-        wheyScoops: 0,
-        milkGlasses: 0,
-        meals: { breakfast: 'custom', lunch: '', snack: '', dinner: '' },
-        waterMl: 0,
-        escapes: { besteiraCount: 0, superBesteiraCount: 0 },
-        breakfastEggCount: 2,
-        lunchConfig: DEFAULT_LUNCH_CONFIG,
-        dinnerType: 'subway',
-        dinnerSubwayConfig: DEFAULT_SUBWAY_CONFIG,
-        dinnerPlateConfig: DEFAULT_DINNER_PLATE_CONFIG,
-        breakfastConfig: DEFAULT_BREAKFAST_CONFIG,
-        snackConfig: DEFAULT_SNACK_CONFIG
-      }
-    );
-  }, [log, selectedDate]);
+  const currentData: NutritionLog = currentLog || {
+    date: selectedDate,
+    tookWhey: false,
+    wheyScoops: 0,
+    milkGlasses: 0,
+    meals: {
+      breakfast: 'custom',
+      lunch: '',
+      snack: 'custom',
+      dinner: ''
+    },
+    waterMl: 0,
+    escapes: {
+      chocSmallCount: 0,
+      snickersBarCount: 0,
+      iceCreamCount: 0,
+      saltySnackCount: 0,
+      besteiraCount: 0,
+      superBesteiraCount: 0
+    },
+    breakfastEggCount: 2,
+    lunchType: 'caseiro',
+    lunchConfig: DEFAULT_LUNCH_CONFIG,
+    churrascoConfig: DEFAULT_CHURRASCO_CONFIG,
+    dinnerType: 'subway',
+    dinnerSubwayConfig: DEFAULT_SUBWAY_CONFIG,
+    dinnerPlateConfig: DEFAULT_DINNER_PLATE_CONFIG,
+    dinnerChurrascoConfig: DEFAULT_CHURRASCO_CONFIG,
+    dinnerBurgerConfig: DEFAULT_BURGER_CONFIG,
+    dinnerPizzaConfig: DEFAULT_PIZZA_CONFIG,
+    breakfastConfig: DEFAULT_BREAKFAST_CONFIG,
+    snackConfig: DEFAULT_SNACK_CONFIG
+  };
 
-  // Actual scoops (each scoop = 20g protein, ~95 kcal)
   const wheyScoops = currentData.wheyScoops ?? (currentData.tookWhey ? 2 : 0);
   const wheyProtein = wheyScoops * 20;
   const wheyCalories = wheyScoops * 95;
 
-  // Copos de leite (~200ml, 6g protein, 110 kcal, 9g carbo, 5g gordura)
   const milkGlasses = currentData.milkGlasses ?? 0;
   const milkProtein = milkGlasses * 6;
   const milkCalories = milkGlasses * 110;
   const milkCarbs = milkGlasses * 9;
   const milkFat = milkGlasses * 5;
 
-  // Configurations
-  const lunchConfig = currentData.lunchConfig ?? DEFAULT_LUNCH_CONFIG;
-  const dinnerSubwayConfig = currentData.dinnerSubwayConfig ?? DEFAULT_SUBWAY_CONFIG;
-  const dinnerPlateConfig = currentData.dinnerPlateConfig ?? DEFAULT_DINNER_PLATE_CONFIG;
+  const breakfastConfig = getResolvedBreakfastConfig(currentData);
+  const snackConfig = getResolvedSnackConfig(currentData);
+  const lunchType: LunchType =
+    currentData.lunchType ||
+    (currentData.meals.lunch === 'churrasquinho' ? 'churrasquinho' : 'caseiro');
+  const lunchConfig = currentData.lunchConfig || DEFAULT_LUNCH_CONFIG;
+  const churrascoConfig = currentData.churrascoConfig || DEFAULT_CHURRASCO_CONFIG;
 
-  // User Profile
-  const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
-  const targetCalories = userProfile?.targetCaloriesKcal || 2200;
-  const targetProtein = userProfile?.targetProteinGrams || 185;
-  const targetWaterMl = userProfile?.targetWaterMl || 4000;
-  const calorieMode = userProfile?.calorieMode || 'recomposicao';
+  const dinnerSubwayConfig = currentData.dinnerSubwayConfig || DEFAULT_SUBWAY_CONFIG;
+  const dinnerPlateConfig = currentData.dinnerPlateConfig || DEFAULT_DINNER_PLATE_CONFIG;
+  const dinnerChurrascoConfig =
+    currentData.dinnerChurrascoConfig || DEFAULT_CHURRASCO_CONFIG;
+  const dinnerBurgerConfig = currentData.dinnerBurgerConfig || DEFAULT_BURGER_CONFIG;
+  const dinnerPizzaConfig = currentData.dinnerPizzaConfig || DEFAULT_PIZZA_CONFIG;
 
-  // Resolved customizable configs
-  const breakfastConfig = useMemo<CustomMealConfig>(() => {
-    return getResolvedBreakfastConfig(currentData);
-  }, [currentData]);
+  const breakfastMacros = useMemo(
+    () => calculateCustomMealMacros(breakfastConfig),
+    [breakfastConfig]
+  );
 
-  const snackConfig = useMemo<CustomMealConfig>(() => {
-    return getResolvedSnackConfig(currentData);
-  }, [currentData]);
-
-  // Calculations for individual selected meals
-  const breakfastMacros = useMemo(() => {
-    return calculateCustomMealMacros(breakfastConfig);
-  }, [breakfastConfig]);
+  const snackMacros = useMemo(
+    () => calculateCustomMealMacros(snackConfig),
+    [snackConfig]
+  );
 
   const lunchMacros = useMemo(() => {
-    if (currentData.meals.lunch !== 'caseiro') return { protein: 0, carbs: 0, fat: 0, calories: 0 };
+    if (!currentData.meals.lunch) {
+      return { protein: 0, carbs: 0, fat: 0, calories: 0 };
+    }
+    if (currentData.meals.lunch === 'churrasquinho') {
+      return calculateChurrascoMacros(churrascoConfig);
+    }
     return calculatePlateMacros(lunchConfig);
-  }, [currentData.meals.lunch, lunchConfig]);
-
-  const snackMacros = useMemo(() => {
-    return calculateCustomMealMacros(snackConfig);
-  }, [snackConfig]);
+  }, [currentData.meals.lunch, lunchConfig, churrascoConfig]);
 
   const dinnerMacros = useMemo(() => {
-    if (currentData.meals.dinner === 'subway') {
-      return calculateSubwayMacros(dinnerSubwayConfig);
-    }
-    if (currentData.meals.dinner === 'caseiro') {
-      return calculatePlateMacros(dinnerPlateConfig);
-    }
+    const dMeal = currentData.meals.dinner;
+    if (!dMeal) return { protein: 0, carbs: 0, fat: 0, calories: 0 };
+    if (dMeal === 'subway') return calculateSubwayMacros(dinnerSubwayConfig);
+    if (dMeal === 'caseiro') return calculatePlateMacros(dinnerPlateConfig);
+    if (dMeal === 'churrasquinho') return calculateChurrascoMacros(dinnerChurrascoConfig);
+    if (dMeal === 'burger') return calculateBurgerMacros(dinnerBurgerConfig);
+    if (dMeal === 'pizza') return calculatePizzaMacros(dinnerPizzaConfig);
     return { protein: 0, carbs: 0, fat: 0, calories: 0 };
-  }, [currentData.meals.dinner, dinnerSubwayConfig, dinnerPlateConfig]);
+  }, [
+    currentData.meals.dinner,
+    dinnerSubwayConfig,
+    dinnerPlateConfig,
+    dinnerChurrascoConfig,
+    dinnerBurgerConfig,
+    dinnerPizzaConfig
+  ]);
 
-  // AUTOMATIC CALCULATOR: Sum of daily protein and macros
+  const escapeMacros = useMemo(
+    () => calculateEscapesMacros(currentData.escapes),
+    [currentData.escapes]
+  );
+
+  // Totals for the day
   const dailyTotals = useMemo(() => {
-    const p = wheyProtein + milkProtein + breakfastMacros.protein + lunchMacros.protein + snackMacros.protein + dinnerMacros.protein;
-    const c = milkCarbs + breakfastMacros.carbs + lunchMacros.carbs + snackMacros.carbs + dinnerMacros.carbs;
-    const f = milkFat + breakfastMacros.fat + lunchMacros.fat + snackMacros.fat + dinnerMacros.fat;
-
-    const escapeKcal =
-      (currentData.escapes.besteiraCount || 0) * 600 +
-      (currentData.escapes.superBesteiraCount || 0) * 1350;
-
-    const kcal = wheyCalories + milkCalories + breakfastMacros.calories + lunchMacros.calories + snackMacros.calories + dinnerMacros.calories + escapeKcal;
-
-    return { protein: p, carbs: c, fat: f, calories: kcal };
-  }, [wheyProtein, wheyCalories, milkProtein, milkCalories, milkCarbs, milkFat, breakfastMacros, lunchMacros, snackMacros, dinnerMacros, currentData.escapes]);
+    return {
+      protein:
+        wheyProtein +
+        milkProtein +
+        breakfastMacros.protein +
+        lunchMacros.protein +
+        snackMacros.protein +
+        dinnerMacros.protein +
+        escapeMacros.protein,
+      carbs:
+        milkCarbs +
+        breakfastMacros.carbs +
+        lunchMacros.carbs +
+        snackMacros.carbs +
+        dinnerMacros.carbs +
+        escapeMacros.carbs,
+      fat:
+        milkFat +
+        breakfastMacros.fat +
+        lunchMacros.fat +
+        snackMacros.fat +
+        dinnerMacros.fat +
+        escapeMacros.fat,
+      calories:
+        wheyCalories +
+        milkCalories +
+        breakfastMacros.calories +
+        lunchMacros.calories +
+        snackMacros.calories +
+        dinnerMacros.calories +
+        escapeMacros.calories
+    };
+  }, [
+    wheyProtein,
+    wheyCalories,
+    milkProtein,
+    milkCalories,
+    milkCarbs,
+    milkFat,
+    breakfastMacros,
+    lunchMacros,
+    snackMacros,
+    dinnerMacros,
+    escapeMacros
+  ]);
 
   const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / targetProtein) * 100));
   const remainingProtein = Math.max(0, targetProtein - dailyTotals.protein);
@@ -776,18 +1170,15 @@ export const NutritionScreen: React.FC = () => {
 
   const handleAdjustMilkGlasses = async (delta: number) => {
     triggerHaptic('light');
-    const nextGlasses = Math.max(0, Math.min(6, milkGlasses + delta));
+    const nextMilk = Math.max(0, Math.min(6, milkGlasses + delta));
     await db.nutritionLogs.update(selectedDate, {
-      milkGlasses: nextGlasses
+      milkGlasses: nextMilk
     });
   };
 
   const handleUpdateBreakfastConfig = async (patch: Partial<CustomMealConfig>) => {
     triggerHaptic('light');
-    const updated: CustomMealConfig = {
-      ...breakfastConfig,
-      ...patch
-    };
+    const updated = { ...breakfastConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
       breakfastConfig: updated,
       'meals.breakfast': 'custom'
@@ -796,107 +1187,142 @@ export const NutritionScreen: React.FC = () => {
 
   const handleUpdateSnackConfig = async (patch: Partial<CustomMealConfig>) => {
     triggerHaptic('light');
-    const updated: CustomMealConfig = {
-      ...snackConfig,
-      ...patch
-    };
+    const updated = { ...snackConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
       snackConfig: updated,
       'meals.snack': 'custom'
     });
   };
 
-  const handleToggleLunch = async () => {
+  const handleSelectLunchType = async (type: LunchType) => {
     triggerHaptic('light');
-    const nextVal = currentData.meals.lunch === 'caseiro' ? '' : 'caseiro';
-    await db.nutritionLogs.update(selectedDate, {
-      'meals.lunch': nextVal,
-      lunchConfig: currentData.lunchConfig ?? DEFAULT_LUNCH_CONFIG
-    });
+    const currentActive = currentData.meals.lunch;
+    if (currentActive === type) {
+      // Desmarcar se clicar novamente no botão de toggle
+      await db.nutritionLogs.update(selectedDate, {
+        'meals.lunch': '',
+        lunchType: type
+      });
+    } else {
+      await db.nutritionLogs.update(selectedDate, {
+        'meals.lunch': type,
+        lunchType: type
+      });
+    }
   };
 
   const handleUpdateLunchConfig = async (patch: Partial<PlateConfig>) => {
     triggerHaptic('light');
-    const updated: PlateConfig = {
-      ...(currentData.lunchConfig || DEFAULT_LUNCH_CONFIG),
-      ...patch
-    };
+    const updated = { ...lunchConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
       lunchConfig: updated,
-      'meals.lunch': 'caseiro' // Ensure marked as eaten
+      lunchType: 'caseiro',
+      'meals.lunch': 'caseiro'
     });
   };
 
-  const handleSelectDinnerType = async (type: 'subway' | 'caseiro') => {
+  const handleUpdateChurrascoConfig = async (patch: Partial<ChurrascoConfig>) => {
     triggerHaptic('light');
-    const nextVal = currentData.meals.dinner === type ? '' : type;
+    const updated = { ...churrascoConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
-      'meals.dinner': nextVal,
-      dinnerType: type
+      churrascoConfig: updated,
+      lunchType: 'churrasquinho',
+      'meals.lunch': 'churrasquinho'
+    });
+  };
+
+  const handleSelectDinnerType = async (type: DinnerType) => {
+    triggerHaptic('light');
+    const currentDinner = currentData.meals.dinner;
+    const nextDinner = currentDinner === type ? '' : type;
+    await db.nutritionLogs.update(selectedDate, {
+      dinnerType: type,
+      'meals.dinner': nextDinner
     });
   };
 
   const handleUpdateSubwayConfig = async (patch: Partial<SubwayConfig>) => {
     triggerHaptic('light');
-    const updated: SubwayConfig = {
-      ...(currentData.dinnerSubwayConfig || DEFAULT_SUBWAY_CONFIG),
-      ...patch
-    };
+    const updated = { ...dinnerSubwayConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
       dinnerSubwayConfig: updated,
+      dinnerType: 'subway',
       'meals.dinner': 'subway'
     });
   };
 
   const handleUpdateDinnerPlateConfig = async (patch: Partial<PlateConfig>) => {
     triggerHaptic('light');
-    const updated: PlateConfig = {
-      ...(currentData.dinnerPlateConfig || DEFAULT_DINNER_PLATE_CONFIG),
-      ...patch
-    };
+    const updated = { ...dinnerPlateConfig, ...patch };
     await db.nutritionLogs.update(selectedDate, {
       dinnerPlateConfig: updated,
+      dinnerType: 'caseiro',
       'meals.dinner': 'caseiro'
+    });
+  };
+
+  const handleUpdateDinnerChurrascoConfig = async (patch: Partial<ChurrascoConfig>) => {
+    triggerHaptic('light');
+    const updated = { ...dinnerChurrascoConfig, ...patch };
+    await db.nutritionLogs.update(selectedDate, {
+      dinnerChurrascoConfig: updated,
+      dinnerType: 'churrasquinho',
+      'meals.dinner': 'churrasquinho'
+    });
+  };
+
+  const handleUpdateBurgerConfig = async (patch: Partial<BurgerConfig>) => {
+    triggerHaptic('light');
+    const updated = { ...dinnerBurgerConfig, ...patch };
+    await db.nutritionLogs.update(selectedDate, {
+      dinnerBurgerConfig: updated,
+      dinnerType: 'burger',
+      'meals.dinner': 'burger'
+    });
+  };
+
+  const handleUpdatePizzaConfig = async (patch: Partial<PizzaConfig>) => {
+    triggerHaptic('light');
+    const updated = { ...dinnerPizzaConfig, ...patch };
+    await db.nutritionLogs.update(selectedDate, {
+      dinnerPizzaConfig: updated,
+      dinnerType: 'pizza',
+      'meals.dinner': 'pizza'
     });
   };
 
   const handleAdjustWater = async (amountMl: number) => {
     triggerHaptic('light');
-    const current = currentData.waterMl || 0;
-    const nextVal = Math.max(0, Math.min(6000, current + amountMl));
+    const nextWater = Math.max(0, Math.min(8000, currentData.waterMl + amountMl));
     await db.nutritionLogs.update(selectedDate, {
-      waterMl: nextVal
+      waterMl: nextWater
     });
   };
 
-  const handleAddBesteira = async (delta: number) => {
-    triggerHaptic('medium');
-    const current = currentData.escapes.besteiraCount || 0;
-    const nextCount = Math.max(0, current + delta);
+  const handleAdjustEscape = async (
+    field: keyof DetailedEscapes,
+    delta: number,
+    label?: string
+  ) => {
+    triggerHaptic(delta > 0 ? 'medium' : 'light');
+    const currentVal = (currentData.escapes?.[field] as number) || 0;
+    const nextVal = Math.max(0, currentVal + delta);
     await db.nutritionLogs.update(selectedDate, {
-      'escapes.besteiraCount': nextCount
-    });
-  };
-
-  const handleAddSuperBesteira = async (delta: number) => {
-    triggerHaptic('alert');
-    const current = currentData.escapes.superBesteiraCount || 0;
-    const nextCount = Math.max(0, current + delta);
-    await db.nutritionLogs.update(selectedDate, {
-      'escapes.superBesteiraCount': nextCount
+      [`escapes.${field}`]: nextVal
     });
 
-    if (delta > 0) {
-      setSuperBesteiraMessage(
-        'Super besteira registrada (~1.200 a 1.500 kcal). Mantenha os treinos pesados amanhã e foque na hidratação.'
-      );
+    if (delta > 0 && label) {
+      setEscapeToast(`${label} registrado no balanço do dia.`);
+      setTimeout(() => {
+        setEscapeToast((prev) => (prev?.includes(label) ? null : prev));
+      }, 2800);
     }
   };
 
-  const handleShiftDate = (days: number) => {
+  const handleShiftDate = (daysDelta: number) => {
     triggerHaptic('light');
     const current = new Date(selectedDate + 'T00:00:00');
-    current.setDate(current.getDate() + days);
+    current.setDate(current.getDate() + daysDelta);
     setSelectedDate(current.toISOString().split('T')[0]);
   };
 
@@ -908,19 +1334,90 @@ export const NutritionScreen: React.FC = () => {
     .replace('.', '')
     .toUpperCase();
 
-  const waterProgress = Math.min(100, Math.round((currentData.waterMl / 4000) * 100));
+  const waterProgress = Math.min(100, Math.round((currentData.waterMl / targetWaterMl) * 100));
 
-  // Dynamic preview for dinner & lunch options
-  const currentLunchPreview = calculatePlateMacros(lunchConfig);
+  const currentLunchPlatePreview = calculatePlateMacros(lunchConfig);
+  const currentLunchChurrascoPreview = calculateChurrascoMacros(churrascoConfig);
+
   const currentDinnerPlatePreview = calculatePlateMacros(dinnerPlateConfig);
   const currentSubwayPreview = calculateSubwayMacros(dinnerSubwayConfig);
+  const currentDinnerChurrascoPreview = calculateChurrascoMacros(dinnerChurrascoConfig);
+  const currentBurgerPreview = calculateBurgerMacros(dinnerBurgerConfig);
+  const currentPizzaPreview = calculatePizzaMacros(dinnerPizzaConfig);
+
+  const escapeItems: {
+    key: keyof DetailedEscapes;
+    emoji: string;
+    title: string;
+    examples: string;
+    kcal: number;
+    prot: number;
+    carbs: number;
+    fat: number;
+    badgeColor: string;
+  }[] = [
+    {
+      key: 'chocSmallCount',
+      emoji: '🍫',
+      title: 'Doce Pequeno / Bombom',
+      examples: 'Quadradinho de chocolate (25g), Sonho de Valsa, 3x Bis',
+      kcal: 130,
+      prot: 1,
+      carbs: 16,
+      fat: 7,
+      badgeColor: 'bg-amber-50 text-amber-800 border-amber-200'
+    },
+    {
+      key: 'snickersBarCount',
+      emoji: '🍬🍫',
+      title: 'Barra de Chocolate / Snickers',
+      examples: 'Snickers (45g), KitKat, Twix, barra recheada média',
+      kcal: 250,
+      prot: 4,
+      carbs: 30,
+      fat: 12,
+      badgeColor: 'bg-amber-100/80 text-amber-900 border-amber-300'
+    },
+    {
+      key: 'iceCreamCount',
+      emoji: '🍦🍰',
+      title: 'Sorvete / Eskibom / Bolo',
+      examples: 'Eskibom, picolé c/ cobertura, copo de sorvete ou fatia de bolo',
+      kcal: 380,
+      prot: 5,
+      carbs: 44,
+      fat: 20,
+      badgeColor: 'bg-orange-50 text-orange-800 border-orange-200'
+    },
+    {
+      key: 'saltySnackCount',
+      emoji: '🥨🍪',
+      title: 'Salgadinho / Biscoito / Salgado',
+      examples: 'Pacote médio Doritos/Cheetos (85g), cookies ou coxinha/pastel',
+      kcal: 450,
+      prot: 6,
+      carbs: 52,
+      fat: 24,
+      badgeColor: 'bg-orange-100/80 text-orange-900 border-orange-300'
+    },
+    {
+      key: 'superBesteiraCount',
+      emoji: '🍕🍻',
+      title: 'Exagero / Refeição Livre Pesada',
+      examples: 'Rodízio, combo fast-food duplo + sobremesa ou bebida + petiscos',
+      kcal: 1200,
+      prot: 35,
+      carbs: 120,
+      fat: 65,
+      badgeColor: 'bg-rose-50 text-rose-800 border-rose-200'
+    }
+  ];
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-4">
       {/* HEADER CENTRALIZADO PREMIUM */}
       <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-4 px-4 border-b border-slate-200/60">
         <div className="flex items-center justify-between mb-2">
-          {/* Spacer esquerdo proporcional para centralização perfeita */}
           <div className="w-16 shrink-0 flex items-center">
             {isToday ? (
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
@@ -936,14 +1433,12 @@ export const NutritionScreen: React.FC = () => {
             )}
           </div>
 
-          {/* Título Central */}
           <div className="flex-1 text-center min-w-0 px-1">
             <h1 className="text-base font-black text-slate-900 tracking-tight leading-tight">
               Dieta & Nutrição
             </h1>
           </div>
 
-          {/* Quadrado Pequeno de Data no Canto Superior Direito */}
           <div className="w-16 shrink-0 flex items-center justify-end gap-0.5">
             <button
               onClick={() => handleShiftDate(-1)}
@@ -973,11 +1468,11 @@ export const NutritionScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* METAS NA MESMA LINHA (FULL WIDTH - SEM QUEBRA) */}
+        {/* METAS NA MESMA LINHA */}
         <div className="flex items-center justify-center gap-1.5 whitespace-nowrap overflow-x-auto no-scrollbar">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
             <Target className="w-2.5 h-2.5 text-blue-600 shrink-0" />
-            <span>{targetProtein}g Prot</span>
+            <span>Meta: {targetProtein}g Proteína</span>
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
             <Flame className="w-2.5 h-2.5 text-amber-600 fill-current shrink-0" />
@@ -990,19 +1485,21 @@ export const NutritionScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {/* 1. CALCULADORA AUTOMÁTICA DE PROTEÍNAS & CALORIAS (DESTAQUE NO TOPO) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-1">
+      <div className="space-y-3.5">
+        {/* ========================================================= */}
+        {/* 1. PAINEL DE METAS & MACROS DO DIA (PADRÃO MACROFACTOR) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-3.5 anim-card-1">
           {/* TRACKER DE PROTEÍNA */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
                   <Target className="w-4 h-4 stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Proteína Alvo
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Proteína Diária
                   </span>
                   <div className="flex items-baseline gap-1">
                     <h2 className="text-lg font-black text-slate-900 leading-none">
@@ -1016,7 +1513,7 @@ export const NutritionScreen: React.FC = () => {
               </div>
 
               <span
-                className={`text-xs font-black px-2 py-0.5 rounded-xl whitespace-nowrap ${
+                className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
                   dailyTotals.protein >= targetProtein
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-blue-50 text-blue-700 border border-blue-100'
@@ -1038,120 +1535,122 @@ export const NutritionScreen: React.FC = () => {
             <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
               <span>
                 {remainingProtein > 0 ? (
-                  <>Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para a meta</>
+                  <>
+                    Faltam <strong className="text-slate-800 font-bold">{remainingProtein}g</strong> para blindar a massa magra
+                  </>
                 ) : (
-                  <span className="text-emerald-700 font-bold">Meta proteica batida!</span>
+                  <span className="text-emerald-700 font-bold">
+                    ✨ Meta proteica batida com sucesso!
+                  </span>
                 )}
               </span>
             </div>
           </div>
 
           {/* TRACKER DE CALORIAS */}
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2.5 border-t border-slate-100">
             <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
                   <Flame className="w-4 h-4 fill-current" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Balanço Calórico
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Balanço Calórico ({calorieMode === 'recomposicao' ? 'Déficit' : 'Manutenção'})
                   </span>
                   <div className="flex items-baseline gap-1">
                     <h2 className="text-lg font-black text-slate-900 leading-none">
-                      {dailyTotals.calories.toLocaleString('pt-BR')} kcal
+                      {dailyTotals.calories.toLocaleString('pt-BR')}
                     </h2>
                     <span className="text-xs font-bold text-slate-400">
-                      / {targetCalories.toLocaleString('pt-BR')}
+                      / {targetCalories.toLocaleString('pt-BR')} kcal
                     </span>
                   </div>
                 </div>
               </div>
 
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
-                {calorieMode === 'recomposicao' ? 'Déficit (2.200)' : 'Manutenção (2.700)'}
+              <span
+                className={`text-xs font-black px-2.5 py-1 rounded-xl whitespace-nowrap ${
+                  remainingCalories >= 0
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200/70'
+                    : 'bg-rose-100 text-rose-800'
+                }`}
+              >
+                {remainingCalories >= 0
+                  ? `Restam ${remainingCalories} kcal`
+                  : `+${Math.abs(remainingCalories)} kcal acima`}
               </span>
             </div>
 
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
               <div
                 className={`h-full transition-all duration-300 ease-out rounded-full ${
-                  dailyTotals.calories > targetCalories ? 'bg-red-500' : 'bg-amber-500'
+                  dailyTotals.calories <= targetCalories
+                    ? 'bg-amber-500'
+                    : dailyTotals.calories <= targetCalories + 300
+                    ? 'bg-orange-500'
+                    : 'bg-rose-500'
                 }`}
                 style={{ width: `${calorieProgress}%` }}
               />
             </div>
-
-            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
-              <span>
-                {remainingCalories > 0 ? (
-                  <>Restam <strong className="text-slate-800 font-bold">{remainingCalories} kcal</strong></>
-                ) : (
-                  <span className="text-amber-800 font-bold">Meta calórica atingida!</span>
-                )}
-              </span>
-              <span className="text-slate-400">
-                {calorieProgress}% consumido
-              </span>
-            </div>
           </div>
 
-          {/* Breakdown de Macros Estimados */}
-          <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-center">
-            <div className="p-1.5 rounded-xl bg-blue-50/60 border border-blue-100/60">
-              <div className="text-[9px] font-bold text-blue-600">PROTEÍNA</div>
-              <div className="text-xs font-black text-blue-900">{dailyTotals.protein}g</div>
+          {/* Breakdown de Macros Semânticos (Sem abreviações soltas) */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+            <div className="p-2 rounded-2xl bg-blue-50/60 border border-blue-100/80">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-blue-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                <span>Proteínas</span>
+              </div>
+              <div className="text-sm font-black text-blue-950 mt-0.5">
+                {dailyTotals.protein}g
+              </div>
             </div>
-            <div className="p-1.5 rounded-xl bg-amber-50/60 border border-amber-100/60">
-              <div className="text-[9px] font-bold text-amber-600">CARBO</div>
-              <div className="text-xs font-black text-amber-900">~{dailyTotals.carbs}g</div>
+            <div className="p-2 rounded-2xl bg-amber-50/60 border border-amber-100/80">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-amber-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span>Carboidratos</span>
+              </div>
+              <div className="text-sm font-black text-amber-950 mt-0.5">
+                {dailyTotals.carbs}g
+              </div>
             </div>
-            <div className="p-1.5 rounded-xl bg-purple-50/60 border border-purple-100/60">
-              <div className="text-[9px] font-bold text-purple-600">GORDURA</div>
-              <div className="text-xs font-black text-purple-900">~{dailyTotals.fat}g</div>
+            <div className="p-2 rounded-2xl bg-purple-50/60 border border-purple-100/80">
+              <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-purple-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span>Gorduras</span>
+              </div>
+              <div className="text-sm font-black text-purple-950 mt-0.5">
+                {dailyTotals.fat}g
+              </div>
             </div>
-          </div>
-
-          {/* REASSURANCE AUTO-SAVE FOOTER */}
-          <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between text-[10px]">
-            <span className="flex items-center gap-1 font-semibold text-emerald-600">
-              <Check className="w-3 h-3 stroke-[3]" />
-              Salvo automaticamente hoje
-            </span>
-            <span className="text-slate-400">
-              Cada dia mantém seu histórico
-            </span>
           </div>
         </div>
 
-        {/* 2. PROTEÍNA RÁPIDA: WHEY & COPO DE LEITE */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-2">
-          <div className="flex items-center gap-2">
+        {/* ========================================================= */}
+        {/* 2. SUPLEMENTAÇÃO & PROTEÍNA RÁPIDA (WHEY + LEITE) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
+          <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              Proteína Rápida & Suplementação
+              Suplementação & Proteína Rápida
             </h3>
           </div>
 
           {/* WHEY PROTEIN */}
-          <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-slate-900">
-                  Whey Protein
-                </span>
-                <span className="text-[9px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded whitespace-nowrap">
-                  20g Prot • 95 kcal / scoop
-                </span>
+          <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 pr-1">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-base shrink-0">
+                ⚡🥤
               </div>
-              <p className="text-[11px] font-semibold text-blue-600 mt-0.5 truncate">
-                {wheyScoops > 0
-                  ? `+${wheyProtein}g proteína • +${wheyCalories} kcal (${wheyScoops} ${wheyScoops === 1 ? 'scoop' : 'scoops'})`
-                  : 'Nenhum scoop marcado'}
-              </p>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900">Whey Protein</div>
+                <MacroPills calories={95} protein={20} unitLabel="scoop" />
+              </div>
             </div>
 
-            {/* Stepper Whey */}
             <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => handleAdjustWheyScoops(-1)}
@@ -1161,11 +1660,9 @@ export const NutritionScreen: React.FC = () => {
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-
               <div className="w-6 text-center font-black text-xs text-slate-900">
                 {wheyScoops}
               </div>
-
               <button
                 onClick={() => handleAdjustWheyScoops(1)}
                 className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
@@ -1177,24 +1674,17 @@ export const NutritionScreen: React.FC = () => {
           </div>
 
           {/* COPO DE LEITE */}
-          <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
-            <div className="min-w-0 pr-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-slate-900">
-                  🥛 Copo de Leite
-                </span>
-                <span className="text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded whitespace-nowrap">
-                  ~200ml • 6g Prot • 110 kcal
-                </span>
+          <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 pr-1">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-base shrink-0">
+                🥛🐄
               </div>
-              <p className="text-[11px] font-semibold text-amber-700 mt-0.5 truncate">
-                {milkGlasses > 0
-                  ? `+${milkProtein}g proteína • +${milkCalories} kcal (${milkGlasses} ${milkGlasses === 1 ? 'copo' : 'copos'})`
-                  : 'Nenhum copo marcado'}
-              </p>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900">Copo de Leite (200ml)</div>
+                <MacroPills calories={110} protein={6} carbs={9} fat={5} unitLabel="copo" />
+              </div>
             </div>
 
-            {/* Stepper Leite */}
             <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
               <button
                 onClick={() => handleAdjustMilkGlasses(-1)}
@@ -1204,14 +1694,12 @@ export const NutritionScreen: React.FC = () => {
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-
               <div className="w-6 text-center font-black text-xs text-slate-900">
                 {milkGlasses}
               </div>
-
               <button
                 onClick={() => handleAdjustMilkGlasses(1)}
-                className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
                 aria-label="Aumentar copo de leite"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -1220,8 +1708,10 @@ export const NutritionScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. REFEIÇÕES DIÁRIAS PERSONALIZÁVEIS */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-5 anim-card-3">
+        {/* ========================================================= */}
+        {/* 3. REFEIÇÕES DO DIA (CAFÉ, ALMOÇO, LANCHE, JANTAR) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-4 anim-card-3">
           <div className="flex items-center gap-2">
             <UtensilsCrossed className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
@@ -1229,266 +1719,390 @@ export const NutritionScreen: React.FC = () => {
             </h3>
           </div>
 
-          {/* ========================================================= */}
-          {/* CAFÉ DA MANHÃ (PERSONALIZÁVEL) */}
-          {/* ========================================================= */}
+          {/* 3.1 CAFÉ DA MANHÃ */}
           <CustomMealBuilder
-            icon="☕"
+            emoji="☕🍳"
             title="Café da Manhã"
+            subtitle="Café c/ leite, ovos, tapioca ou fruta"
             config={breakfastConfig}
             onChange={handleUpdateBreakfastConfig}
+            defaultOpen={true}
           />
 
-          {/* ========================================================= */}
-          {/* ALMOÇO: PRATO CASEIRO PERSONALIZÁVEL */}
-          {/* ========================================================= */}
-          <div className="border-t border-slate-100 pt-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-                🍽️ Almoço (Prato Caseiro Completo)
+          {/* 3.2 ALMOÇO: PRATO CASEIRO OU CHURRASQUINHO */}
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3.5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                  {lunchType === 'churrasquinho' ? '🍢🔥' : '🍽️🥩'}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    Almoço Principal
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium truncate">
+                    {currentData.meals.lunch
+                      ? `${lunchMacros.calories} kcal • ${lunchMacros.protein}g Proteína • ${lunchMacros.carbs}g Carbo`
+                      : 'Selecione Prato Caseiro ou Churrasquinho'}
+                  </p>
+                </div>
               </div>
+
               <button
-                onClick={handleToggleLunch}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-black transition-all flex items-center gap-1 ${
-                  currentData.meals.lunch === 'caseiro'
+                type="button"
+                onClick={() => handleSelectLunchType(lunchType)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all flex items-center gap-1 shrink-0 active:scale-95 ${
+                  currentData.meals.lunch
                     ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
                 }`}
               >
-                {currentData.meals.lunch === 'caseiro' ? (
+                {currentData.meals.lunch ? (
                   <>
                     <Check className="w-3 h-3 stroke-[3]" />
-                    Almoço Marcado
+                    <span>Registrado</span>
                   </>
                 ) : (
-                  '+ Marcar Almoço'
+                  <span>+ Marcar Almoço</span>
                 )}
               </button>
             </div>
 
-            {/* CARD BUILDER DO PRATO CASEIRO */}
-            <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
-              {/* Badge de Totais do Almoço */}
-              <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                <span className="text-xs font-black text-slate-800">
-                  Total Estimado do Almoço:
-                </span>
-                <span className="text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                  {currentLunchPreview.calories} kcal • P: {currentLunchPreview.protein}g • C: {currentLunchPreview.carbs}g • G: {currentLunchPreview.fat}g
-                </span>
-              </div>
-
-              {/* 1. Escolha da Proteína */}
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
-                  1. Proteína Principal
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[
-                    { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g/bife (28g P)' },
-                    { id: 'frango', label: '🍗 Filé Frango', sub: '~120g/filé (32g P)' },
-                    { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g/filé (26g P)' }
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleUpdateLunchConfig({ proteinType: item.id as any })}
-                      className={`p-2 rounded-xl border text-center transition-all ${
-                        lunchConfig.proteinType === item.id
-                          ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-2xs'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="text-xs font-black truncate">{item.label}</div>
-                      <div className="text-[9px] text-slate-400 mt-0.5">{item.sub}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Contadores de Porções (Bifes, Arroz, Feijão) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {/* Quantidade de Bifes/Filés */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase">
-                      {lunchConfig.proteinType === 'carne' ? 'Bifes' : 'Filés'}
-                    </div>
-                    <div className="text-xs font-black text-slate-800">
-                      {lunchConfig.proteinPortions}x ({lunchConfig.proteinPortions * (lunchConfig.proteinType === 'carne' ? 100 : 120)}g)
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ proteinPortions: Math.max(1, lunchConfig.proteinPortions - 1) })}
-                      disabled={lunchConfig.proteinPortions <= 1}
-                      className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                    >
-                      -
-                    </button>
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ proteinPortions: Math.min(5, lunchConfig.proteinPortions + 1) })}
-                      disabled={lunchConfig.proteinPortions >= 5}
-                      className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quantidade de Arroz */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase">
-                      Arroz Branco
-                    </div>
-                    <div className="text-xs font-black text-slate-800">
-                      {lunchConfig.ricePortions}x {lunchConfig.ricePortions === 1 ? 'concha' : 'conchas'} (~{lunchConfig.ricePortions * 100}g)
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ ricePortions: Math.max(0, lunchConfig.ricePortions - 1) })}
-                      disabled={lunchConfig.ricePortions <= 0}
-                      className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                    >
-                      -
-                    </button>
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ ricePortions: Math.min(4, lunchConfig.ricePortions + 1) })}
-                      disabled={lunchConfig.ricePortions >= 4}
-                      className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quantidade de Feijão */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase">
-                      Feijão Carioca
-                    </div>
-                    <div className="text-xs font-black text-slate-800">
-                      {lunchConfig.beanPortions}x {lunchConfig.beanPortions === 1 ? 'concha' : 'conchas'} (~{lunchConfig.beanPortions * 80}g)
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ beanPortions: Math.max(0, lunchConfig.beanPortions - 1) })}
-                      disabled={lunchConfig.beanPortions <= 0}
-                      className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                    >
-                      -
-                    </button>
-                    <button
-                      onClick={() => handleUpdateLunchConfig({ beanPortions: Math.min(3, lunchConfig.beanPortions + 1) })}
-                      disabled={lunchConfig.beanPortions >= 3}
-                      className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Toggle de Salada */}
+            {/* SELETOR DE MODALIDADE DO ALMOÇO: PRATO CASEIRO vs CHURRASQUINHO */}
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => handleUpdateLunchConfig({ hasSalad: !lunchConfig.hasSalad })}
-                className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
-                  lunchConfig.hasSalad
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                    : 'border-slate-200 bg-white text-slate-500'
-                }`}
-              >
-                <span>🥗 Salada Verde (Folhas, tomate e azeite sutil)</span>
-                <span className="text-[10px] font-black">
-                  {lunchConfig.hasSalad ? 'INCLUSA (+35 kcal)' : 'NÃO INCLUSA'}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* ========================================================= */}
-          {/* LANCHE DA TARDE (PERSONALIZÁVEL) */}
-          {/* ========================================================= */}
-          <CustomMealBuilder
-            icon="🥪"
-            title="Lanche da Tarde"
-            config={snackConfig}
-            onChange={handleUpdateSnackConfig}
-            allowShake={true}
-          />
-
-          {/* ========================================================= */}
-          {/* JANTAR: SANDUÍCHE BAGUETE OU PRATO CASEIRO */}
-          {/* ========================================================= */}
-          <div className="border-t border-slate-100 pt-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-                🌙 Jantar (2 Opções: Sanduíche Baguete ou Caseiro)
-              </div>
-              {currentData.meals.dinner && (
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                  {dinnerMacros.calories} kcal • {dinnerMacros.protein}g Prot
-                </span>
-              )}
-            </div>
-
-            {/* TAB SELECTOR: SANDUÍCHE BAGUETE vs PRATO CASEIRO */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button
-                onClick={() => handleSelectDinnerType('subway')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] ${
-                  currentData.meals.dinner === 'subway'
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  db.nutritionLogs.update(selectedDate, {
+                    lunchType: 'caseiro',
+                    'meals.lunch': 'caseiro'
+                  });
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
+                  lunchType === 'caseiro'
                     ? 'border-blue-600 bg-blue-50/80 text-blue-950 font-black shadow-2xs ring-1 ring-blue-500'
-                    : 'border-slate-200 bg-slate-50/40 hover:bg-slate-100 text-slate-700 font-bold'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs font-black">
-                  <span>🥖 Sanduíche Baguete</span>
-                  {currentData.meals.dinner === 'subway' && (
-                    <Check className="w-4 h-4 text-blue-600 stroke-[3]" />
-                  )}
-                </div>
-                <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                  Molho + Queijos + Salada
-                </div>
-                <div className="text-[10px] font-bold text-amber-700 mt-1">
-                  ~{currentSubwayPreview.calories} kcal ({currentSubwayPreview.protein}g Prot)
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSelectDinnerType('caseiro')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] ${
-                  currentData.meals.dinner === 'caseiro'
-                    ? 'border-blue-600 bg-blue-50/80 text-blue-950 font-black shadow-2xs ring-1 ring-blue-500'
-                    : 'border-slate-200 bg-slate-50/40 hover:bg-slate-100 text-slate-700 font-bold'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-black">
                   <span>🍽️ Prato Caseiro</span>
-                  {currentData.meals.dinner === 'caseiro' && (
-                    <Check className="w-4 h-4 text-blue-600 stroke-[3]" />
+                  {currentData.meals.lunch === 'caseiro' && (
+                    <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />
                   )}
                 </div>
-                <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                  Arroz, feijão, proteína & salada
+                <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                  Arroz, feijão, carne/frango e salada
                 </div>
-                <div className="text-[10px] font-bold text-amber-700 mt-1">
-                  ~{currentDinnerPlatePreview.calories} kcal ({currentDinnerPlatePreview.protein}g Prot)
+                <div className="text-[10px] font-extrabold text-blue-700 mt-1">
+                  ~{currentLunchPlatePreview.calories} kcal • {currentLunchPlatePreview.protein}g Prot
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  db.nutritionLogs.update(selectedDate, {
+                    lunchType: 'churrasquinho',
+                    'meals.lunch': 'churrasquinho'
+                  });
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
+                  lunchType === 'churrasquinho'
+                    ? 'border-amber-600 bg-amber-50/80 text-amber-950 font-black shadow-2xs ring-1 ring-amber-500'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-black">
+                  <span>🍢 Churrasquinho</span>
+                  {currentData.meals.lunch === 'churrasquinho' && (
+                    <Check className="w-3.5 h-3.5 text-amber-600 stroke-[3]" />
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                  Espetinhos + Baião + Vinagrete
+                </div>
+                <div className="text-[10px] font-extrabold text-amber-800 mt-1">
+                  ~{currentLunchChurrascoPreview.calories} kcal • {currentLunchChurrascoPreview.protein}g Prot
                 </div>
               </button>
             </div>
 
-            {/* SE SANDUÍCHE SELECIONADO: CONTROLES DO SANDUÍCHE COMPLETO */}
-            {currentData.meals.dinner === 'subway' && (
-              <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-3 animate-in fade-in duration-150">
-                {/* Tamanho: 15cm ou 30cm (Dobro) */}
+            {/* BUILDER DO PRATO CASEIRO */}
+            {lunchType === 'caseiro' && (
+              <div className="p-3 rounded-2xl border border-slate-200 bg-white space-y-3 animate-in fade-in duration-150">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-900 block mb-1">
-                    Tamanho do Sanduíche
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
+                    1. Proteína Principal
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g • 28g Prot' },
+                      { id: 'frango', label: '🍗 Filé Frango', sub: '~120g • 32g Prot' },
+                      { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g • 26g Prot' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleUpdateLunchConfig({ proteinType: item.id as any })}
+                        className={`p-2 rounded-xl border text-center transition-all ${
+                          lunchConfig.proteinType === item.id
+                            ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-2xs'
+                            : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="text-xs font-black truncate">{item.label}</div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">{item.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5">
+                  {/* Porções de Proteína */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                      {lunchConfig.proteinType === 'carne' ? '🥩 Bifes' : '🍗 Filés'}
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-black text-slate-900">
+                        {lunchConfig.proteinPortions}x
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              proteinPortions: Math.max(1, lunchConfig.proteinPortions - 1)
+                            })
+                          }
+                          disabled={lunchConfig.proteinPortions <= 1}
+                          className="w-5 h-5 rounded bg-white border border-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
+                        >
+                          -
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              proteinPortions: Math.min(5, lunchConfig.proteinPortions + 1)
+                            })
+                          }
+                          disabled={lunchConfig.proteinPortions >= 5}
+                          className="w-5 h-5 rounded bg-blue-600 text-white font-bold text-xs disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Arroz */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                      🍚 Arroz
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-black text-slate-900">
+                        {lunchConfig.ricePortions}x
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              ricePortions: Math.max(0, lunchConfig.ricePortions - 1)
+                            })
+                          }
+                          disabled={lunchConfig.ricePortions <= 0}
+                          className="w-5 h-5 rounded bg-white border border-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
+                        >
+                          -
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              ricePortions: Math.min(4, lunchConfig.ricePortions + 1)
+                            })
+                          }
+                          disabled={lunchConfig.ricePortions >= 4}
+                          className="w-5 h-5 rounded bg-blue-600 text-white font-bold text-xs disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feijão */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">
+                      🫘 Feijão
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-black text-slate-900">
+                        {lunchConfig.beanPortions}x
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              beanPortions: Math.max(0, lunchConfig.beanPortions - 1)
+                            })
+                          }
+                          disabled={lunchConfig.beanPortions <= 0}
+                          className="w-5 h-5 rounded bg-white border border-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
+                        >
+                          -
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleUpdateLunchConfig({
+                              beanPortions: Math.min(3, lunchConfig.beanPortions + 1)
+                            })
+                          }
+                          disabled={lunchConfig.beanPortions >= 3}
+                          className="w-5 h-5 rounded bg-blue-600 text-white font-bold text-xs disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateLunchConfig({ hasSalad: !lunchConfig.hasSalad })}
+                  className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+                    lunchConfig.hasSalad
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                      : 'border-slate-200 bg-slate-50 text-slate-500'
+                  }`}
+                >
+                  <span>🥗🍅 Salada Verde Completa</span>
+                  <span className="text-[10px] font-black">
+                    {lunchConfig.hasSalad ? 'INCLUSA (+35 kcal)' : 'NÃO INCLUSA'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* BUILDER DO CHURRASQUINHO */}
+            {lunchType === 'churrasquinho' && (
+              <ChurrascoBuilder
+                config={churrascoConfig}
+                onChange={handleUpdateChurrascoConfig}
+              />
+            )}
+          </div>
+
+          {/* 3.3 LANCHE DA TARDE */}
+          <CustomMealBuilder
+            emoji="🥪🍌"
+            title="Lanche da Tarde"
+            subtitle="Fruta, ovos, tapioca ou shake proteico"
+            config={snackConfig}
+            onChange={handleUpdateSnackConfig}
+            allowShake={true}
+            defaultOpen={false}
+          />
+
+          {/* 3.4 JANTAR COMPLETO (5 OPÇÕES REALISTAS) */}
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3.5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                  🌙🍽️
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    Jantar
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium truncate">
+                    {currentData.meals.dinner
+                      ? `${dinnerMacros.calories} kcal • ${dinnerMacros.protein}g Proteína • ${dinnerMacros.carbs}g Carbo`
+                      : 'Escolha entre Prato, Baguete, Churrasquinho, Burger ou Pizza'}
+                  </p>
+                </div>
+              </div>
+
+              {currentData.meals.dinner && (
+                <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0">
+                  {dinnerMacros.calories} kcal
+                </span>
+              )}
+            </div>
+
+            {/* SELETOR DE OPÇÕES DO JANTAR */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {[
+                {
+                  id: 'caseiro' as DinnerType,
+                  emoji: '🍽️',
+                  title: 'Prato Caseiro',
+                  kcal: currentDinnerPlatePreview.calories,
+                  prot: currentDinnerPlatePreview.protein
+                },
+                {
+                  id: 'subway' as DinnerType,
+                  emoji: '🥖',
+                  title: 'Baguete / Sub',
+                  kcal: currentSubwayPreview.calories,
+                  prot: currentSubwayPreview.protein
+                },
+                {
+                  id: 'churrasquinho' as DinnerType,
+                  emoji: '🍢',
+                  title: 'Churrasquinho',
+                  kcal: currentDinnerChurrascoPreview.calories,
+                  prot: currentDinnerChurrascoPreview.protein
+                },
+                {
+                  id: 'burger' as DinnerType,
+                  emoji: '🍔',
+                  title: 'Burger / Podrão',
+                  kcal: currentBurgerPreview.calories,
+                  prot: currentBurgerPreview.protein
+                },
+                {
+                  id: 'pizza' as DinnerType,
+                  emoji: '🍕',
+                  title: 'Pizza (Fatias)',
+                  kcal: currentPizzaPreview.calories,
+                  prot: currentPizzaPreview.protein
+                }
+              ].map((opt) => {
+                const isSelected = currentData.meals.dinner === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleSelectDinnerType(opt.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50/90 text-blue-950 font-black shadow-2xs ring-1 ring-blue-500'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs font-black">
+                      <span className="truncate">
+                        {opt.emoji} {opt.title}
+                      </span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0 stroke-[3]" />}
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-500 mt-1">
+                      ~{opt.kcal} kcal • {opt.prot}g Prot
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 1. BUILDER JANTAR: SANDUÍCHE BAGUETE */}
+            {currentData.meals.dinner === 'subway' && (
+              <div className="p-3 rounded-2xl border border-blue-200 bg-white space-y-3 animate-in fade-in duration-150">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                    Tamanho da Baguete
                   </span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
@@ -1496,226 +2110,389 @@ export const NutritionScreen: React.FC = () => {
                       className={`py-2 rounded-xl text-xs font-black border transition-all ${
                         dinnerSubwayConfig.size === '15cm'
                           ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
                       }`}
                     >
-                      15 cm Padrão
+                      🥖 15 cm Padrão
                     </button>
                     <button
                       onClick={() => handleUpdateSubwayConfig({ size: '30cm' })}
                       className={`py-2 rounded-xl text-xs font-black border transition-all ${
                         dinnerSubwayConfig.size === '30cm'
                           ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
                       }`}
                     >
-                      30 cm (Dobro Completo)
+                      🥖🥖 30 cm (Dobro)
                     </button>
                   </div>
                 </div>
 
-                {/* Sabor / Proteína */}
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-900 block mb-1">
-                    Recheio Principal
-                  </span>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      onClick={() => handleUpdateSubwayConfig({ protein: 'frango_teriyaki' })}
-                      className={`p-2 rounded-xl text-xs font-black border text-left transition-all ${
-                        dinnerSubwayConfig.protein === 'frango_teriyaki'
-                          ? 'border-blue-600 bg-white text-blue-900 shadow-2xs ring-1 ring-blue-500'
-                          : 'border-slate-200 bg-white text-slate-700'
-                      }`}
-                    >
-                      <div>🍗 Frango Teriyaki</div>
-                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
-                        {dinnerSubwayConfig.size === '30cm' ? '64g Prot • 920 kcal' : '32g Prot • 460 kcal'}
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handleUpdateSubwayConfig({ protein: 'carne' })}
-                      className={`p-2 rounded-xl text-xs font-black border text-left transition-all ${
-                        dinnerSubwayConfig.protein === 'carne'
-                          ? 'border-blue-600 bg-white text-blue-900 shadow-2xs ring-1 ring-blue-500'
-                          : 'border-slate-200 bg-white text-slate-700'
-                      }`}
-                    >
-                      <div>🥩 Carne / Bife</div>
-                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
-                        {dinnerSubwayConfig.size === '30cm' ? '60g Prot • 980 kcal' : '30g Prot • 490 kcal'}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Lista fixa de acompanhamentos do combo completo */}
-                <div className="p-2.5 rounded-xl bg-white border border-blue-200/80 text-[11px] text-slate-600">
-                  <span className="font-bold text-blue-950">Ingredientes Inclusos: </span>
-                  Molho Chipotle, Queijo Parmesão Ralado, Queijo Mussarela e Salada Completa (Alface, Tomate, Pepino e Cebola).
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => handleUpdateSubwayConfig({ protein: 'frango_teriyaki' })}
+                    className={`p-2 rounded-xl text-xs font-black border text-left transition-all ${
+                      dinnerSubwayConfig.protein === 'frango_teriyaki'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div>🍗 Frango Teriyaki</div>
+                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                      {dinnerSubwayConfig.size === '30cm'
+                        ? '920 kcal • 64g Prot'
+                        : '460 kcal • 32g Prot'}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleUpdateSubwayConfig({ protein: 'carne' })}
+                    className={`p-2 rounded-xl text-xs font-black border text-left transition-all ${
+                      dinnerSubwayConfig.protein === 'carne'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div>🥩 Carne / Tiras</div>
+                    <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                      {dinnerSubwayConfig.size === '30cm'
+                        ? '980 kcal • 60g Prot'
+                        : '490 kcal • 30g Prot'}
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* SE PRATO CASEIRO SELECIONADO: BUILDER DO JANTAR CASEIRO */}
+            {/* 2. BUILDER JANTAR: PRATO CASEIRO */}
             {currentData.meals.dinner === 'caseiro' && (
-              <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-3 animate-in fade-in duration-150">
-                {/* 1. Escolha da Proteína */}
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                    Proteína Principal do Jantar
+              <div className="p-3 rounded-2xl border border-blue-200 bg-white space-y-3 animate-in fade-in duration-150">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g' },
+                    { id: 'frango', label: '🍗 Filé Frango', sub: '~120g' },
+                    { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g' }
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleUpdateDinnerPlateConfig({ proteinType: item.id as any })}
+                      className={`p-2 rounded-xl border text-center transition-all ${
+                        dinnerPlateConfig.proteinType === item.id
+                          ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-black truncate">{item.label}</div>
+                      <div className="text-[9px] text-slate-400 mt-0.5">{item.sub}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-700">
+                      🥩 {dinnerPlateConfig.proteinPortions}x
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            proteinPortions: Math.max(1, dinnerPlateConfig.proteinPortions - 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-white border border-slate-200 text-xs font-bold"
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            proteinPortions: Math.min(5, dinnerPlateConfig.proteinPortions + 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-700">
+                      🍚 {dinnerPlateConfig.ricePortions}x
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            ricePortions: Math.max(0, dinnerPlateConfig.ricePortions - 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-white border border-slate-200 text-xs font-bold"
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            ricePortions: Math.min(4, dinnerPlateConfig.ricePortions + 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-700">
+                      🫘 {dinnerPlateConfig.beanPortions}x
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            beanPortions: Math.max(0, dinnerPlateConfig.beanPortions - 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-white border border-slate-200 text-xs font-bold"
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleUpdateDinnerPlateConfig({
+                            beanPortions: Math.min(3, dinnerPlateConfig.beanPortions + 1)
+                          })
+                        }
+                        className="w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. BUILDER JANTAR: CHURRASQUINHO */}
+            {currentData.meals.dinner === 'churrasquinho' && (
+              <ChurrascoBuilder
+                config={dinnerChurrascoConfig}
+                onChange={handleUpdateDinnerChurrascoConfig}
+              />
+            )}
+
+            {/* 4. BUILDER JANTAR: HAMBÚRGUER / PODRÃO (NOVO!) */}
+            {currentData.meals.dinner === 'burger' && (
+              <div className="p-3.5 rounded-2xl border border-amber-200 bg-white space-y-3 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
+                  <span className="text-xs font-black text-slate-900">
+                    🍔 Total do Lanche:
                   </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[
-                      { id: 'carne', label: '🥩 Bife Bovino', sub: '~100g' },
-                      { id: 'frango', label: '🍗 Filé Frango', sub: '~120g' },
-                      { id: 'peixe', label: '🐟 Filé Peixe', sub: '~120g' }
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleUpdateDinnerPlateConfig({ proteinType: item.id as any })}
-                        className={`p-2 rounded-xl border text-center transition-all ${
-                          dinnerPlateConfig.proteinType === item.id
-                            ? 'border-blue-600 bg-white text-blue-900 font-bold shadow-2xs'
-                            : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
-                        }`}
-                      >
-                        <div className="text-xs font-black truncate">{item.label}</div>
-                        <div className="text-[9px] text-slate-400 mt-0.5">{item.sub}</div>
-                      </button>
-                    ))}
-                  </div>
+                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
+                    {currentBurgerPreview.calories} kcal • {currentBurgerPreview.protein}g Prot
+                  </span>
                 </div>
 
-                {/* 2. Contadores de Porções */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase">
-                        {dinnerPlateConfig.proteinType === 'carne' ? 'Bifes' : 'Filés'}
+                <div className="space-y-1.5">
+                  {[
+                    {
+                      id: 'artesanal_simples',
+                      label: '🍔 Hambúrguer Artesanal Simples',
+                      desc: 'Pão brioche, 1 blend 160g, queijo e molho',
+                      kcal: 620,
+                      prot: 34,
+                      carbs: 42,
+                      fat: 34
+                    },
+                    {
+                      id: 'artesanal_duplo',
+                      label: '🍔🥓 Artesanal Duplo + Bacon',
+                      desc: 'Pão brioche, 2 blends 160g, duplo queijo e bacon',
+                      kcal: 940,
+                      prot: 58,
+                      carbs: 45,
+                      fat: 58
+                    },
+                    {
+                      id: 'podrao_xtudo',
+                      label: '🍔🍳 Clássico "Podrão" / X-Tudo',
+                      desc: 'Pão, carne, ovo, presunto, queijo, bacon, batata palha e maionese',
+                      kcal: 1050,
+                      prot: 46,
+                      carbs: 62,
+                      fat: 68
+                    }
+                  ].map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => handleUpdateBurgerConfig({ style: b.id as any })}
+                      className={`w-full p-2.5 rounded-xl border text-left transition-all ${
+                        dinnerBurgerConfig.style === b.id
+                          ? 'border-amber-600 bg-amber-50/60 ring-1 ring-amber-500'
+                          : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-900">{b.label}</span>
+                        {dinnerBurgerConfig.style === b.id && (
+                          <Check className="w-4 h-4 text-amber-600 stroke-[3]" />
+                        )}
                       </div>
-                      <div className="text-xs font-black text-slate-800">
-                        {dinnerPlateConfig.proteinPortions}x
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ proteinPortions: Math.max(1, dinnerPlateConfig.proteinPortions - 1) })}
-                        disabled={dinnerPlateConfig.proteinPortions <= 1}
-                        className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ proteinPortions: Math.min(5, dinnerPlateConfig.proteinPortions + 1) })}
-                        disabled={dinnerPlateConfig.proteinPortions >= 5}
-                        className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase">
-                        Arroz Branco
-                      </div>
-                      <div className="text-xs font-black text-slate-800">
-                        {dinnerPlateConfig.ricePortions}x conchas
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ ricePortions: Math.max(0, dinnerPlateConfig.ricePortions - 1) })}
-                        disabled={dinnerPlateConfig.ricePortions <= 0}
-                        className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ ricePortions: Math.min(4, dinnerPlateConfig.ricePortions + 1) })}
-                        disabled={dinnerPlateConfig.ricePortions >= 4}
-                        className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase">
-                        Feijão
-                      </div>
-                      <div className="text-xs font-black text-slate-800">
-                        {dinnerPlateConfig.beanPortions}x conchas
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ beanPortions: Math.max(0, dinnerPlateConfig.beanPortions - 1) })}
-                        disabled={dinnerPlateConfig.beanPortions <= 0}
-                        className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30"
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => handleUpdateDinnerPlateConfig({ beanPortions: Math.min(3, dinnerPlateConfig.beanPortions + 1) })}
-                        disabled={dinnerPlateConfig.beanPortions >= 3}
-                        className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-30"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{b.desc}</p>
+                      <MacroPills calories={b.kcal} protein={b.prot} carbs={b.carbs} fat={b.fat} />
+                    </button>
+                  ))}
                 </div>
 
-                {/* 3. Salada */}
                 <button
-                  onClick={() => handleUpdateDinnerPlateConfig({ hasSalad: !dinnerPlateConfig.hasSalad })}
+                  type="button"
+                  onClick={() =>
+                    handleUpdateBurgerConfig({ hasFries: !dinnerBurgerConfig.hasFries })
+                  }
                   className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
-                    dinnerPlateConfig.hasSalad
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                      : 'border-slate-200 bg-white text-slate-500'
+                    dinnerBurgerConfig.hasFries
+                      ? 'border-orange-400 bg-orange-50 text-orange-950'
+                      : 'border-slate-200 bg-slate-50 text-slate-500'
                   }`}
                 >
-                  <span>🥗 Salada Verde</span>
+                  <span>🍟🥤 + Batata Frita / Acompanhamento</span>
                   <span className="text-[10px] font-black">
-                    {dinnerPlateConfig.hasSalad ? 'INCLUSA (+35 kcal)' : 'NÃO INCLUSA'}
+                    {dinnerBurgerConfig.hasFries ? 'INCLUSO (+380 kcal)' : 'NÃO INCLUSO'}
                   </span>
                 </button>
+              </div>
+            )}
+
+            {/* 5. BUILDER JANTAR: PIZZA POR FATIAS (NOVO!) */}
+            {currentData.meals.dinner === 'pizza' && (
+              <div className="p-3.5 rounded-2xl border border-amber-200 bg-white space-y-3 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
+                  <span className="text-xs font-black text-slate-900">
+                    🍕 Total ({dinnerPizzaConfig.slices}{' '}
+                    {dinnerPizzaConfig.slices === 1 ? 'fatia' : 'fatias'}):
+                  </span>
+                  <span className="text-xs font-black text-amber-900 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
+                    {currentPizzaPreview.calories} kcal • {currentPizzaPreview.protein}g Prot
+                  </span>
+                </div>
+
+                {/* Contador de Fatias */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">
+                      🍕 Quantidade de Fatias
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Cada fatia tem ~{dinnerPizzaConfig.flavorType === 'proteica' ? 285 : 320} kcal
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdatePizzaConfig({
+                          slices: Math.max(1, dinnerPizzaConfig.slices - 1)
+                        })
+                      }
+                      disabled={dinnerPizzaConfig.slices <= 1}
+                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm disabled:opacity-30 active:scale-90"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-black text-sm text-slate-900">
+                      {dinnerPizzaConfig.slices}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdatePizzaConfig({
+                          slices: Math.min(10, dinnerPizzaConfig.slices + 1)
+                        })
+                      }
+                      disabled={dinnerPizzaConfig.slices >= 10}
+                      className="w-8 h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black text-sm disabled:opacity-30 active:scale-90"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tipo de Sabor */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePizzaConfig({ flavorType: 'proteica' })}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      dinnerPizzaConfig.flavorType === 'proteica'
+                        ? 'border-blue-600 bg-blue-50/70 text-blue-950 font-black ring-1 ring-blue-500'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="text-xs font-black">🍗🍕 Frango / Portuguesa</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      Frango c/ Catupiry, Atum, Lombo
+                    </div>
+                    <div className="text-[10px] font-extrabold text-blue-700 mt-1">
+                      285 kcal • 14g Prot / fatia
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePizzaConfig({ flavorType: 'tradicional' })}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      dinnerPizzaConfig.flavorType === 'tradicional'
+                        ? 'border-amber-600 bg-amber-50/70 text-amber-950 font-black ring-1 ring-amber-500'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="text-xs font-black">🧀🍕 Calabresa / Queijos</div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      Mussarela, 4 Queijos, Pepperoni
+                    </div>
+                    <div className="text-[10px] font-extrabold text-amber-800 mt-1">
+                      320 kcal • 12g Prot / fatia
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
 
+        {/* ========================================================= */}
         {/* 4. HIDRATAÇÃO DIÁRIA (META 4.0L) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs anim-card-4">
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs anim-card-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
-                <Droplets className="w-4 h-4 fill-current" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center text-base">
+                💧
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                   Hidratação Diária
                 </span>
                 <div className="flex items-baseline gap-1">
                   <h3 className="text-base font-black text-slate-900 leading-none">
                     {(currentData.waterMl / 1000).toFixed(2)}L
                   </h3>
-                  <span className="text-xs font-semibold text-slate-400">/ 4,0L</span>
+                  <span className="text-xs font-semibold text-slate-400">
+                    / {(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L
+                  </span>
                 </div>
               </div>
             </div>
 
             <span
-              className={`text-xs font-bold px-2.5 py-0.5 rounded-lg ${
+              className={`text-xs font-black px-2.5 py-1 rounded-xl ${
                 waterProgress >= 100
                   ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-cyan-50 text-cyan-700'
+                  : 'bg-cyan-50 text-cyan-700 border border-cyan-100'
               }`}
             >
               {waterProgress}%
@@ -1743,121 +2520,137 @@ export const NutritionScreen: React.FC = () => {
               onClick={() => handleAdjustWater(250)}
               className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold active:scale-95 transition-all min-h-[40px]"
             >
-              +250 ml (Copo)
+              🥤 +250 ml
             </button>
             <button
               onClick={() => handleAdjustWater(500)}
               className="py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold active:scale-95 transition-all min-h-[40px]"
             >
-              +500 ml (Garrafa)
+              💧 +500 ml
             </button>
           </div>
         </div>
 
-        {/* 5. CONTROLE DE ESCAPES CALÓRICOS */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs anim-card-5">
-          <div className="mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Acompanhamento Realista
-            </span>
-            <h3 className="text-sm font-black text-slate-900 leading-tight">
-              Controle de Escapes Calóricos
-            </h3>
+        {/* ========================================================= */}
+        {/* 5. CONTROLE DE ESCAPES CALÓRICOS GRANULAR (5 NÍVEIS) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-3 anim-card-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                Acompanhamento Realista Sem Culpa
+              </span>
+              <h3 className="text-sm font-black text-slate-900 leading-tight">
+                Doces, Salgadinhos & Escapes
+              </h3>
+            </div>
+            {escapeMacros.calories > 0 && (
+              <span className="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                +{escapeMacros.calories} kcal em escapes
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-            {/* + BESTEIRA */}
-            <div className="p-3 rounded-xl border border-amber-200/80 bg-amber-50/50 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Cookie className="w-3.5 h-3.5 text-amber-600" />
-                    <span className="text-xs font-black text-amber-900">+ Besteira</span>
+          <div className="space-y-2">
+            {escapeItems.map((item) => {
+              const count = (currentData.escapes?.[item.key] as number) || 0;
+              return (
+                <div
+                  key={item.key}
+                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 ${
+                    count > 0
+                      ? 'bg-amber-50/40 border-amber-300 shadow-2xs'
+                      : 'bg-slate-50/60 border-slate-200/80'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs mt-0.5">
+                      {item.emoji}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-slate-900">
+                          {item.title}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                        {item.examples}
+                      </p>
+                      <MacroPills
+                        calories={item.kcal}
+                        protein={item.prot}
+                        carbs={item.carbs}
+                        fat={item.fat}
+                      />
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
-                    ~600 kcal
-                  </span>
-                </div>
-                <p className="text-[10px] text-amber-800/80 mt-1">
-                  Cookie 150g, Eskibom, pedaço de bolo.
-                </p>
-              </div>
 
-              <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-amber-200/50">
-                <span className="text-xs font-bold text-amber-950">
-                  {currentData.escapes.besteiraCount || 0}x no dia
-                </span>
-                <div className="flex items-center gap-1">
-                  {currentData.escapes.besteiraCount > 0 && (
+                  {/* Stepper de Escape */}
+                  <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
                     <button
-                      onClick={() => handleAddBesteira(-1)}
-                      className="w-6 h-6 rounded bg-amber-200/60 hover:bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold active:scale-95"
+                      type="button"
+                      onClick={() => handleAdjustEscape(item.key, -1)}
+                      disabled={count <= 0}
+                      className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30 active:scale-90 transition-transform"
+                      aria-label={`Diminuir ${item.title}`}
                     >
                       -
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleAddBesteira(1)}
-                    className="px-2.5 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold active:scale-95 shadow-2xs"
-                  >
-                    + Registrar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* + SUPER BESTEIRA */}
-            <div className="p-3 rounded-xl border border-red-200/80 bg-red-50/50 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Pizza className="w-3.5 h-3.5 text-red-600" />
-                    <span className="text-xs font-black text-red-900">+ Super Besteira</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
-                    ~1.200-1.500 kcal
-                  </span>
-                </div>
-                <p className="text-[10px] text-red-800/80 mt-1">
-                  Rodízio, pizza inteira, hambúrguer duplo + fritas.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-red-200/50">
-                <span className="text-xs font-bold text-red-950">
-                  {currentData.escapes.superBesteiraCount || 0}x no dia
-                </span>
-                <div className="flex items-center gap-1">
-                  {currentData.escapes.superBesteiraCount > 0 && (
+                    <span className="w-5 text-center font-black text-xs text-slate-900">
+                      {count}
+                    </span>
                     <button
-                      onClick={() => handleAddSuperBesteira(-1)}
-                      className="w-6 h-6 rounded bg-red-200/60 hover:bg-red-200 text-red-900 flex items-center justify-center text-xs font-bold active:scale-95"
+                      type="button"
+                      onClick={() => handleAdjustEscape(item.key, 1, item.title)}
+                      className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs active:scale-90 transition-transform"
+                      aria-label={`Adicionar ${item.title}`}
                     >
-                      -
+                      +
                     </button>
-                  )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Caso exista besteiraCount legado salvo no dia, exibir para permitir ajuste */}
+            {(currentData.escapes?.besteiraCount || 0) > 0 && (
+              <div className="p-3 rounded-2xl border border-amber-300 bg-amber-50/40 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-slate-900">
+                    🍩 Escape Rápido (Atalho)
+                  </div>
+                  <MacroPills calories={600} protein={6} carbs={65} fat={30} />
+                </div>
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
                   <button
-                    onClick={() => handleAddSuperBesteira(1)}
-                    className="px-2.5 h-7 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold active:scale-95 shadow-2xs"
+                    onClick={() => handleAdjustEscape('besteiraCount', -1)}
+                    className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
                   >
-                    + Registrar
+                    -
+                  </button>
+                  <span className="w-5 text-center font-black text-xs">
+                    {currentData.escapes.besteiraCount}
+                  </span>
+                  <button
+                    onClick={() => handleAdjustEscape('besteiraCount', 1)}
+                    className="w-7 h-7 rounded-lg bg-amber-600 text-white font-bold text-xs"
+                  >
+                    +
                   </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* COACHING TOAST FOR SUPER BESTEIRA */}
-          {superBesteiraMessage && (
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-start gap-2 animate-in fade-in duration-200">
-              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-              <div className="flex-1 text-[11px]">
-                <strong className="font-bold">Saldo calórico computado:</strong>{' '}
-                {superBesteiraMessage}
+          {escapeToast && (
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-center justify-between gap-2 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="text-[11px] font-bold">{escapeToast}</span>
               </div>
               <button
-                onClick={() => setSuperBesteiraMessage(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold ml-1 text-xs"
+                onClick={() => setEscapeToast(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-xs"
               >
                 ✕
               </button>

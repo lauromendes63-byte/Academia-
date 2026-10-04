@@ -5,6 +5,10 @@ import {
   calculatePlateMacros,
   calculateSubwayMacros,
   calculateCustomMealMacros,
+  calculateChurrascoMacros,
+  calculateBurgerMacros,
+  calculatePizzaMacros,
+  calculateEscapesMacros,
   getResolvedBreakfastConfig,
   getResolvedSnackConfig
 } from './NutritionScreen';
@@ -54,11 +58,12 @@ export function computeNutritionLogTotals(log: NutritionLog) {
   const bConfig = getResolvedBreakfastConfig(log);
   const bMacros = calculateCustomMealMacros(bConfig);
 
-  const lunchConfig = log.lunchConfig;
-  const lunchMacros =
-    log.meals?.lunch === 'caseiro'
-      ? calculatePlateMacros(lunchConfig)
-      : { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  let lunchMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  if (log.meals?.lunch === 'caseiro') {
+    lunchMacros = calculatePlateMacros(log.lunchConfig);
+  } else if (log.meals?.lunch === 'churrasquinho') {
+    lunchMacros = calculateChurrascoMacros(log.churrascoConfig);
+  }
 
   const sConfig = getResolvedSnackConfig(log);
   const sMacros = calculateCustomMealMacros(sConfig);
@@ -68,11 +73,22 @@ export function computeNutritionLogTotals(log: NutritionLog) {
     dinnerMacros = calculateSubwayMacros(log.dinnerSubwayConfig);
   } else if (log.meals?.dinner === 'caseiro') {
     dinnerMacros = calculatePlateMacros(log.dinnerPlateConfig);
+  } else if (log.meals?.dinner === 'churrasquinho') {
+    dinnerMacros = calculateChurrascoMacros(log.dinnerChurrascoConfig);
+  } else if (log.meals?.dinner === 'burger') {
+    dinnerMacros = calculateBurgerMacros(log.dinnerBurgerConfig);
+  } else if (log.meals?.dinner === 'pizza') {
+    dinnerMacros = calculatePizzaMacros(log.dinnerPizzaConfig);
   }
 
-  const escapeKcal =
-    (log.escapes?.besteiraCount || 0) * 600 +
-    (log.escapes?.superBesteiraCount || 0) * 1350;
+  const escapeInfo = calculateEscapesMacros(log.escapes);
+  const escapesCount =
+    (log.escapes?.chocSmallCount || 0) +
+    (log.escapes?.snickersBarCount || 0) +
+    (log.escapes?.iceCreamCount || 0) +
+    (log.escapes?.saltySnackCount || 0) +
+    (log.escapes?.besteiraCount || 0) +
+    (log.escapes?.superBesteiraCount || 0);
 
   const protein =
     wheyProtein +
@@ -80,19 +96,22 @@ export function computeNutritionLogTotals(log: NutritionLog) {
     bMacros.protein +
     lunchMacros.protein +
     sMacros.protein +
-    dinnerMacros.protein;
+    dinnerMacros.protein +
+    escapeInfo.protein;
   const carbs =
     milkCarbs +
     bMacros.carbs +
     lunchMacros.carbs +
     sMacros.carbs +
-    dinnerMacros.carbs;
+    dinnerMacros.carbs +
+    escapeInfo.carbs;
   const fat =
     milkFat +
     bMacros.fat +
     lunchMacros.fat +
     sMacros.fat +
-    dinnerMacros.fat;
+    dinnerMacros.fat +
+    escapeInfo.fat;
   const calories =
     wheyCalories +
     milkCalories +
@@ -100,10 +119,18 @@ export function computeNutritionLogTotals(log: NutritionLog) {
     lunchMacros.calories +
     sMacros.calories +
     dinnerMacros.calories +
-    escapeKcal;
+    escapeInfo.calories;
   const waterL = (log.waterMl || 0) / 1000;
 
-  return { protein, carbs, fat, calories, waterL, waterMl: log.waterMl || 0 };
+  return {
+    protein,
+    carbs,
+    fat,
+    calories,
+    waterL,
+    waterMl: log.waterMl || 0,
+    escapesCount
+  };
 }
 
 export const EvolutionScreen: React.FC = () => {
@@ -275,7 +302,7 @@ export const EvolutionScreen: React.FC = () => {
       const log = logsMap.get(dStr);
       const totals = log
         ? computeNutritionLogTotals(log)
-        : { protein: 0, carbs: 0, fat: 0, calories: 0, waterL: 0, waterMl: 0 };
+        : { protein: 0, carbs: 0, fat: 0, calories: 0, waterL: 0, waterMl: 0, escapesCount: 0 };
 
       const hasEntries =
         !!log && (totals.calories > 0 || totals.protein > 0 || totals.waterMl > 0);
@@ -300,8 +327,7 @@ export const EvolutionScreen: React.FC = () => {
         isToday,
         hasEntries,
         totals,
-        escapesCount:
-          (log?.escapes?.besteiraCount || 0) + (log?.escapes?.superBesteiraCount || 0),
+        escapesCount: totals.escapesCount,
         calorieStatus,
         proteinMet,
         waterMet
@@ -367,9 +393,14 @@ export const EvolutionScreen: React.FC = () => {
 
     return currentRoutine.exercises.map((exDef, exIdx) => {
       const color = EXERCISE_COLORS[exIdx % EXERCISE_COLORS.length];
+      const isAssisted =
+        !!exDef.isAssisted ||
+        exDef.name.toLowerCase().includes('graviton') ||
+        exDef.id === 'pull_1' ||
+        exDef.id === 'push_5';
 
       // Points across all sessions of this routine
-      const points = routineSessionsChronological.map((session, sIdx) => {
+      const rawPoints = routineSessionsChronological.map((session, sIdx) => {
         const found = session.exercises?.find(
           (e) => e.exerciseId === exDef.id || e.exerciseName === exDef.name
         );
@@ -377,7 +408,9 @@ export const EvolutionScreen: React.FC = () => {
         if (found && !found.abortedForFatigue && found.sets) {
           const completed = found.sets.filter((s) => s.completed);
           if (completed.length > 0) {
-            weight = Math.max(...completed.map((s) => s.weightKg));
+            weight = isAssisted
+              ? Math.min(...completed.map((s) => s.weightKg))
+              : Math.max(...completed.map((s) => s.weightKg));
           }
         }
         return {
@@ -388,14 +421,26 @@ export const EvolutionScreen: React.FC = () => {
       });
 
       const initialWeight =
-        points.length > 0 ? points[0].weightKg : exDef.defaultWeightKg;
+        rawPoints.length > 0 ? rawPoints[0].weightKg : exDef.defaultWeightKg;
       const latestWeight =
-        points.length > 0 ? points[points.length - 1].weightKg : exDef.defaultWeightKg;
-      const maxWeight =
-        points.length > 0
-          ? Math.max(...points.map((p) => p.weightKg))
+        rawPoints.length > 0 ? rawPoints[rawPoints.length - 1].weightKg : exDef.defaultWeightKg;
+      const bestWeight =
+        rawPoints.length > 0
+          ? isAssisted
+            ? Math.min(...rawPoints.map((p) => p.weightKg))
+            : Math.max(...rawPoints.map((p) => p.weightKg))
           : exDef.defaultWeightKg;
+
+      // No Graviton, reduzir o contrapeso (ex: 40kg -> 35kg) faz a linha do gráfico SUBIR (+5 de força)
+      const points = rawPoints.map((pt) => ({
+        ...pt,
+        plotWeightKg: isAssisted
+          ? initialWeight + (initialWeight - pt.weightKg)
+          : pt.weightKg
+      }));
+
       const delta = latestWeight - initialWeight;
+      const hasProgress = isAssisted ? delta < 0 : delta > 0;
 
       return {
         id: exDef.id,
@@ -403,13 +448,14 @@ export const EvolutionScreen: React.FC = () => {
         muscleGroup: exDef.muscleGroup,
         targetReps: exDef.targetReps,
         defaultSets: exDef.defaultSets,
+        isAssisted,
         color,
         points,
         initialWeight,
         latestWeight,
-        maxWeight,
+        bestWeight,
         delta,
-        hasProgress: delta > 0
+        hasProgress
       };
     });
   }, [currentRoutine, routineSessionsChronological]);
@@ -421,7 +467,7 @@ export const EvolutionScreen: React.FC = () => {
     if (exerciseCurves.length === 0) return { min: 0, max: 100, range: 100 };
     const allWeights: number[] = [];
     exerciseCurves.forEach((c) => {
-      c.points.forEach((p) => allWeights.push(p.weightKg));
+      c.points.forEach((p) => allWeights.push(p.plotWeightKg));
       allWeights.push(c.initialWeight);
     });
 
@@ -717,12 +763,19 @@ export const EvolutionScreen: React.FC = () => {
                       className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs ring-2 ring-white"
                       style={{ backgroundColor: curve.color }}
                     />
-                    <span className="font-bold text-slate-900 leading-snug">
-                      {curve.name}
-                    </span>
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-900 leading-snug block">
+                        {curve.name}
+                      </span>
+                      {curve.isAssisted && (
+                        <span className="text-[10px] font-bold text-purple-700 block">
+                          Graviton: menos kg de ajuda = mais força
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <strong className="text-slate-900 font-black shrink-0 text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-                    {curve.latestWeight} kg
+                    {curve.latestWeight} kg{curve.isAssisted ? ' (Ajuda)' : ''}
                   </strong>
                 </div>
               ))}
@@ -747,7 +800,7 @@ export const EvolutionScreen: React.FC = () => {
                           : (i / (sessionCount - 1)) * 280 + 20;
                       const y =
                         115 -
-                        ((pt.weightKg - chartBounds.min) / chartBounds.range) * 95;
+                        ((pt.plotWeightKg - chartBounds.min) / chartBounds.range) * 95;
                       return { x, y, weight: pt.weightKg };
                     });
 
@@ -852,6 +905,11 @@ export const EvolutionScreen: React.FC = () => {
                         <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                           {item.muscleGroup}
                         </span>
+                        {item.isAssisted && (
+                          <span className="text-[9px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                            Graviton (-kg = +Força)
+                          </span>
+                        )}
                         <span className="text-[10px] text-slate-400 font-semibold">
                           {item.defaultSets}× {item.targetReps}
                         </span>
@@ -861,14 +919,30 @@ export const EvolutionScreen: React.FC = () => {
                         {item.name}
                       </h4>
 
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium">
-                        <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
-                        <span>•</span>
-                        <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
-                        {item.maxWeight > item.latestWeight && (
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium flex-wrap">
+                        {item.isAssisted ? (
                           <>
+                            <span>Ajuda Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
                             <span>•</span>
-                            <span className="text-amber-700 font-bold">PR: {item.maxWeight}kg</span>
+                            <span>Ajuda Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
+                            {item.bestWeight < item.latestWeight && (
+                              <>
+                                <span>•</span>
+                                <span className="text-amber-700 font-bold">PR (Menor ajuda): {item.bestWeight}kg</span>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
+                            <span>•</span>
+                            <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
+                            {item.bestWeight > item.latestWeight && (
+                              <>
+                                <span>•</span>
+                                <span className="text-amber-700 font-bold">PR: {item.bestWeight}kg</span>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -877,7 +951,18 @@ export const EvolutionScreen: React.FC = () => {
 
                   {/* Badge de Evolução em kg */}
                   <div className="shrink-0 text-right">
-                    {item.delta > 0 ? (
+                    {item.isAssisted ? (
+                      item.delta < 0 ? (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                          <TrendingUp className="w-3 h-3 stroke-[2.5]" />
+                          <span>{item.delta}kg ajuda</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200">
+                          {item.latestWeight}kg ajuda
+                        </span>
+                      )
+                    ) : item.delta > 0 ? (
                       <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                         <TrendingUp className="w-3 h-3 stroke-[2.5]" />
                         <span>+{item.delta}kg</span>

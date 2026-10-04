@@ -54,7 +54,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   // Active session in-memory state
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [lastPerfMap, setLastPerfMap] = useState<
-    Record<string, { weightKg: number; reps: number; date: string } | null>
+    Record<string, { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null>
   >({});
   const [isFinishing, setIsFinishing] = useState(false);
   const [completedSummary, setCompletedSummary] = useState<{
@@ -314,16 +314,52 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
             );
           })}
         </div>
+
+        {/* Barra de Progresso Fluida da Sessão (Estilo Hevy) */}
+        {exerciseLogs.length > 0 && (
+          <div className="mt-2.5 h-1.5 w-full bg-slate-200/70 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ease-out ${
+                completedSetsCount > 0 &&
+                completedSetsCount >=
+                  exerciseLogs.reduce(
+                    (acc, ex) => acc + (ex.abortedForFatigue ? 0 : ex.sets.length),
+                    0
+                  )
+                  ? 'bg-emerald-500'
+                  : 'bg-blue-600'
+              }`}
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.round(
+                    (completedSetsCount /
+                      Math.max(
+                        1,
+                        exerciseLogs.reduce(
+                          (acc, ex) => acc + (ex.abortedForFatigue ? 0 : ex.sets.length),
+                          0
+                        )
+                      )) *
+                      100
+                  )
+                )}%`
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* EXERCISE CARDS LIST */}
       <div id="exercise-cards-section" className="space-y-3">
-        {currentRoutine?.exercises.map((exDef) => {
+        {currentRoutine?.exercises.map((exDef, idx) => {
           const log = exerciseLogs.find((l) => l.exerciseId === exDef.id);
           if (!log) return null;
 
+          const staggerClass = `anim-card-${Math.min(5, idx + 1)}`;
+
           return (
-            <div key={exDef.id} className="content-auto">
+            <div key={exDef.id} className={`content-auto ${staggerClass}`}>
               <ExerciseCard
                 exercise={exDef}
                 log={log}

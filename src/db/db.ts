@@ -163,13 +163,19 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
+export function isGravitonExercise(name?: string, isAssisted?: boolean): boolean {
+  if (isAssisted) return true;
+  if (!name) return false;
+  return name.toLowerCase().includes('graviton');
+}
+
 /**
- * Gets the last recorded weight, reps and date for a given exercise
+ * Gets the last recorded weight, reps, date and all-time best weight for a given exercise
  */
 export async function getLastExercisePerformance(
   exerciseId: string,
   exerciseName: string
-): Promise<{ weightKg: number; reps: number; date: string } | null> {
+): Promise<{ weightKg: number; reps: number; date: string; bestWeightKg?: number } | null> {
   const allSessions = await db.workoutSessions.toArray();
   const sessions = allSessions
     .filter((s) => s.completed)
@@ -177,6 +183,10 @@ export async function getLastExercisePerformance(
       if (b.date !== a.date) return b.date.localeCompare(a.date);
       return (b.id || 0) - (a.id || 0);
     });
+
+  const isAssisted = isGravitonExercise(exerciseName);
+  let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
+  let bestWeightKg: number | undefined = undefined;
 
   for (const session of sessions) {
     const exLog = session.exercises?.find(
@@ -188,33 +198,51 @@ export async function getLastExercisePerformance(
     );
 
     if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
-      const completedSets = exLog.sets.filter((s) => s.completed);
-      const targetSets = completedSets.length > 0 ? completedSets : exLog.sets;
+      const completedSets = exLog.sets.filter((s) => s.completed && s.weightKg > 0);
+      const targetSets =
+        completedSets.length > 0
+          ? completedSets
+          : exLog.sets.filter((s) => s.weightKg > 0);
+
       if (targetSets.length > 0) {
-        const topSet = targetSets.reduce(
-          (max, s) => (s.weightKg > max.weightKg ? s : max),
-          targetSets[0]
-        );
-        if (topSet && topSet.weightKg > 0) {
-          return {
-            weightKg: topSet.weightKg,
-            reps: topSet.reps,
-            date: session.date
-          };
+        const bestSetInSession = targetSets.reduce((best, s) => {
+          if (isAssisted) {
+            return s.weightKg < best.weightKg ? s : best;
+          }
+          return s.weightKg > best.weightKg ? s : best;
+        }, targetSets[0]);
+
+        if (bestSetInSession && bestSetInSession.weightKg > 0) {
+          if (!latestPerf) {
+            latestPerf = {
+              weightKg: bestSetInSession.weightKg,
+              reps: bestSetInSession.reps,
+              date: session.date
+            };
+          }
+          if (bestWeightKg === undefined) {
+            bestWeightKg = bestSetInSession.weightKg;
+          } else {
+            bestWeightKg = isAssisted
+              ? Math.min(bestWeightKg, bestSetInSession.weightKg)
+              : Math.max(bestWeightKg, bestSetInSession.weightKg);
+          }
         }
       }
     }
   }
 
-  return null;
+  return latestPerf ? { ...latestPerf, bestWeightKg } : null;
 }
 
 /**
  * Single-pass performance fetch for all exercises in a routine (drastically reduces CPU & DB overhead)
  */
 export async function getRoutineLastPerformances(
-  exercises: { id: string; name: string }[]
-): Promise<Record<string, { weightKg: number; reps: number; date: string } | null>> {
+  exercises: { id: string; name: string; isAssisted?: boolean }[]
+): Promise<
+  Record<string, { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null>
+> {
   const allSessions = await db.workoutSessions.toArray();
   const sessions = allSessions
     .filter((s) => s.completed)
@@ -223,10 +251,17 @@ export async function getRoutineLastPerformances(
       return (b.id || 0) - (a.id || 0);
     });
 
-  const perfMap: Record<string, { weightKg: number; reps: number; date: string } | null> = {};
+  const perfMap: Record<
+    string,
+    { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null
+  > = {};
 
   for (const ex of exercises) {
     perfMap[ex.id] = null;
+    const isAssisted = isGravitonExercise(ex.name, ex.isAssisted);
+    let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
+    let bestWeightKg: number | undefined = undefined;
+
     for (const session of sessions) {
       const exLog = session.exercises?.find(
         (e) =>
@@ -237,23 +272,42 @@ export async function getRoutineLastPerformances(
       );
 
       if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
-        const completedSets = exLog.sets.filter((s) => s.completed);
-        const targetSets = completedSets.length > 0 ? completedSets : exLog.sets;
+        const completedSets = exLog.sets.filter((s) => s.completed && s.weightKg > 0);
+        const targetSets =
+          completedSets.length > 0
+            ? completedSets
+            : exLog.sets.filter((s) => s.weightKg > 0);
+
         if (targetSets.length > 0) {
-          const topSet = targetSets.reduce(
-            (max, s) => (s.weightKg > max.weightKg ? s : max),
-            targetSets[0]
-          );
-          if (topSet && topSet.weightKg > 0) {
-            perfMap[ex.id] = {
-              weightKg: topSet.weightKg,
-              reps: topSet.reps,
-              date: session.date
-            };
-            break;
+          const bestSetInSession = targetSets.reduce((best, s) => {
+            if (isAssisted) {
+              return s.weightKg < best.weightKg ? s : best;
+            }
+            return s.weightKg > best.weightKg ? s : best;
+          }, targetSets[0]);
+
+          if (bestSetInSession && bestSetInSession.weightKg > 0) {
+            if (!latestPerf) {
+              latestPerf = {
+                weightKg: bestSetInSession.weightKg,
+                reps: bestSetInSession.reps,
+                date: session.date
+              };
+            }
+            if (bestWeightKg === undefined) {
+              bestWeightKg = bestSetInSession.weightKg;
+            } else {
+              bestWeightKg = isAssisted
+                ? Math.min(bestWeightKg, bestSetInSession.weightKg)
+                : Math.max(bestWeightKg, bestSetInSession.weightKg);
+            }
           }
         }
       }
+    }
+
+    if (latestPerf) {
+      perfMap[ex.id] = { ...latestPerf, bestWeightKg };
     }
   }
 

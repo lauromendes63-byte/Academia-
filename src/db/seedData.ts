@@ -28,7 +28,8 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         targetReps: '6-8',
         restSeconds: 120,
         defaultWeightKg: 40,
-        substitutes: ['Puxador Vertical Polia Alta', 'Puxada c/ Triângulo']
+        substitutes: ['Puxador Vertical Polia Alta', 'Puxada c/ Triângulo'],
+        isAssisted: true
       },
       {
         id: 'pull_2',
@@ -207,7 +208,8 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         targetReps: '8-10',
         restSeconds: 90,
         defaultWeightKg: 35,
-        substitutes: ['Supino Fechado Barra', 'Flexão Diamante']
+        substitutes: ['Supino Fechado Barra', 'Flexão Diamante'],
+        isAssisted: true
       },
       {
         id: 'push_6',
