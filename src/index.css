@@ -70,136 +70,50 @@ input[type="number"] {
   padding-top: env(safe-area-inset-top, 12px);
 }
 
-/* GPU acceleration for sticky headers and fixed navigation */
-.sticky, nav.fixed {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-/* Content visibility optimization for long scrollable lists (saves battery & RAM) */
-.content-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 120px;
-}
-
-/* Butter-smooth micro-animations & Directional Tab Transitions */
+/* Butter-smooth micro-animations & Directional Tab Transitions (Zero Blink) */
 @keyframes smoothFadeIn {
   from {
-    opacity: 0;
-    transform: translateY(4px);
+    opacity: 0.9;
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
 @keyframes slideFromRight {
   from {
-    opacity: 0;
-    transform: translate3d(24px, 0, 0);
+    opacity: 0.9;
+    transform: translate3d(10px, 0, 0);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
 @keyframes slideFromLeft {
   from {
-    opacity: 0;
-    transform: translate3d(-24px, 0, 0);
+    opacity: 0.9;
+    transform: translate3d(-10px, 0, 0);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes cardFadeUp {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
 .animate-smooth-in {
-  animation: smoothFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: smoothFadeIn 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .animate-slide-forward {
-  animation: slideFromRight 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: slideFromRight 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .animate-slide-backward {
-  animation: slideFromLeft 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* Prevent double-animation when Native View Transitions are running */
-html:active-view-transition .animate-slide-forward,
-html:active-view-transition .animate-slide-backward {
-  animation: none !important;
-}
-
-/* Staggered card reveals for tabs (delicate 60/120fps feel) */
-.anim-card-1 {
-  animation: cardFadeUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.02s both;
-}
-.anim-card-2 {
-  animation: cardFadeUp 0.30s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
-}
-.anim-card-3 {
-  animation: cardFadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) 0.10s both;
-}
-.anim-card-4 {
-  animation: cardFadeUp 0.34s cubic-bezier(0.16, 1, 0.3, 1) 0.14s both;
-}
-.anim-card-5 {
-  animation: cardFadeUp 0.36s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
-}
-
-/* Native View Transitions (Baseline CSS specification) */
-::view-transition-group(root) {
-  animation-duration: 0.2s;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Keep Bottom Navigation Bar stationary during tab View Transitions */
-::view-transition-group(bottom-nav) {
-  animation: none;
-}
-
-html:active-view-transition-type(forward)::view-transition-old(root) {
-  animation-name: slide-to-left;
-}
-html:active-view-transition-type(forward)::view-transition-new(root) {
-  animation-name: slide-from-right;
-}
-
-html:active-view-transition-type(backward)::view-transition-old(root) {
-  animation-name: slide-to-right;
-}
-html:active-view-transition-type(backward)::view-transition-new(root) {
-  animation-name: slide-from-left;
-}
-
-@keyframes slide-to-left {
-  to { transform: translateX(-12%); opacity: 0; }
-}
-@keyframes slide-from-right {
-  from { transform: translateX(12%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slide-to-right {
-  to { transform: translateX(12%); opacity: 0; }
-}
-@keyframes slide-from-left {
-  from { transform: translateX(-12%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  animation: slideFromLeft 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Battery-saver & Reduced Motion support */
@@ -211,3 +125,4 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
     scroll-behavior: auto !important;
   }
 }
+

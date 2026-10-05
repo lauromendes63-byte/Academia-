@@ -37,7 +37,7 @@ export const SettingsScreen: React.FC = () => {
 
   const handleSelectCalorieMode = async (mode: 'recomposicao' | 'manutencao') => {
     triggerHaptic('light');
-    const kcal = mode === 'recomposicao' ? 2200 : 2700;
+    const kcal = mode === 'recomposicao' ? 2200 : 2800;
     await db.userProfile.update('main_user', {
       targetCaloriesKcal: kcal,
       calorieMode: mode
@@ -132,7 +132,7 @@ export const SettingsScreen: React.FC = () => {
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
       {/* BARRA SUPERIOR LIMPA E DIRETA AO PONTO */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+      <div className="sticky top-0 z-20 bg-slate-50 pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
         <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 shadow-sm border border-slate-800 flex items-center justify-between gap-2">
           <h1 className="text-base font-black text-white tracking-tight leading-none">
             Ajustes
@@ -159,18 +159,18 @@ export const SettingsScreen: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        {/* 1. SELETOR DE PERFIL CALÓRICO (2.200 kcal vs 2.700 kcal) */}
-        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+        {/* 1. SELETOR DE PERFIL CALÓRICO (2.200 kcal vs 2.800 kcal) */}
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2">
             <Flame className="w-4 h-4 text-blue-400 fill-current shrink-0" />
             <h3 className="text-sm font-black text-white">
-              Meta Calórica Diária
+              Meta Calórica & Macros
             </h3>
           </div>
 
           <div className="p-4 sm:p-5 space-y-3 bg-white">
             <p className="text-xs text-slate-500">
-              Gasto estimado em 2.700–2.800 kcal (4 treinos/semana). Selecione a estratégia atual:
+              Gasto basal + 4 treinos/semana estimado em 2.800 kcal. Selecione a estratégia atual:
             </p>
 
             <div className="grid grid-cols-1 gap-2.5 pt-1">
@@ -193,8 +193,11 @@ export const SettingsScreen: React.FC = () => {
                   <div className="text-base font-black text-blue-700 mt-0.5">
                     2.200 kcal / dia
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Déficit de ~500 kcal: foco em perder gordura preservando/ganhando massa magra.
+                  <div className="text-[11px] font-bold text-slate-700 mt-1">
+                    185g Prot • 220g Carbo • 65g Gord
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Déficit de ~600 kcal: foco em perder gordura e ganhar massa magra.
                   </p>
                 </div>
 
@@ -207,7 +210,7 @@ export const SettingsScreen: React.FC = () => {
                 )}
               </div>
 
-              {/* OPÇÃO 2: MANUTENÇÃO (2.700 kcal) */}
+              {/* OPÇÃO 2: MANUTENÇÃO (2.800 kcal) */}
               <div
                 onClick={() => handleSelectCalorieMode('manutencao')}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-center justify-between active:scale-[0.98] ${
@@ -224,10 +227,13 @@ export const SettingsScreen: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-base font-black text-slate-900 mt-0.5">
-                    2.700 kcal / dia
+                    2.800 kcal / dia
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Sem déficit calórico: para manter o percentual de gordura e progredir cargas.
+                  <div className="text-[11px] font-bold text-slate-700 mt-1">
+                    185g Prot • 325g Carbo • 85g Gord
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Manutenção do peso corporal com alta energia para progredir cargas.
                   </p>
                 </div>
 

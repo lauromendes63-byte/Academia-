@@ -22,7 +22,8 @@ import {
   ChevronUp,
   ShieldCheck,
   Plus,
-  Minus
+  Minus,
+  Utensils
 } from 'lucide-react';
 
 import {
@@ -42,7 +43,8 @@ import {
   calculateCustomMealMacros,
   calculateEscapesMacros,
   getResolvedBreakfastConfig,
-  getResolvedSnackConfig
+  getResolvedSnackConfig,
+  calculateMacroTargets
 } from '../utils/nutritionMath';
 
 // ============================================================================
@@ -570,13 +572,21 @@ export const NutritionScreen: React.FC = () => {
   const [escapeToast, setEscapeToast] = useState<string | null>(null);
 
   const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
-  const targetProtein = userProfile?.targetProteinGrams || 185;
-  const targetCalories = userProfile?.targetCaloriesKcal || 2200;
+  const calorieMode = userProfile?.calorieMode || 'recomposicao';
+  const macroTargets = useMemo(
+    () => calculateMacroTargets(calorieMode, userProfile?.targetProteinGrams || 185),
+    [calorieMode, userProfile?.targetProteinGrams]
+  );
+  const targetProtein = macroTargets.protein;
+  const targetCalories = macroTargets.calories;
+  const targetCarbs = macroTargets.carbs;
+  const targetFat = macroTargets.fat;
   const targetWaterMl = userProfile?.targetWaterMl || 4000;
 
-  const currentLog = useLiveQuery(
-    () => db.nutritionLogs.get(selectedDate),
-    [selectedDate]
+  const allNutritionLogs = useLiveQuery(() => db.nutritionLogs.toArray());
+  const currentLog = useMemo(
+    () => allNutritionLogs?.find((l) => l.date === selectedDate),
+    [allNutritionLogs, selectedDate]
   );
 
   // Initialize log for selected date if none exists
@@ -773,9 +783,23 @@ export const NutritionScreen: React.FC = () => {
   ]);
 
   const proteinProgress = Math.min(100, Math.round((dailyTotals.protein / targetProtein) * 100));
+  const carbsProgress = Math.min(100, Math.round((dailyTotals.carbs / targetCarbs) * 100));
+  const fatProgress = Math.min(100, Math.round((dailyTotals.fat / targetFat) * 100));
 
   const calorieProgress = Math.min(100, Math.round((dailyTotals.calories / targetCalories) * 100));
   const remainingCalories = targetCalories - dailyTotals.calories;
+  const remainingProtein = targetProtein - dailyTotals.protein;
+  const remainingCarbs = targetCarbs - dailyTotals.carbs;
+  const remainingFat = targetFat - dailyTotals.fat;
+
+  const handleSwitchCalorieMode = async (mode: 'recomposicao' | 'manutencao') => {
+    triggerHaptic('light');
+    const kcal = mode === 'manutencao' ? 2800 : 2200;
+    await db.userProfile.update('main_user', {
+      calorieMode: mode,
+      targetCaloriesKcal: kcal
+    });
+  };
 
   // Handlers
   const handleAdjustWheyScoops = async (delta: number) => {
@@ -1028,24 +1052,27 @@ export const NutritionScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* BARRA SUPERIOR LIMPA E DIRETA AO PONTO */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
-        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 shadow-sm border border-slate-800 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+      {/* BARRA SUPERIOR LIMPA COM CONTRASTE AZUL REAL */}
+      <div className="sticky top-0 z-20 bg-slate-50 pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-2xl px-3.5 py-2.5 shadow-sm border border-slate-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-2xs">
+              <Utensils className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+            </div>
             <h1 className="text-base font-black text-white tracking-tight leading-none">
               Nutrição
             </h1>
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(todayStr)}
-                className="text-[10px] font-extrabold text-white bg-blue-600 px-2.5 py-1 rounded-lg active:scale-95 whitespace-nowrap shadow-2xs"
+                className="text-[10px] font-extrabold text-white bg-blue-600 px-2 py-0.5 rounded-md active:scale-95 whitespace-nowrap shadow-2xs"
               >
                 Hoje
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-950/70 px-1.5 py-1 rounded-xl border border-white/10 shrink-0">
+          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-white/10 shrink-0">
             <button
               onClick={() => handleShiftDate(-1)}
               className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform"
@@ -1054,11 +1081,8 @@ export const NutritionScreen: React.FC = () => {
             >
               <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
-            <div className="px-2 flex items-center gap-1.5 whitespace-nowrap">
-              {isToday && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-              )}
-              <span className="text-xs font-black text-white tracking-tight">
+            <div className="px-2.5 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1.5 whitespace-nowrap shadow-2xs">
+              <span className="text-xs font-black tracking-tight leading-none">
                 {isToday ? `Hoje, ${dayNumber} ${monthShort}` : `${dayNumber} ${monthShort}`}
               </span>
             </div>
@@ -1079,7 +1103,7 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         {/* 1. PAINEL DE METAS & MACROS DO DIA (ALTO CONTRASTE)       */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
           {/* Header Navy Slate-900 */}
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
             <h3 className="text-sm font-black text-white truncate">
@@ -1099,48 +1123,40 @@ export const NutritionScreen: React.FC = () => {
           </div>
 
           <div className="p-4 space-y-3.5 bg-white">
-            {/* TRACKER DE PROTEÍNA */}
-            <div>
-              <div className="flex items-baseline justify-between mb-1.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-900">
-                    Proteína
-                  </span>
-                  <span className="text-sm font-black text-blue-600">
-                    {dailyTotals.protein}g
-                    <span className="text-xs font-bold text-slate-400"> / {targetProtein}g</span>
-                  </span>
-                </div>
-
-                <span
-                  className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                    dailyTotals.protein >= targetProtein
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-900 text-white'
-                  }`}
-                >
-                  {proteinProgress}%
-                </span>
-              </div>
-
-              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ease-out rounded-full ${
-                    dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
-                  }`}
-                  style={{ width: `${proteinProgress}%` }}
-                />
-              </div>
+            {/* SELETOR RÁPIDO DAS DUAS METAS: 2.200 KCAL (RECOMPOSIÇÃO) VS 2.800 KCAL (MANUTENÇÃO) */}
+            <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => handleSwitchCalorieMode('recomposicao')}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] whitespace-nowrap ${
+                  calorieMode === 'recomposicao'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Recomposição • 2.200</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchCalorieMode('manutencao')}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] whitespace-nowrap ${
+                  calorieMode === 'manutencao'
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Manutenção • 2.800</span>
+              </button>
             </div>
 
             {/* TRACKER DE CALORIAS */}
-            <div className="pt-3 border-t border-slate-100">
+            <div>
               <div className="flex items-baseline justify-between mb-1.5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-900">
                     Calorias
                   </span>
-                  <span className="text-sm font-black text-slate-900">
+                  <span className="text-sm font-black text-slate-900 tabular-nums">
                     {dailyTotals.calories.toLocaleString('pt-BR')}
                     <span className="text-xs font-bold text-slate-400">
                       {' '}
@@ -1149,7 +1165,7 @@ export const NutritionScreen: React.FC = () => {
                   </span>
                 </div>
 
-                <span className="text-[11px] font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 border border-slate-200/80 whitespace-nowrap">
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 border border-slate-200/80 whitespace-nowrap tabular-nums">
                   {calorieProgress}%
                 </span>
               </div>
@@ -1168,33 +1184,163 @@ export const NutritionScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Breakdown de Macros Padronizado */}
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
-              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                  <span>Proteínas</span>
+            {/* COMPOSIÇÃO COMPLETA DOS 3 MACRONUTRIENTES (PROTEÍNAS, CARBOIDRATOS E GORDURAS) */}
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+              {/* 1. PROTEÍNAS */}
+              <div
+                className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                  dailyTotals.protein >= targetProtein
+                    ? 'bg-emerald-50/60 border-emerald-200'
+                    : 'bg-slate-50 border-slate-200/90'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                      <span>Proteína</span>
+                    </div>
+                    <span className="text-[9px] font-black text-blue-600 tabular-nums">
+                      {proteinProgress}%
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline gap-0.5 tabular-nums">
+                    <span className="text-sm font-black text-slate-900">
+                      {dailyTotals.protein}g
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      /{targetProtein}g
+                    </span>
+                  </div>
                 </div>
-                <div className="text-base font-black text-slate-900 mt-0.5">
-                  {dailyTotals.protein}g
+
+                <div className="mt-2 space-y-1">
+                  <div className="h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
+                      }`}
+                      style={{ width: `${proteinProgress}%` }}
+                    />
+                  </div>
+                  <div
+                    className={`text-[9.5px] font-extrabold whitespace-nowrap truncate ${
+                      remainingProtein <= 0 ? 'text-emerald-700' : 'text-slate-500'
+                    }`}
+                  >
+                    {remainingProtein > 0
+                      ? `Faltam ${remainingProtein}g`
+                      : `Meta OK (+${Math.abs(remainingProtein)}g)`}
+                  </div>
                 </div>
               </div>
-              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                  <span>Carboidratos</span>
+
+              {/* 2. CARBOIDRATOS */}
+              <div
+                className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                  remainingCarbs < 0
+                    ? 'bg-rose-50/70 border-rose-200'
+                    : 'bg-slate-50 border-slate-200/90'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                      <span>Carbo</span>
+                    </div>
+                    <span
+                      className={`text-[9px] font-black tabular-nums ${
+                        remainingCarbs < 0 ? 'text-rose-600' : 'text-amber-700'
+                      }`}
+                    >
+                      { Math.round((dailyTotals.carbs / targetCarbs) * 100) }%
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline gap-0.5 tabular-nums">
+                    <span className="text-sm font-black text-slate-900">
+                      {dailyTotals.carbs}g
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      /{targetCarbs}g
+                    </span>
+                  </div>
                 </div>
-                <div className="text-base font-black text-slate-900 mt-0.5">
-                  {dailyTotals.carbs}g
+
+                <div className="mt-2 space-y-1">
+                  <div className="h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        remainingCarbs < 0 ? 'bg-rose-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${carbsProgress}%` }}
+                    />
+                  </div>
+                  <div
+                    className={`text-[9.5px] font-extrabold whitespace-nowrap truncate ${
+                      remainingCarbs < 0 ? 'text-rose-600' : 'text-slate-500'
+                    }`}
+                  >
+                    {remainingCarbs >= 0
+                      ? `Restam ${remainingCarbs}g`
+                      : `+${Math.abs(remainingCarbs)}g acima`}
+                  </div>
                 </div>
               </div>
-              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                  <span className="w-2 h-2 rounded-full bg-slate-900 shrink-0" />
-                  <span>Gorduras</span>
+
+              {/* 3. GORDURAS */}
+              <div
+                className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                  remainingFat < 0
+                    ? 'bg-rose-50/70 border-rose-200'
+                    : 'bg-slate-50 border-slate-200/90'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                      <span className="w-2 h-2 rounded-full bg-slate-900 shrink-0" />
+                      <span>Gordura</span>
+                    </div>
+                    <span
+                      className={`text-[9px] font-black tabular-nums ${
+                        remainingFat < 0 ? 'text-rose-600' : 'text-slate-700'
+                      }`}
+                    >
+                      { Math.round((dailyTotals.fat / targetFat) * 100) }%
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline gap-0.5 tabular-nums">
+                    <span className="text-sm font-black text-slate-900">
+                      {dailyTotals.fat}g
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      /{targetFat}g
+                    </span>
+                  </div>
                 </div>
-                <div className="text-base font-black text-slate-900 mt-0.5">
-                  {dailyTotals.fat}g
+
+                <div className="mt-2 space-y-1">
+                  <div className="h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        remainingFat < 0 ? 'bg-rose-500' : 'bg-slate-800'
+                      }`}
+                      style={{ width: `${fatProgress}%` }}
+                    />
+                  </div>
+                  <div
+                    className={`text-[9.5px] font-extrabold whitespace-nowrap truncate ${
+                      remainingFat < 0 ? 'text-rose-600' : 'text-slate-500'
+                    }`}
+                  >
+                    {remainingFat >= 0
+                      ? `Restam ${remainingFat}g`
+                      : `+${Math.abs(remainingFat)}g acima`}
+                  </div>
                 </div>
               </div>
             </div>

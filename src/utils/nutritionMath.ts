@@ -387,3 +387,32 @@ export function getResolvedSnackConfig(log: NutritionLog): CustomMealConfig {
     shakeCount: 0
   };
 }
+
+export interface MacroTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mode: 'recomposicao' | 'manutencao';
+}
+
+export function calculateMacroTargets(
+  calorieMode: 'recomposicao' | 'manutencao' = 'recomposicao',
+  customProteinGrams = 185
+): MacroTargets {
+  const mode = calorieMode === 'manutencao' ? 'manutencao' : 'recomposicao';
+  const calories = mode === 'manutencao' ? 2800 : 2200;
+  const protein = customProteinGrams || 185;
+  const fat = mode === 'manutencao' ? 85 : 65;
+  const rawCarbs = (calories - protein * 4 - fat * 9) / 4;
+  const carbs = Math.max(100, Math.round(rawCarbs / 5) * 5);
+
+  return {
+    calories,
+    protein,
+    carbs,
+    fat,
+    mode
+  };
+}
+

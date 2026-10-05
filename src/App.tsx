@@ -114,11 +114,11 @@ export const AppContent: React.FC = () => {
     executeQuickAction();
   }, [isDbReady]);
 
-  // Smooth Tab Switcher (Uses Native View Transitions + Keep-Alive tabs for 0ms lag)
+  // Smooth Tab Switcher (Keep-Alive tabs + 120fps CSS directional glide, zero blink)
   const handleTabChange = (newTab: TabType) => {
     if (newTab === activeTab) return;
 
-    // Defer update check outside the 120fps animation frame
+    // Defer update check outside the animation frame
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => checkForUpdate(false), { timeout: 1500 });
     } else {
@@ -128,34 +128,10 @@ export const AppContent: React.FC = () => {
     const oldIdx = TAB_ORDER.indexOf(activeTab);
     const newIdx = TAB_ORDER.indexOf(newTab);
     const direction = newIdx >= oldIdx ? 'forward' : 'backward';
+
     setNavDirection(direction);
-
-    const commitTabSwitch = () => {
-      setVisitedTabs((prev) => (prev[newTab] ? prev : { ...prev, [newTab]: true }));
-      setActiveTab(newTab);
-    };
-
-    if (
-      typeof document !== 'undefined' &&
-      'startViewTransition' in document &&
-      typeof (document as any).startViewTransition === 'function'
-    ) {
-      try {
-        (document as any).startViewTransition({
-          update: () => {
-            commitTabSwitch();
-          },
-          types: [direction]
-        });
-        return;
-      } catch {
-        // Fallback to React transition
-      }
-    }
-
-    React.startTransition(() => {
-      commitTabSwitch();
-    });
+    setVisitedTabs((prev) => (prev[newTab] ? prev : { ...prev, [newTab]: true }));
+    setActiveTab(newTab);
   };
 
   if (!isDbReady) {

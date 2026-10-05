@@ -36,6 +36,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
   // Active routine selection (A, B, C, D)
   const [selectedRoutineId, setSelectedRoutineId] = useState<RoutineId>('A');
+  const hasSyncedInitialRoutineRef = useRef(false);
 
   // Swipe gesture tracking state
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -43,7 +44,8 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
   // Sync selected routine with user profile's active routine on initial load
   useEffect(() => {
-    if (userProfile?.activeRoutine) {
+    if (userProfile?.activeRoutine && !hasSyncedInitialRoutineRef.current) {
+      hasSyncedInitialRoutineRef.current = true;
       setSelectedRoutineId(userProfile.activeRoutine);
     }
   }, [userProfile?.activeRoutine]);
@@ -53,8 +55,8 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     return routines?.find((r) => r.id === selectedRoutineId);
   }, [routines, selectedRoutineId]);
 
-  // Active session in-memory state
-  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
+  // Active session in-memory state cached for all routines (A, B, C, D) for 0ms switching
+  const [logsByRoutine, setLogsByRoutine] = useState<Record<string, ExerciseLog[]>>({});
   const [lastPerfMap, setLastPerfMap] = useState<
     Record<string, ExercisePerformanceSummary | null>
   >({});
@@ -65,55 +67,84 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     totalExercises: number;
   } | null>(null);
 
-  // Load / initialize exercise logs when selected routine changes
+  // Preload all routines once so switching between Treino A / B / C / D is 0ms with zero blink
   useEffect(() => {
     let isMounted = true;
 
-    async function loadRoutineData() {
-      const routine = await db.routines.get(selectedRoutineId);
-      if (!routine) return;
+    async function preloadAllRoutines() {
+      const allRoutines = await db.routines.toArray();
+      if (!allRoutines || allRoutines.length === 0) return;
 
-      // Ultra-fast single pass performance fetch for all exercises in this routine
-      const perfMap = await getRoutineLastPerformances(routine.exercises);
+      const allExercises = allRoutines.flatMap((r) => r.exercises);
+      const perfMap = await getRoutineLastPerformances(allExercises);
 
-      const initialLogs: ExerciseLog[] = routine.exercises.map((ex) => {
-        const last = perfMap[ex.id];
-        const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
-        const { minReps } = parseRepRange(ex.targetReps);
+      const initialMap: Record<string, ExerciseLog[]> = {};
+      for (const routine of allRoutines) {
+        initialMap[routine.id] = routine.exercises.map((ex) => {
+          const last = perfMap[ex.id];
+          const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
+          const { minReps } = parseRepRange(ex.targetReps);
 
-        return {
-          exerciseId: ex.id,
-          exerciseName: ex.name,
-          activeExerciseName: ex.name,
-          isSubstituted: false,
-          abortedForFatigue: false,
-          sets: Array.from({ length: ex.defaultSets }, (_, i) => {
-            const prevSetReps =
-              last && last.weightKg === baseWeight
-                ? last.lastSetsReps?.[i] ?? last.reps
-                : minReps;
-            return {
-              setNumber: i + 1,
-              weightKg: baseWeight,
-              reps: prevSetReps || minReps,
-              completed: false
-            };
-          })
-        };
-      });
+          return {
+            exerciseId: ex.id,
+            exerciseName: ex.name,
+            activeExerciseName: ex.name,
+            isSubstituted: false,
+            abortedForFatigue: false,
+            sets: Array.from({ length: ex.defaultSets }, (_, i) => {
+              const prevSetReps =
+                last && last.weightKg === baseWeight
+                  ? last.lastSetsReps?.[i] ?? last.reps
+                  : minReps;
+              return {
+                setNumber: i + 1,
+                weightKg: baseWeight,
+                reps: prevSetReps || minReps,
+                completed: false
+              };
+            })
+          };
+        });
+      }
 
       if (isMounted) {
-        setExerciseLogs(initialLogs);
         setLastPerfMap(perfMap);
+        setLogsByRoutine((prev) => ({ ...initialMap, ...prev }));
       }
     }
 
-    loadRoutineData();
+    preloadAllRoutines();
 
     return () => {
       isMounted = false;
     };
-  }, [selectedRoutineId]);
+  }, []);
+
+  // Synchronous fallback so exerciseLogs is NEVER empty while IndexedDB resolves
+  const exerciseLogs = useMemo<ExerciseLog[]>(() => {
+    const cached = logsByRoutine[selectedRoutineId];
+    if (cached && cached.length > 0) return cached;
+    if (!currentRoutine) return [];
+
+    return currentRoutine.exercises.map((ex) => {
+      const last = lastPerfMap[ex.id];
+      const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
+      const { minReps } = parseRepRange(ex.targetReps);
+      return {
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        activeExerciseName: ex.name,
+        isSubstituted: false,
+        abortedForFatigue: false,
+        sets: Array.from({ length: ex.defaultSets }, (_, i) => ({
+          setNumber: i + 1,
+          weightKg: baseWeight,
+          reps: minReps,
+          completed: false
+        }))
+      };
+    });
+  }, [logsByRoutine, selectedRoutineId, currentRoutine, lastPerfMap]);
 
   // Debounce timers per exercise so rapid +5/-5 taps update UI in 0ms without triggering useLiveQuery cascades
   const weightPersistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -128,9 +159,15 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   // Update an exercise log in 0ms & persist load with a 350ms debounce
   const handleUpdateLog = useCallback(
     (updated: ExerciseLog) => {
-      setExerciseLogs((prev) =>
-        prev.map((item) => (item.exerciseId === updated.exerciseId ? updated : item))
-      );
+      setLogsByRoutine((prev) => {
+        const currentList = prev[selectedRoutineId] || exerciseLogs;
+        return {
+          ...prev,
+          [selectedRoutineId]: currentList.map((item) =>
+            item.exerciseId === updated.exerciseId ? updated : item
+          )
+        };
+      });
 
       // Persist the updated weight into db.routines after rapid taps settle (350ms)
       if (updated.sets && updated.sets[0] && updated.sets[0].weightKg > 0) {
@@ -155,7 +192,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         }, 350);
       }
     },
-    [selectedRoutineId]
+    [selectedRoutineId, exerciseLogs]
   );
 
   const completedSetsCount = useMemo(() => {
@@ -207,7 +244,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       });
       await db.routines.update(currentRoutine.id, { exercises: updatedExercises });
       const refreshedPerf = await getRoutineLastPerformances(updatedExercises);
-      setLastPerfMap(refreshedPerf);
+      setLastPerfMap((prev) => ({ ...prev, ...refreshedPerf }));
     }
 
     // Advance active routine in cycle (A -> B -> C -> D -> A)
@@ -218,6 +255,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     await db.userProfile.update('main_user', {
       activeRoutine: nextRoutine
     });
+    setSelectedRoutineId(nextRoutine);
 
     setCompletedSummary({
       routineTitle: currentRoutine?.title || 'Treino Concluído',
@@ -232,13 +270,14 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   const handleResetSession = () => {
     if (window.confirm('Deseja zerar as séries marcadas nesta sessão?')) {
       triggerHaptic('light');
-      setExerciseLogs((prev) =>
-        prev.map((ex) => ({
+      setLogsByRoutine((prev) => ({
+        ...prev,
+        [selectedRoutineId]: (prev[selectedRoutineId] || exerciseLogs).map((ex) => ({
           ...ex,
           abortedForFatigue: false,
           sets: ex.sets.map((s) => ({ ...s, completed: false }))
         }))
-      );
+      }));
     }
   };
 
@@ -298,7 +337,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       {/* BARRA SUPERIOR COMPACTA E DIRETA AO PONTO */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+      <div className="sticky top-0 z-20 bg-slate-50 pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
         <div className="bg-slate-900 text-white rounded-2xl p-2.5 shadow-sm border border-slate-800">
           {/* Linha 1: Seletor Direto Treino A / B / C / D */}
           <div className="grid grid-cols-4 gap-1 bg-slate-950/70 p-1 rounded-xl border border-white/10">
@@ -355,14 +394,12 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
       {/* EXERCISE CARDS LIST */}
       <div id="exercise-cards-section" className="space-y-3">
-        {currentRoutine?.exercises.map((exDef, idx) => {
+        {currentRoutine?.exercises.map((exDef) => {
           const log = exerciseLogs.find((l) => l.exerciseId === exDef.id);
           if (!log) return null;
 
-          const staggerClass = `anim-card-${Math.min(5, idx + 1)}`;
-
           return (
-            <div key={exDef.id} className={`content-auto ${staggerClass}`}>
+            <div key={exDef.id}>
               <ExerciseCard
                 exercise={exDef}
                 log={log}

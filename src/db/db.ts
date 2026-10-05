@@ -55,6 +55,15 @@ export async function initializeDatabase(): Promise<void> {
         calorieMode: existingProfile.calorieMode || 'recomposicao'
       })
     );
+  } else if (
+    existingProfile.calorieMode === 'manutencao' &&
+    existingProfile.targetCaloriesKcal !== 2800
+  ) {
+    initTasks.push(
+      db.userProfile.update('main_user', {
+        targetCaloriesKcal: 2800
+      })
+    );
   }
 
   if (routinesCount === 0) {

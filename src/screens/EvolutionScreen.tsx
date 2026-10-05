@@ -492,7 +492,7 @@ export const EvolutionScreen: React.FC = () => {
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
       {/* BARRA SUPERIOR LIMPA E COMPACTA */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+      <div className="sticky top-0 z-20 bg-slate-50 pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
         <div className="bg-slate-900 text-white rounded-2xl p-2 shadow-sm border border-slate-800">
           {/* SUB-ABAS DIRETAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
           <div className="grid grid-cols-2 gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-white/10">
@@ -534,9 +534,9 @@ export const EvolutionScreen: React.FC = () => {
         {/* CONTEÚDO DA ABA: TREINOS & CARGAS */}
         {/* ========================================================= */}
         {evolutionTab === 'treinos' && (
-          <div className="space-y-3.5 animate-in fade-in duration-150">
+          <div className="space-y-3.5">
             {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
               <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
                 <h3 className="text-sm font-black text-white truncate">
                   Meta Semanal ({frequencyStats.weeklyCount}/{frequencyStats.weeklyGoal} treinos)
@@ -967,9 +967,9 @@ export const EvolutionScreen: React.FC = () => {
     {/* CONTEÚDO DA ABA: DIETA & NUTRIÇÃO                         */}
     {/* ========================================================= */}
     {evolutionTab === 'nutricao' && (
-      <div className="space-y-4 animate-in fade-in duration-150">
+      <div className="space-y-4">
         {/* 1. RESUMO SEMANAL DA DIETA (KCAL, PROTEÍNA, ÁGUA) */}
-        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
             <h3 className="text-sm font-black text-white truncate">
               Adesão Nutricional
@@ -1085,10 +1085,12 @@ export const EvolutionScreen: React.FC = () => {
               <Target className="w-4 h-4 text-blue-600 shrink-0" />
               <div className="min-w-0">
                 <span className="text-[10px] font-black uppercase text-blue-700 block">
-                  Perfil Ativo: {weeklyNutritionStats.calorieMode === 'recomposicao' ? 'Recomposição Corporal' : 'Manutenção'}
+                  Perfil Ativo: {weeklyNutritionStats.calorieMode === 'recomposicao' ? 'Recomposição (2.200 kcal)' : 'Manutenção (2.800 kcal)'}
                 </span>
                 <span className="text-xs font-bold text-slate-800">
-                  Meta de {weeklyNutritionStats.calorieTarget} kcal • Déficit de 500 kcal
+                  {weeklyNutritionStats.calorieMode === 'recomposicao'
+                    ? '185g Prot • 220g Carbo • 65g Gord'
+                    : '185g Prot • 325g Carbo • 85g Gord'}
                 </span>
               </div>
             </div>
