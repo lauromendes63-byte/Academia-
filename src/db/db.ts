@@ -29,7 +29,7 @@ export class AcademiaDatabase extends Dexie {
 
 export const db = new AcademiaDatabase();
 
-const MIGRATION_FLAG_KEY = 'academia_db_migrated_v214';
+const MIGRATION_FLAG_KEY = 'academia_db_migrated_v216';
 
 /**
  * Initializes database with default routines and user profile if not present.
@@ -75,30 +75,33 @@ export async function initializeDatabase(): Promise<void> {
     if (!alreadyMigrated) {
       initTasks.push(
         (async () => {
-          const routineA = await db.routines.get('A');
-          if (routineA) {
-            const needsUpdate = routineA.exercises.some(
-              (e) => e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia'
-            );
-            if (needsUpdate) {
-              routineA.exercises = routineA.exercises.map((e) => {
-                if (e.id === 'pull_4') {
-                  return {
-                    id: 'pull_4',
-                    name: 'Rosca Bayesiana na Polia',
-                    muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
-                    gripOrForm:
-                      'Polia Baixa, pegada supinada, cotovelos levemente à frente',
-                    defaultSets: 3,
-                    targetReps: '12-15',
-                    restSeconds: 60,
-                    defaultWeightKg: 15,
-                    substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
-                  };
-                }
-                return e;
-              });
-              await db.routines.put(routineA);
+          const allRoutines = await db.routines.toArray();
+          for (const routine of allRoutines) {
+            let changed = false;
+            routine.exercises = routine.exercises.map((e) => {
+              let updated = e;
+              if (e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia') {
+                changed = true;
+                updated = {
+                  ...updated,
+                  name: 'Rosca Bayesiana na Polia',
+                  muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
+                  gripOrForm:
+                    'Polia Baixa, pegada supinada, cotovelos levemente à frente',
+                  defaultSets: 3,
+                  targetReps: '12-15',
+                  restSeconds: 60,
+                  substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
+                };
+              }
+              if (updated.defaultSets !== 3) {
+                changed = true;
+                updated = { ...updated, defaultSets: 3 };
+              }
+              return updated;
+            });
+            if (changed) {
+              await db.routines.put(routine);
             }
           }
 

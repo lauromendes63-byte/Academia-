@@ -922,7 +922,7 @@ export const EvolutionScreen: React.FC = () => {
                             {item.muscleGroup}
                           </span>
                           <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
-                            {item.defaultSets}× {item.targetReps}
+                            {item.targetReps} reps
                           </span>
                           {prog && (
                             <span

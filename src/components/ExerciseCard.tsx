@@ -17,11 +17,9 @@ import {
   Plus,
   ArrowRightLeft,
   Dumbbell,
-  Target,
   PlayCircle,
   Trophy,
-  Flame,
-  Star
+  Flame
 } from 'lucide-react';
 
 interface ExerciseCardProps {
@@ -52,6 +50,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     displayName.toLowerCase().includes('graviton');
 
   const { minReps, maxReps } = parseRepRange(exercise.targetReps);
+  const isUnilateralReps = exercise.targetReps.toLowerCase().includes('lado');
 
   const currentWeight =
     log.sets[0]?.weightKg ?? lastPerformance?.weightKg ?? exercise.defaultWeightKg;
@@ -216,70 +215,43 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             : 'border-slate-200/80'
         }`}
       >
-        {/* TOP ROW: Muscle, Target Reps and Action Buttons */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="flex-1 min-w-0 pr-1">
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
-                {exercise.muscleGroup}
+        {/* LINHA 1: Badge do Músculo (Esquerda) e Botões de Ação (Direita) — Altura idêntica h-7 */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="h-7 px-2.5 rounded-lg inline-flex items-center text-[11px] font-extrabold bg-blue-50/90 text-blue-700 border border-blue-200/70 whitespace-nowrap truncate">
+              {exercise.muscleGroup}
+            </span>
+
+            {isNewPR && (
+              <span className="h-7 px-2 rounded-lg inline-flex items-center gap-1 text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/90 whitespace-nowrap shrink-0">
+                <Trophy className="w-3 h-3 text-amber-500 fill-current" />
+                <span>PR</span>
               </span>
-
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
-                <Target className="w-2.5 h-2.5 text-slate-500" />
-                <span>
-                  {exercise.defaultSets}× {exercise.targetReps} reps
-                </span>
-              </span>
-
-              {isNewPR && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/90 whitespace-nowrap animate-in zoom-in-95 duration-150">
-                  <Trophy className="w-2.5 h-2.5 text-amber-500 fill-current" />
-                  <span>Novo PR!</span>
-                </span>
-              )}
-            </div>
-
-            {/* Exercise Name + Clickable Execution Guide Trigger */}
-            <div className="flex items-center gap-1.5">
-              <h3
-                onClick={() => {
-                  triggerHaptic('light');
-                  setIsExecModalOpen(true);
-                }}
-                className="text-base font-black text-slate-900 tracking-tight leading-snug truncate cursor-pointer active:text-blue-600 transition-colors"
-                title="Toque para ver animação de execução"
-              >
-                {displayName}
-              </h3>
-            </div>
-
-            {/* Grip / Form Cue */}
-            <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-              {exercise.gripOrForm}
-            </p>
+            )}
           </div>
 
-          {/* Action buttons: Execução, Substituir & Pular por Fadiga (X) */}
           <div className="flex items-center gap-1 shrink-0">
             <button
+              type="button"
               onClick={() => {
                 triggerHaptic('light');
                 setIsExecModalOpen(true);
               }}
-              className="h-8 px-2 rounded-xl border border-blue-200 bg-blue-50/80 text-blue-700 flex items-center gap-1 active:scale-[0.96] transition-transform duration-120 ease-out shadow-2xs"
+              className="h-7 px-2.5 rounded-lg border border-blue-200/90 bg-blue-50/80 text-blue-700 inline-flex items-center gap-1 active:scale-[0.96] transition-transform duration-120 ease-out"
               title="Ver animação e execução"
               aria-label="Como executar"
             >
               <PlayCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span className="text-[10px] font-black">Técnica</span>
+              <span className="text-[11px] font-extrabold">Técnica</span>
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 triggerHaptic('light');
                 setIsSubModalOpen(true);
               }}
-              className="w-8 h-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center active:scale-[0.95] transition-transform duration-120 ease-out shadow-2xs"
+              className="w-7 h-7 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 inline-flex items-center justify-center active:scale-[0.95] transition-transform duration-120 ease-out"
               title="Substituir exercício"
               aria-label="Substituir exercício"
             >
@@ -287,17 +259,39 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             </button>
 
             <button
+              type="button"
               onClick={handleToggleFatigue}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs active:scale-[0.95] transition-[transform,background-color] duration-120 ease-out shadow-2xs ${
+              className={`w-7 h-7 rounded-lg inline-flex items-center justify-center font-bold text-xs active:scale-[0.95] transition-[transform,background-color] duration-120 ease-out ${
                 isAborted
-                  ? 'bg-red-500 text-white shadow-xs ring-2 ring-red-400'
+                  ? 'bg-red-500 text-white ring-2 ring-red-400'
                   : 'border border-red-200 bg-red-50/80 text-red-600'
               }`}
               title="Pular por Fadiga"
               aria-label="Pular por Fadiga"
             >
-              <span className="text-xs font-black">✕</span>
+              <span className="text-[11px] font-black">✕</span>
             </button>
+          </div>
+        </div>
+
+        {/* LINHA 2: Nome do Exercício (Esquerda) + Alvo de Repetições Moderno (Direita) */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <h3
+            onClick={() => {
+              triggerHaptic('light');
+              setIsExecModalOpen(true);
+            }}
+            className="text-[15px] font-black text-slate-900 tracking-tight leading-snug truncate cursor-pointer active:text-blue-600 transition-colors min-w-0 flex-1"
+            title="Toque para ver animação de execução"
+          >
+            {displayName}
+          </h3>
+
+          <div className="h-6 px-2.5 rounded-lg bg-slate-100 border border-slate-200/80 inline-flex items-center gap-1.5 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+            <span className="text-[11px] font-extrabold text-slate-700 tracking-tight tabular-nums whitespace-nowrap">
+              {minReps}–{maxReps} {isUnilateralReps ? 'reps/lado' : 'reps'}
+            </span>
           </div>
         </div>
 
@@ -317,10 +311,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           </div>
         )}
 
-        {/* HISTÓRICO + STATUS DE DUPLA PROGRESSÃO (0/3, 1/3, 2/3, 3/3) */}
-        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 mb-2 pt-0.5">
+        {/* LINHA 3: Histórico (Esquerda) + Contador Teto X/3 Limpo sem Estrela (Direita) */}
+        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0 truncate">
-            <History className="w-3 h-3 text-blue-600 shrink-0" />
+            <History className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <div className="truncate">
               {lastPerformance ? (
                 <span>
@@ -345,32 +339,18 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             </div>
           </div>
 
-          {/* Contador discreto de Treinos Perfeitos no Teto (Regra 3/3) */}
           {!isAborted && (
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 tabular-nums border ${
+              className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold shrink-0 tabular-nums border ${
                 liveStreak >= 3
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
                   : liveStreak > 0
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                  : 'bg-slate-100 text-slate-600 border-slate-200/60'
+                  : 'bg-slate-100 text-slate-500 border-slate-200/70'
               }`}
-              title={`Meta para subir carga: fechar ${log.sets.length}×${maxReps} reps por 3 treinos seguidos`}
+              title={`Meta para subir carga: fechar todas as séries em ${maxReps} reps por 3 treinos seguidos`}
             >
-              <Star
-                className={`w-2.5 h-2.5 ${
-                  liveStreak >= 3
-                    ? 'text-amber-500 fill-current'
-                    : liveStreak > 0
-                    ? 'text-emerald-500 fill-current'
-                    : 'text-slate-400'
-                }`}
-              />
-              <span>
-                {liveStreak > 0
-                  ? `Teto ${Math.min(3, liveStreak)}/3`
-                  : `Teto: ${log.sets.length}×${maxReps}`}
-              </span>
+              Teto {Math.min(3, liveStreak)}/3
             </span>
           )}
         </div>
@@ -382,12 +362,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               <Flame className="w-4 h-4 text-amber-600 shrink-0 fill-amber-500/20" />
               <div className="min-w-0">
                 <div className="text-[11px] font-black text-amber-950 truncate leading-tight">
-                  Carga dominada ({lastPerformance.perfectStreak}/3 no teto de {maxReps} reps)
+                  Carga dominada (3/3 no teto de {maxReps} reps)
                 </div>
                 <div className="text-[10px] font-semibold text-amber-800 truncate leading-tight">
                   {isGraviton
-                    ? `Pronto p/ reduzir assistência e reiniciar em ${minReps} reps`
-                    : `Pronto p/ subir carga e reiniciar ciclo em ${minReps} reps`}
+                    ? `Reduzir assistência e reiniciar em ${minReps} reps`
+                    : `Subir carga e reiniciar ciclo em ${minReps} reps`}
                 </div>
               </div>
             </div>
@@ -404,22 +384,23 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           </div>
         )}
 
-        {/* CONTROLE DE CARGA PADRONIZADO E LIMPO */}
-        <div className="flex items-center justify-between gap-1.5 mb-3 py-1.5 px-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap">
+        {/* LINHA 4: Controle de Carga Padronizado */}
+        <div className="flex items-center justify-between gap-1.5 mb-3 py-1.5 px-3 rounded-xl bg-slate-50/80 border border-slate-200/60">
+          <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 whitespace-nowrap">
             <Dumbbell className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <span>Carga</span>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
+              type="button"
               onClick={() => handleAdjustWeight(-5)}
               disabled={isAborted || currentWeight <= 0}
-              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
+              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-extrabold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
               title="Diminuir 5kg"
               aria-label="-5kg"
             >
-              <Minus className="w-2.5 h-2.5" />
+              <Minus className="w-2.5 h-2.5 stroke-[2.5]" />
               <span>5</span>
             </button>
 
@@ -442,19 +423,20 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             </div>
 
             <button
+              type="button"
               onClick={() => handleAdjustWeight(5)}
               disabled={isAborted}
-              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
+              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-extrabold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
               title="Aumentar 5kg"
               aria-label="+5kg"
             >
-              <Plus className="w-2.5 h-2.5" />
+              <Plus className="w-2.5 h-2.5 stroke-[2.5]" />
               <span>5</span>
             </button>
           </div>
         </div>
 
-        {/* SÉRIES COM STEPPER DE REPETIÇÕES INTEGRADO (- / + REPS SEM DIGITAR) */}
+        {/* LINHA 5: Séries Minimalistas com Stepper de Repetições Integrado (- / +) */}
         <div
           className={`grid ${
             isCompact4Cols ? 'grid-cols-4 gap-1.5' : 'grid-cols-3 gap-2'
@@ -473,67 +455,42 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                     ? 'border-slate-200 bg-slate-100 opacity-60'
                     : isDone
                     ? 'border-emerald-500 bg-emerald-50/20 shadow-2xs'
-                    : 'border-slate-200/90 bg-slate-50/60'
+                    : 'border-slate-200/90 bg-white'
                 }`}
               >
-                {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série */}
+                {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Limpo, sem subtítulo redundante) */}
                 <button
                   type="button"
                   onClick={() => handleToggleSet(idx)}
                   disabled={isAborted}
-                  className={`w-full h-10 px-1.5 flex flex-col items-center justify-center transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
+                  className={`w-full h-9 px-1.5 flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
                     isAborted
-                      ? 'text-slate-400 cursor-not-allowed'
+                      ? 'text-slate-400 cursor-not-allowed bg-slate-100'
                       : isDone
                       ? 'bg-emerald-500 text-white'
                       : 'bg-white text-slate-800'
                   }`}
                   aria-label={`Concluir Série ${set.setNumber}`}
                 >
-                  <div className="flex items-center gap-1 leading-none">
-                    {isDone ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />
-                        <span className="text-[11px] font-black tracking-tight whitespace-nowrap">
-                          {isCompact4Cols ? `S${set.setNumber}` : `Série ${set.setNumber}`}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[11px] font-extrabold tracking-tight whitespace-nowrap">
-                        {isCompact4Cols ? `Série ${set.setNumber}` : `Série ${set.setNumber}`}
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    className={`text-[9px] font-bold mt-0.5 leading-none whitespace-nowrap tabular-nums ${
-                      isDone
-                        ? 'text-emerald-100'
-                        : isAtTargetCeiling
-                        ? 'text-emerald-600'
-                        : 'text-slate-400'
-                    }`}
-                  >
-                    {isDone
-                      ? `${set.weightKg}kg feito`
-                      : isAtTargetCeiling
-                      ? `No teto (${maxReps})`
-                      : `Meta ${minReps}-${maxReps}`}
-                  </div>
+                  {isDone && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />}
+                  <span className="text-[11px] font-black tracking-tight whitespace-nowrap">
+                    {isCompact4Cols ? `S${set.setNumber}` : `Série ${set.setNumber}`}
+                  </span>
                 </button>
 
                 {/* Parte Inferior: Stepper Rápido de Repetições (- / +) */}
                 <div
                   className={`h-8 flex items-center justify-between border-t ${
                     isDone
-                      ? 'border-emerald-200/80 bg-emerald-50/40'
-                      : 'border-slate-200/70 bg-slate-100/70'
+                      ? 'border-emerald-200/80 bg-emerald-50/50'
+                      : 'border-slate-100 bg-slate-50/90'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => handleAdjustSetReps(idx, -1)}
                     disabled={isAborted || currentReps <= 1}
-                    className="w-7 h-full flex items-center justify-center text-slate-600 active:scale-90 active:bg-slate-200/70 transition-transform disabled:opacity-30 shrink-0"
+                    className="w-7 h-full flex items-center justify-center text-slate-500 active:scale-90 active:bg-slate-200/70 transition-transform disabled:opacity-30 shrink-0"
                     aria-label={`Menos 1 repetição na série ${set.setNumber}`}
                   >
                     <Minus className="w-3 h-3 stroke-[2.5]" />
@@ -542,11 +499,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                   <div className="flex-1 text-center min-w-0 px-0.5">
                     <span
                       className={`text-[11px] font-black tabular-nums whitespace-nowrap ${
-                        isAtTargetCeiling ? 'text-emerald-700' : 'text-slate-800'
+                        isAtTargetCeiling ? 'text-emerald-600' : 'text-slate-800'
                       }`}
                     >
                       {currentReps}
-                      <span className="text-[9px] font-bold text-slate-500 ml-0.5">
+                      <span
+                        className={`text-[9px] font-bold ml-0.5 ${
+                          isAtTargetCeiling ? 'text-emerald-600/80' : 'text-slate-400'
+                        }`}
+                      >
                         {isCompact4Cols ? 'r' : 'reps'}
                       </span>
                     </span>
