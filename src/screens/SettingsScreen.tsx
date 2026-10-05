@@ -131,18 +131,15 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
-        <div className="bg-slate-900 text-white rounded-3xl px-4 py-3 shadow-md border border-slate-800 text-center">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-500/20 border border-blue-400/30 mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
-              Sistema • v{version}
-            </span>
-          </div>
-          <h1 className="text-[15px] font-black text-white tracking-tight truncate leading-tight">
-            Perfil & Configurações
+      {/* BARRA SUPERIOR LIMPA E DIRETA AO PONTO */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 shadow-sm border border-slate-800 flex items-center justify-between gap-2">
+          <h1 className="text-base font-black text-white tracking-tight leading-none">
+            Ajustes
           </h1>
+          <span className="px-2 py-0.5 rounded-lg bg-slate-950/70 border border-white/10 text-[10px] font-black text-slate-300 tabular-nums">
+            v{version}
+          </span>
         </div>
       </div>
 

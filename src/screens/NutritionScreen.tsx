@@ -1028,35 +1028,27 @@ export const NutritionScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
-        <div className="bg-slate-900 text-white rounded-3xl px-4 py-3 shadow-md border border-slate-800 flex items-center justify-between gap-2">
+      {/* BARRA SUPERIOR LIMPA E DIRETA AO PONTO */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 shadow-sm border border-slate-800 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/30 mb-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="text-[9px] font-black uppercase tracking-wider text-blue-200">
-                  Recomposição
-                </span>
-              </div>
-              <h1 className="text-base font-black text-white tracking-tight leading-tight">
-                Dieta & Macros
-              </h1>
-            </div>
+            <h1 className="text-base font-black text-white tracking-tight leading-none">
+              Nutrição
+            </h1>
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(todayStr)}
-                className="text-[10px] font-extrabold text-white bg-blue-600 px-2.5 py-1 rounded-xl active:scale-95 whitespace-nowrap shadow-2xs"
+                className="text-[10px] font-extrabold text-white bg-blue-600 px-2.5 py-1 rounded-lg active:scale-95 whitespace-nowrap shadow-2xs"
               >
                 Hoje
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-950/60 px-1.5 py-1 rounded-2xl border border-white/10 shrink-0">
+          <div className="flex items-center gap-1 bg-slate-950/70 px-1.5 py-1 rounded-xl border border-white/10 shrink-0">
             <button
               onClick={() => handleShiftDate(-1)}
-              className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform"
+              className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform"
               title="Dia anterior"
               aria-label="Dia anterior"
             >
@@ -1073,7 +1065,7 @@ export const NutritionScreen: React.FC = () => {
             <button
               onClick={() => handleShiftDate(1)}
               disabled={isToday}
-              className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform disabled:opacity-25"
+              className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform disabled:opacity-25"
               title="Próximo dia"
               aria-label="Próximo dia"
             >
@@ -1090,14 +1082,9 @@ export const NutritionScreen: React.FC = () => {
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
           {/* Header Navy Slate-900 */}
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
-                Resumo Diário
-              </span>
-              <h3 className="text-sm font-black text-white truncate">
-                Metas & Macros
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white truncate">
+              Metas do Dia
+            </h3>
             <span
               className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg whitespace-nowrap ${
                 remainingCalories >= 0
@@ -1219,14 +1206,9 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-2">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
-                Suplemento
-              </span>
-              <h3 className="text-sm font-black text-white">
-                Proteína Rápida
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white">
+              Proteína Rápida
+            </h3>
             {(wheyScoops > 0 || milkGlasses > 0) && (
               <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-black tabular-nums">
                 +{wheyScoops * 20 + milkGlasses * 6}g Prot
@@ -1324,14 +1306,9 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-3">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
-                Cardápio
-              </span>
-              <h3 className="text-sm font-black text-white">
-                Refeições do Dia
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white">
+              Refeições
+            </h3>
           </div>
 
           <div className="p-3.5 sm:p-4 space-y-3.5 bg-white">
@@ -2089,14 +2066,9 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-4">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
-                Água
-              </span>
-              <h3 className="text-sm font-black text-white">
-                Hidratação Diária
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white">
+              Hidratação
+            </h3>
 
             <span
               className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg tabular-nums ${
@@ -2169,14 +2141,9 @@ export const NutritionScreen: React.FC = () => {
         {/* ========================================================= */}
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-5">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
-                Controle
-              </span>
-              <h3 className="text-sm font-black text-white">
-                Escapes
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white">
+              Escapes
+            </h3>
             {escapeMacros.calories > 0 && (
               <span className="text-[10px] font-black text-white bg-rose-500 px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0">
                 +{escapeMacros.calories} kcal

@@ -491,31 +491,19 @@ export const EvolutionScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
-        <div className="bg-slate-900 text-white rounded-3xl px-4 pt-3.5 pb-3 shadow-md border border-slate-800">
-          <div className="text-center min-w-0 px-2 mb-2.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-500/20 border border-blue-400/30 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
-                Progresso & Métricas
-              </span>
-            </div>
-            <h1 className="text-[15px] font-black text-white tracking-tight truncate leading-tight">
-              {evolutionTab === 'treinos' ? 'Evolução de Cargas' : 'Evolução da Dieta'}
-            </h1>
-          </div>
-
-          {/* SUB-ABAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
-          <div className="grid grid-cols-2 gap-1.5 bg-slate-950/60 p-1 rounded-2xl border border-white/10">
+      {/* BARRA SUPERIOR LIMPA E COMPACTA */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-2xl p-2 shadow-sm border border-slate-800">
+          {/* SUB-ABAS DIRETAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
+          <div className="grid grid-cols-2 gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-white/10">
             <button
               onClick={() => {
                 triggerHaptic('light');
                 setEvolutionTab('treinos');
               }}
-              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
+              className={`py-2 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
                 evolutionTab === 'treinos'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -528,9 +516,9 @@ export const EvolutionScreen: React.FC = () => {
                 triggerHaptic('light');
                 setEvolutionTab('nutricao');
               }}
-              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
+              className={`py-2 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
                 evolutionTab === 'nutricao'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-2xs'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -550,14 +538,9 @@ export const EvolutionScreen: React.FC = () => {
             {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
             <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
               <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                    Meta Semanal
-                  </span>
-                  <h3 className="text-sm font-black text-white truncate">
-                    {frequencyStats.weeklyCount} de {frequencyStats.weeklyGoal} treinos
-                  </h3>
-                </div>
+                <h3 className="text-sm font-black text-white truncate">
+                  Meta Semanal ({frequencyStats.weeklyCount}/{frequencyStats.weeklyGoal} treinos)
+                </h3>
 
                 {/* Botão de Expandir / Ver Sessões */}
                 <button
@@ -693,14 +676,9 @@ export const EvolutionScreen: React.FC = () => {
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-2">
           {/* Header Navy Slate-900 */}
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                Sobrecarga
-              </span>
-              <h3 className="text-sm font-black text-white truncate">
-                Evolução por Treino
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white truncate">
+              Evolução por Treino
+            </h3>
 
             <span className="text-[10px] font-black text-white bg-blue-600 px-2.5 py-0.5 rounded-lg shrink-0 whitespace-nowrap">
               {evolvedCount}/{exerciseCurves.length} em alta
@@ -993,14 +971,9 @@ export const EvolutionScreen: React.FC = () => {
         {/* 1. RESUMO SEMANAL DA DIETA (KCAL, PROTEÍNA, ÁGUA) */}
         <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                Balanço Semanal
-              </span>
-              <h3 className="text-sm font-black text-white truncate">
-                Adesão Nutricional
-              </h3>
-            </div>
+            <h3 className="text-sm font-black text-white truncate">
+              Adesão Nutricional
+            </h3>
 
             <span className="text-[10px] font-black text-white bg-blue-600 px-2.5 py-0.5 rounded-lg shrink-0">
               {weeklyNutritionStats.loggedCount}/7 dias

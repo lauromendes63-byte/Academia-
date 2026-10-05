@@ -282,7 +282,6 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     setTouchStartY(null);
   };
 
-  const focusName = currentRoutine?.title.split(':')[1]?.trim() || currentRoutine?.id;
   const totalActiveSets = exerciseLogs.reduce(
     (acc, ex) => acc + (ex.abortedForFatigue ? 0 : ex.sets.length),
     0
@@ -298,42 +297,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
-        <div className="bg-slate-900 text-white rounded-3xl px-4 pt-3.5 pb-3 shadow-md border border-slate-800">
-          <div className="relative flex items-center justify-between mb-2.5">
-            {/* Spacer esquerdo para centralização exata */}
-            <div className="w-8 shrink-0" />
-
-            {/* Conteúdo Centralizado */}
-            <div className="flex-1 text-center min-w-0 px-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-500/20 border border-blue-400/30 mb-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
-                  {focusName}
-                </span>
-              </div>
-
-              <h1 className="text-[15px] font-black text-white tracking-tight truncate leading-tight">
-                {currentRoutine?.subtitle}
-              </h1>
-            </div>
-
-            {/* Botão de resetar sessão no canto direito (mesmo estilo dos cards) */}
-            <div className="w-8 shrink-0 flex justify-end">
-              <button
-                onClick={handleResetSession}
-                className="w-8 h-8 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 text-slate-200 flex items-center justify-center active:scale-90 transition-all"
-                title="Recomeçar séries desta sessão"
-                aria-label="Recomeçar sessão"
-              >
-                <RotateCw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* ABCD TAB SELECTOR DE ALTO CONTRASTE */}
-          <div className="grid grid-cols-4 gap-1.5 bg-slate-950/60 p-1 rounded-2xl border border-white/10">
+      {/* BARRA SUPERIOR COMPACTA E DIRETA AO PONTO */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-2xl p-2.5 shadow-sm border border-slate-800">
+          {/* Linha 1: Seletor Direto Treino A / B / C / D */}
+          <div className="grid grid-cols-4 gap-1 bg-slate-950/70 p-1 rounded-xl border border-white/10">
             {(['A', 'B', 'C', 'D'] as RoutineId[]).map((rId) => {
               const isSelected = selectedRoutineId === rId;
               return (
@@ -343,9 +311,9 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                     triggerHaptic('light');
                     setSelectedRoutineId(rId);
                   }}
-                  className={`py-2 rounded-xl text-xs font-black transition-all duration-150 min-h-[38px] flex items-center justify-center active:scale-95 ${
+                  className={`py-1.5 rounded-lg text-xs font-black transition-all duration-150 min-h-[34px] flex items-center justify-center active:scale-95 ${
                     isSelected
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-blue-600 text-white shadow-2xs'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -355,22 +323,31 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
             })}
           </div>
 
-          {/* Barra de Progresso Fluida da Sessão */}
-          {exerciseLogs.length > 0 && (
-            <div className="mt-2.5 flex items-center gap-2">
-              <div className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ease-out ${
-                    completedSetsCount > 0 && completedSetsCount >= totalActiveSets
-                      ? 'bg-emerald-400'
-                      : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${sessionProgressPct}%` }}
-                />
-              </div>
-              <span className="text-[10px] font-black text-slate-300 tabular-nums shrink-0">
-                {sessionProgressPct}%
-              </span>
+          {/* Linha 2: Apenas os Músculos do Dia (Esquerda) + Botão Recomeçar (Direita) */}
+          <div className="flex items-center justify-between gap-2 mt-2 px-1">
+            <h1 className="text-xs font-extrabold text-slate-200 tracking-tight truncate">
+              {currentRoutine?.subtitle}
+            </h1>
+
+            <button
+              onClick={handleResetSession}
+              className="w-7 h-7 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 text-slate-200 flex items-center justify-center active:scale-90 transition-all shrink-0"
+              title="Recomeçar séries desta sessão"
+              aria-label="Recomeçar sessão"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Barra fina de progresso (só aparece quando iniciar séries) */}
+          {completedSetsCount > 0 && (
+            <div className="mt-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ease-out ${
+                  completedSetsCount >= totalActiveSets ? 'bg-emerald-400' : 'bg-blue-500'
+                }`}
+                style={{ width: `${sessionProgressPct}%` }}
+              />
             </div>
           )}
         </div>
