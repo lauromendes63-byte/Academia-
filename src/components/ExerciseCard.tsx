@@ -20,7 +20,8 @@ import {
   Dumbbell,
   PlayCircle,
   Trophy,
-  Flame
+  Flame,
+  Target
 } from 'lucide-react';
 
 interface ExerciseCardProps {
@@ -74,32 +75,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const isTodayPerfectAtTarget =
     allSetsDone && log.sets.every((s) => s.reps >= maxReps && s.weightKg > 0);
 
-  // Historical streak at the current weight
+  // Historical streak at the current weight (0, 1, 2, or 3+ workouts at rep ceiling)
   const isSameWeightAsLast =
     lastPerformance !== null &&
     lastPerformance !== undefined &&
     currentWeight === lastPerformance.weightKg;
 
-  const baseStreak = isSameWeightAsLast ? lastPerformance.perfectStreak : 0;
-  const liveStreak = isTodayPerfectAtTarget ? baseStreak + 1 : baseStreak;
+  const baseStreak = isSameWeightAsLast ? Math.min(3, lastPerformance.perfectStreak) : 0;
+  const liveStreak = Math.min(3, isTodayPerfectAtTarget ? baseStreak + 1 : baseStreak);
 
-  // Cálculo dos 6 segmentos da Barra de Progresso do Exercício:
-  // Segmentos 1..3: evolução das repetições dentro da faixa (ex: 6 -> 7 -> 8 reps)
-  // Segmentos 4..6: consolidação dos 3 treinos perfeitos no teto (1/3, 2/3, 3/3)
-  const avgSetReps =
-    log.sets.reduce((acc, s) => acc + (s.reps || minReps), 0) /
-    Math.max(1, log.sets.length);
-  const repRangeSpan = Math.max(1, maxReps - minReps);
-  const repRatio = Math.max(0, Math.min(1, (avgSetReps - minReps) / repRangeSpan));
-
-  const filledSegments =
-    liveStreak >= 3
-      ? 6
-      : liveStreak === 2
-      ? 5
-      : liveStreak === 1
-      ? 4
-      : Math.max(1, Math.min(3, 1 + Math.round(repRatio * 2)));
+  // Progresso da sessão de hoje para preencher parcialmente o segmento atual (quando ainda não bateu o teto nas 3 séries)
+  const todaySetsAtCeiling = log.sets.filter((s) => s.completed && s.reps >= maxReps).length;
+  const todayCeilingRatio =
+    log.sets.length > 0 ? todaySetsAtCeiling / log.sets.length : 0;
 
   // Show progression recommendation banner when user has 3/3 perfect workouts at this weight
   const showProgressionBanner =
@@ -224,7 +212,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       ? `${lastPerformance.reps}`
       : null;
 
-  const currentRepsFormatted = log.sets.map((s) => s.reps || minReps).join('/');
   const isCompact4Cols = log.sets.length >= 4;
 
   return (
@@ -344,9 +331,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           )}
 
           {/* =================================================================== */}
-          {/* ZONA 2: ILUSTRAÇÃO ANATÔMICA NA MÁQUINA + BARRA DE PROGRESSO        */}
+          {/* ZONA 2: ILUSTRAÇÃO ANATÔMICA + PAINEL DE DOMÍNIO DA CARGA (3 ETAPAS) */}
           {/* =================================================================== */}
-          <div className="flex items-center gap-3.5 mb-3">
+          <div className="flex items-stretch gap-3 mb-3">
             {/* Desenho Anatômico na Máquina (Toque abre o guia de execução) */}
             <button
               type="button"
@@ -354,7 +341,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                 triggerHaptic('light');
                 setIsExecModalOpen(true);
               }}
-              className="w-20 h-20 rounded-2xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-2xs overflow-hidden"
+              className="w-20 h-20 rounded-2xl bg-white border border-slate-200/90 p-1 flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-2xs overflow-hidden"
               title="Ver execução detalhada"
               aria-label={`Ilustração de ${displayName}`}
             >
@@ -366,65 +353,74 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               />
             </button>
 
-            {/* Barra de Progresso de Repetições & Domínio (2 tons de azul) */}
-            <div className="flex-1 min-w-0">
-              {/* Callout Superior */}
-              <div className="flex items-center justify-between gap-1.5 mb-2">
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200/70 text-[10px] font-extrabold text-slate-700 tabular-nums truncate">
-                  {lastRepsFormatted
-                    ? `Último: ${lastRepsFormatted} reps`
-                    : `Hoje: ${currentRepsFormatted} reps`}
+            {/* Painel de Domínio da Carga (3 Treinos no Teto para Subir Peso) */}
+            <div className="flex-1 min-w-0 rounded-2xl bg-slate-50/90 border border-slate-200/80 px-3 py-2 flex flex-col justify-between">
+              {/* Linha Superior: Rótulo Intuitivo + Badge de Domínio (0/3, 1/3, 2/3, 3/3) */}
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-[11px] font-black text-slate-800 tracking-tight truncate">
+                  Domínio da Carga
                 </span>
 
                 {!isAborted && (
                   <span
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 tabular-nums border ${
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 tabular-nums shadow-2xs ${
                       liveStreak >= 3
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        ? 'bg-amber-500 text-white'
                         : liveStreak > 0
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-slate-100 text-slate-600 border-slate-200/70'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-900 text-white'
                     }`}
                   >
-                    Teto {Math.min(3, liveStreak)}/3
+                    {liveStreak}/3 {liveStreak >= 3 ? 'PRONTO' : 'no teto'}
                   </span>
                 )}
               </div>
 
-              {/* Barra Segmentada (6 blocos com ponteiro branco no segmento ativo) */}
-              <div className="grid grid-cols-6 gap-1 p-1 rounded-full bg-slate-100 border border-slate-200/80">
-                {[0, 1, 2, 3, 4, 5].map((segIdx) => {
-                  const isFilled = segIdx < filledSegments;
-                  const isCurrentTip = segIdx === filledSegments - 1;
-                  // Apenas 2 tons de azul: Slate-900 (base de repetições) e Blue-600 (domínio de teto)
-                  const fillClass = !isFilled
-                    ? 'bg-slate-200/70'
-                    : segIdx < 3
-                    ? 'bg-slate-900'
-                    : 'bg-blue-600';
+              {/* Barra de Progresso Intuitiva de 3 Etapas (1 bloco = 1 treino perfeito no teto) */}
+              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-full bg-slate-200/75 border border-slate-300/60 my-1">
+                {[0, 1, 2].map((stepIdx) => {
+                  const isCompletedStep = stepIdx < liveStreak;
+                  const isCurrentActiveStep =
+                    stepIdx === baseStreak && !isTodayPerfectAtTarget && todayCeilingRatio > 0;
 
                   return (
                     <div
-                      key={segIdx}
-                      className={`h-2.5 rounded-full flex items-center justify-center transition-colors duration-200 ${fillClass}`}
+                      key={stepIdx}
+                      className="h-2.5 rounded-full bg-white/80 overflow-hidden flex items-center relative"
                     >
-                      {isCurrentTip && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-white shadow-2xs" />
-                      )}
+                      {isCompletedStep ? (
+                        <div
+                          className={`w-full h-full rounded-full flex items-center justify-end pr-1 transition-all duration-200 ${
+                            liveStreak >= 3 ? 'bg-amber-500' : 'bg-blue-600'
+                          }`}
+                        >
+                          {stepIdx === liveStreak - 1 && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-2xs" />
+                          )}
+                        </div>
+                      ) : isCurrentActiveStep ? (
+                        <div
+                          className="h-full rounded-full bg-slate-900 transition-all duration-200"
+                          style={{ width: `${Math.round(todayCeilingRatio * 100)}%` }}
+                        />
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Faixa Alvo de Repetições Abaixo da Barra */}
-              <div className="flex items-center justify-between mt-1.5 px-0.5">
-                <span className="text-[11px] font-extrabold text-slate-700 tracking-tight tabular-nums">
-                  {minReps}–{maxReps} {isUnilateralReps ? 'reps/lado' : 'reps'}
+              {/* Linha Inferior: Faixa de Repetições (Esquerda) + Ícone de Alvo Máximo (Direita) */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black text-slate-900 tracking-tight tabular-nums">
+                  Faixa: {minReps}–{maxReps} {isUnilateralReps ? 'reps/lado' : 'reps'}
                 </span>
-                <span className="text-[10px] font-semibold text-slate-400 tabular-nums">
-                  {allSetsDone
-                    ? 'Séries concluídas'
-                    : `Alvo máx: ${maxReps} reps`}
+
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200/90 text-[10px] font-black text-slate-800 tabular-nums shrink-0 shadow-2xs"
+                  title={`Alvo máximo de ${maxReps} repetições para domínio da carga`}
+                >
+                  <Target className="w-3 h-3 text-blue-600 stroke-[2.5] shrink-0" />
+                  <span>{maxReps} reps</span>
                 </span>
               </div>
             </div>
@@ -518,7 +514,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           </div>
 
           {/* =================================================================== */}
-          {/* ZONA 4: OS 3 BOTÕES DE SÉRIES COM STEPPER INTEGRADO (- / +)         */}
+          {/* ZONA 4: OS 3 BOTÕES DE SÉRIES DE ALTO CONTRASTE (SLATE-900 / BLUE)  */}
           {/* =================================================================== */}
           <div
             className={`grid ${
@@ -533,47 +529,49 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               return (
                 <div
                   key={set.setNumber}
-                  className={`rounded-xl border overflow-hidden transition-[border-color,background-color] duration-120 ease-out ${
+                  className={`rounded-2xl border overflow-hidden transition-[border-color,background-color,box-shadow] duration-120 ease-out ${
                     isAborted
                       ? 'border-slate-200 bg-slate-100 opacity-60'
                       : isDone
-                      ? 'border-emerald-500 bg-emerald-50/20 shadow-2xs'
-                      : 'border-slate-200/90 bg-white'
+                      ? 'border-emerald-500 bg-emerald-50/30 ring-1 ring-emerald-500/20 shadow-2xs'
+                      : 'border-slate-300/90 bg-slate-100/80 shadow-2xs'
                   }`}
                 >
-                  {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série */}
+                  {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Alto Contraste) */}
                   <button
                     type="button"
                     onClick={() => handleToggleSet(idx)}
                     disabled={isAborted}
-                    className={`w-full h-9 px-1.5 flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
+                    className={`w-full h-9 px-2 flex items-center justify-center gap-1.5 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
                       isAborted
-                        ? 'text-slate-400 cursor-not-allowed bg-slate-100'
+                        ? 'text-slate-400 cursor-not-allowed bg-slate-200'
                         : isDone
                         ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-50/70 text-slate-800'
+                        : 'bg-slate-900 text-white'
                     }`}
                     aria-label={`Concluir Série ${set.setNumber}`}
                   >
-                    {isDone && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />}
+                    {isDone ? (
+                      <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-white" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full border-2 border-blue-400 shrink-0" />
+                    )}
                     <span className="text-[11px] font-black tracking-tight whitespace-nowrap">
                       {isCompact4Cols ? `S${set.setNumber}` : `Série ${set.setNumber}`}
                     </span>
                   </button>
 
-                  {/* Parte Inferior: Stepper Rápido de Repetições (- / +) */}
+                  {/* Parte Inferior: Stepper de Repetições com Botões Destacados (- / +) */}
                   <div
-                    className={`h-8 flex items-center justify-between border-t ${
-                      isDone
-                        ? 'border-emerald-200/80 bg-emerald-50/50'
-                        : 'border-slate-200/70 bg-white'
+                    className={`p-1 flex items-center justify-between gap-0.5 ${
+                      isDone ? 'bg-emerald-50/70' : 'bg-slate-100'
                     }`}
                   >
                     <button
                       type="button"
                       onClick={() => handleAdjustSetReps(idx, -1)}
                       disabled={isAborted || currentReps <= 1}
-                      className="w-7 h-full flex items-center justify-center text-slate-500 active:scale-90 active:bg-slate-100 transition-transform disabled:opacity-30 shrink-0 border-r border-slate-100"
+                      className="w-6 h-6 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 active:scale-90 transition-transform disabled:opacity-30 shrink-0 shadow-2xs"
                       aria-label={`Menos 1 repetição na série ${set.setNumber}`}
                     >
                       <Minus className="w-3 h-3 stroke-[2.5]" />
@@ -581,14 +579,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
                     <div className="flex-1 text-center min-w-0 px-0.5">
                       <span
-                        className={`text-[11px] font-black tabular-nums whitespace-nowrap ${
-                          isAtTargetCeiling ? 'text-emerald-600' : 'text-slate-900'
+                        className={`text-xs font-black tabular-nums whitespace-nowrap ${
+                          isAtTargetCeiling ? 'text-emerald-700' : 'text-slate-900'
                         }`}
                       >
                         {currentReps}
                         <span
-                          className={`text-[9px] font-bold ml-0.5 ${
-                            isAtTargetCeiling ? 'text-emerald-600/80' : 'text-slate-400'
+                          className={`text-[9px] font-extrabold ml-0.5 ${
+                            isAtTargetCeiling ? 'text-emerald-600' : 'text-slate-500'
                           }`}
                         >
                           {isCompact4Cols ? 'r' : 'reps'}
@@ -600,7 +598,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                       type="button"
                       onClick={() => handleAdjustSetReps(idx, 1)}
                       disabled={isAborted || currentReps >= 35}
-                      className="w-7 h-full flex items-center justify-center text-blue-600 active:scale-90 active:bg-blue-50 transition-transform disabled:opacity-30 shrink-0 border-l border-slate-100"
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30 shrink-0 shadow-2xs ${
+                        isDone ? 'bg-emerald-600' : 'bg-blue-600'
+                      }`}
                       aria-label={`Mais 1 repetição na série ${set.setNumber}`}
                     >
                       <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -612,37 +612,39 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           </div>
 
           {/* =================================================================== */}
-          {/* ZONA 5: RODAPÉ DISCRETO DE HISTÓRICO                                */}
+          {/* ZONA 5: RODAPÉ ÚNICO E ESTRUTURADO DE HISTÓRICO (COM RELOGINHO)     */}
           {/* =================================================================== */}
-          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+          <div className="mt-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-[11px] text-slate-600">
             <div className="flex items-center gap-1.5 min-w-0 truncate">
               <History className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <div className="truncate">
                 {lastPerformance ? (
                   <span>
                     Último:{' '}
-                    <strong className="text-slate-800 font-bold tabular-nums">
+                    <strong className="text-slate-900 font-black tabular-nums">
                       {lastPerformance.weightKg}kg
                     </strong>
                     {lastRepsFormatted && (
-                      <span className="text-slate-600 font-semibold ml-1 tabular-nums">
+                      <span className="text-slate-700 font-bold ml-1 tabular-nums">
                         ({lastRepsFormatted} reps)
                       </span>
                     )}
                     {formattedLastDate && (
-                      <span className="text-slate-400 font-normal ml-1">
+                      <span className="text-slate-400 font-semibold ml-1">
                         • {formattedLastDate}
                       </span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-slate-400">1ª sessão registrada nesta carga</span>
+                  <span className="text-slate-500 font-medium">
+                    1ª sessão registrada nesta carga
+                  </span>
                 )}
               </div>
             </div>
 
             {completedCount > 0 && (
-              <span className="text-[10px] font-extrabold text-emerald-600 shrink-0 tabular-nums">
+              <span className="px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 text-[10px] font-black shrink-0 tabular-nums">
                 {completedCount}/{log.sets.length} feitas
               </span>
             )}

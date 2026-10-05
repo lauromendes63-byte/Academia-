@@ -490,52 +490,54 @@ export const EvolutionScreen: React.FC = () => {
   const hasMultipleSessions = routineSessionsChronological.length >= 2;
 
   return (
-    <div className="pb-36 pt-2 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER CENTRALIZADO COM SUB-ABAS */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-2 pb-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/60">
-        <div className="text-center min-w-0 px-2 mb-2.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 shadow-2xs mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
-              Progresso & Métricas
-            </span>
+    <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
+      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-3xl px-4 pt-3.5 pb-3 shadow-md border border-slate-800">
+          <div className="text-center min-w-0 px-2 mb-2.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-500/20 border border-blue-400/30 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
+                Progresso & Métricas
+              </span>
+            </div>
+            <h1 className="text-[15px] font-black text-white tracking-tight truncate leading-tight">
+              {evolutionTab === 'treinos' ? 'Evolução de Cargas' : 'Evolução da Dieta'}
+            </h1>
           </div>
-          <h1 className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
-            {evolutionTab === 'treinos' ? 'Evolução de Cargas' : 'Evolução da Dieta'}
-          </h1>
-        </div>
 
-        {/* SUB-ABAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
-        <div className="grid grid-cols-2 gap-1.5 bg-slate-200/70 p-1 rounded-2xl max-w-sm mx-auto">
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setEvolutionTab('treinos');
-            }}
-            className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
-              evolutionTab === 'treinos'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5 shrink-0" />
-            <span>Treinos & Cargas</span>
-          </button>
+          {/* SUB-ABAS: TREINOS & CARGAS vs DIETA & NUTRIÇÃO */}
+          <div className="grid grid-cols-2 gap-1.5 bg-slate-950/60 p-1 rounded-2xl border border-white/10">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setEvolutionTab('treinos');
+              }}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
+                evolutionTab === 'treinos'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+              <span>Treinos & Cargas</span>
+            </button>
 
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setEvolutionTab('nutricao');
-            }}
-            className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
-              evolutionTab === 'nutricao'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
-            <span>Dieta & Nutrição</span>
-          </button>
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setEvolutionTab('nutricao');
+              }}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap ${
+                evolutionTab === 'nutricao'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
+              <span>Dieta & Nutrição</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -546,178 +548,168 @@ export const EvolutionScreen: React.FC = () => {
         {evolutionTab === 'treinos' && (
           <div className="space-y-3.5 animate-in fade-in duration-150">
             {/* 1. META SEMANAL DE FREQUÊNCIA (4X NA SEMANA) */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs anim-card-1">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 shrink-0">
-                <Flame className="w-5 h-5 fill-current" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Meta Semanal
-                </span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Target className="w-4 h-4 text-blue-600 shrink-0" />
-                  <h3 className="text-base font-black text-slate-900 leading-none">
+            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+              <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                    Meta Semanal
+                  </span>
+                  <h3 className="text-sm font-black text-white truncate">
                     {frequencyStats.weeklyCount} de {frequencyStats.weeklyGoal} treinos
                   </h3>
                 </div>
-              </div>
-            </div>
 
-            {/* Botão de Expandir / Ver Sessões com ícone de seta */}
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setShowSessionsList(!showSessionsList);
-              }}
-              className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-2xs shrink-0"
-              title="Ver treinos realizados"
-            >
-              <span>{showSessionsList ? 'Ocultar' : 'Treinos'}</span>
-              {showSessionsList ? (
-                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-              )}
-            </button>
-          </div>
-
-          {/* Barra de Progresso Semanal */}
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
-            <div
-              className={`h-full transition-all duration-300 ease-out rounded-full ${
-                frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
-                  ? 'bg-emerald-500'
-                  : 'bg-blue-600'
-              }`}
-              style={{ width: `${frequencyStats.weeklyProgress}%` }}
-            />
-          </div>
-
-          {/* Indicadores Visuais dos Dias da Semana (Seg a Dom) */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-3">
-            {frequencyStats.weekDayPills.map((day, idx) => (
-              <div
-                key={idx}
-                className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-between transition-all ${
-                  day.hadWorkout
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900 shadow-2xs font-bold'
-                    : day.isToday
-                    ? 'border-blue-400 bg-blue-50/60 text-blue-900 font-bold'
-                    : 'border-slate-100 bg-slate-50/50 text-slate-400'
-                }`}
-              >
-                <span className="text-[9px] uppercase tracking-tight">{day.label}</span>
-                <span className="text-xs font-black my-0.5">{day.dayNumber}</span>
-                <div className="h-3 flex items-center justify-center">
-                  {day.hadWorkout ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                  ) : day.isToday ? (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                {/* Botão de Expandir / Ver Sessões */}
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowSessionsList(!showSessionsList);
+                  }}
+                  className="px-2.5 py-1 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 text-white text-[11px] font-extrabold flex items-center gap-1 active:scale-95 transition-all shrink-0"
+                  title="Ver treinos realizados"
+                >
+                  <span>{showSessionsList ? 'Ocultar' : 'Sessões'}</span>
+                  {showSessionsList ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-blue-300" />
                   ) : (
-                    <span className="text-[9px] text-slate-300">•</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-blue-300" />
+                  )}
+                </button>
+              </div>
+
+              <div className="p-4 bg-white">
+                {/* Barra de Progresso Semanal */}
+                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+                  <div
+                    className={`h-full transition-all duration-300 ease-out rounded-full ${
+                      frequencyStats.weeklyCount >= frequencyStats.weeklyGoal
+                        ? 'bg-emerald-500'
+                        : 'bg-blue-600'
+                    }`}
+                    style={{ width: `${frequencyStats.weeklyProgress}%` }}
+                  />
+                </div>
+
+                {/* Indicadores Visuais dos Dias da Semana (Seg a Dom) */}
+                <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                  {frequencyStats.weekDayPills.map((day, idx) => (
+                    <div
+                      key={idx}
+                      className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-between transition-all ${
+                        day.hadWorkout
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-900 shadow-2xs font-bold'
+                          : day.isToday
+                          ? 'border-blue-400 bg-blue-50/60 text-blue-900 font-bold'
+                          : 'border-slate-100 bg-slate-50/50 text-slate-400'
+                      }`}
+                    >
+                      <span className="text-[9px] uppercase tracking-tight">{day.label}</span>
+                      <span className="text-xs font-black my-0.5">{day.dayNumber}</span>
+                      <div className="h-3 flex items-center justify-center">
+                        {day.hadWorkout ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        ) : day.isToday ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                        ) : (
+                          <span className="text-[9px] text-slate-300">•</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Resumo do Mês Centralizado */}
+                <div className="pt-2.5 border-t border-slate-100 flex flex-col items-center justify-center gap-1.5 text-center">
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-800 text-xs font-bold shadow-2xs">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>
+                      Em <strong className="capitalize">{frequencyStats.currentMonthName}</strong>: {frequencyStats.monthlyCount} {frequencyStats.monthlyCount === 1 ? 'dia treinado' : 'dias treinados'}
+                    </span>
+                  </span>
+
+                  {frequencyStats.weeklyCount >= frequencyStats.weeklyGoal && (
+                    <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
+                      Meta Batida! 🔥
+                    </span>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Resumo do Mês Centralizado */}
-          <div className="pt-2.5 border-t border-slate-100 flex flex-col items-center justify-center gap-1.5 text-center">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50/80 border border-blue-100 text-blue-900 text-xs font-bold shadow-2xs">
-              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>
-                Em <strong className="capitalize">{frequencyStats.currentMonthName}</strong>: {frequencyStats.monthlyCount} {frequencyStats.monthlyCount === 1 ? 'dia treinado' : 'dias treinados'}
-              </span>
-            </span>
+                {/* LISTA EXPANSÍVEL DE TREINOS COM OPÇÃO DE EXCLUIR */}
+                {showSessionsList && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                      <span>Histórico de Sessões</span>
+                      <span>{workoutSessions.length} {workoutSessions.length === 1 ? 'treino' : 'treinos'}</span>
+                    </div>
 
-            {frequencyStats.weeklyCount >= frequencyStats.weeklyGoal && (
-              <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
-                Meta Batida! 🔥
-              </span>
-            )}
-          </div>
+                    {workoutSessions.length > 0 ? (
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
+                        {workoutSessions.map((session) => {
+                          const routineDef = routines?.find((r) => r.id === session.routineId);
+                          const focus = routineDef?.title.split(':')[1]?.trim() || session.routineId;
 
-          {/* LISTA EXPANSÍVEL DE TREINOS COM OPÇÃO DE EXCLUIR */}
-          {showSessionsList && (
-            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
-                <span>Histórico de Sessões</span>
-                <span>{workoutSessions.length} {workoutSessions.length === 1 ? 'treino' : 'treinos'}</span>
-              </div>
+                          return (
+                            <div
+                              key={session.id}
+                              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-7 h-7 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center shrink-0">
+                                  {session.routineId}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-black text-slate-900 truncate">
+                                    Treino {session.routineId} • {focus}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-medium">
+                                    {session.date.slice(8, 10)}/{session.date.slice(5, 7)} • {session.exercises?.length || 0} exercícios
+                                  </div>
+                                </div>
+                              </div>
 
-              {workoutSessions.length > 0 ? (
-                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
-                  {workoutSessions.map((session) => {
-                    const routineDef = routines?.find((r) => r.id === session.routineId);
-                    const focus = routineDef?.title.split(':')[1]?.trim() || session.routineId;
-
-                    return (
-                      <div
-                        key={session.id}
-                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                            {session.routineId}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-black text-slate-900 truncate">
-                              Treino {session.routineId} • {focus}
+                              <button
+                                onClick={() => handleDeleteSession(session.id)}
+                                className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0"
+                                title="Excluir treino"
+                                aria-label="Excluir treino"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <div className="text-[10px] text-slate-400 font-medium">
-                              {session.date.slice(8, 10)}/{session.date.slice(5, 7)} • {session.exercises?.length || 0} exercícios
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => handleDeleteSession(session.id)}
-                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0"
-                          title="Excluir treino"
-                          aria-label="Excluir treino"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400 py-2 text-center">Nenhum treino registrado ainda.</p>
-              )}
+                    ) : (
+                      <p className="text-xs text-slate-400 py-2 text-center">Nenhum treino registrado ainda.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
 
         {/* ========================================================= */}
         {/* 2. EVOLUÇÃO POR TREINO (SEM TONELAGEM, LINHA POR EXERCÍCIO) */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3.5 anim-card-2">
-          {/* Header sem quebra: "Evolução por Treino" */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-                <TrendingUp className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
-                  Sobrecarga Progressiva
-                </span>
-                <h3 className="text-base font-black text-slate-900 leading-tight truncate">
-                  Evolução por Treino
-                </h3>
-              </div>
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-2">
+          {/* Header Navy Slate-900 */}
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                Sobrecarga
+              </span>
+              <h3 className="text-sm font-black text-white truncate">
+                Evolução por Treino
+              </h3>
             </div>
 
-            <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full shrink-0 shadow-2xs whitespace-nowrap">
+            <span className="text-[10px] font-black text-white bg-blue-600 px-2.5 py-0.5 rounded-lg shrink-0 whitespace-nowrap">
               {evolvedCount}/{exerciseCurves.length} em alta
             </span>
           </div>
 
-          {/* ABCD SELECTOR DE ROTINA */}
-          <div className="grid grid-cols-4 gap-1.5 bg-slate-100 p-1 rounded-2xl">
+          <div className="p-4 sm:p-5 space-y-3.5 bg-white">
+          {/* ABCD SELECTOR DE ROTINA (ALTO CONTRASTE) */}
+          <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-2xl">
             {(['A', 'B', 'C', 'D'] as RoutineId[]).map((rId) => {
               const isSel = selectedRoutineId === rId;
               const subLabel =
@@ -733,7 +725,7 @@ export const EvolutionScreen: React.FC = () => {
                   className={`py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center active:scale-95 whitespace-nowrap ${
                     isSel
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <span>Treino {rId}</span>
@@ -988,37 +980,34 @@ export const EvolutionScreen: React.FC = () => {
               })}
             </div>
           </div>
+          </div>
         </div>
       </div>
     )}
 
     {/* ========================================================= */}
-    {/* CONTEÚDO DA ABA: DIETA & NUTRIÇÃO */}
+    {/* CONTEÚDO DA ABA: DIETA & NUTRIÇÃO                         */}
     {/* ========================================================= */}
     {evolutionTab === 'nutricao' && (
       <div className="space-y-4 animate-in fade-in duration-150">
         {/* 1. RESUMO SEMANAL DA DIETA (KCAL, PROTEÍNA, ÁGUA) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4 anim-card-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
-                <UtensilsCrossed className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
-                  Balanço Semanal da Dieta
-                </span>
-                <h3 className="text-base font-black text-slate-900 leading-tight truncate">
-                  Adesão Nutricional
-                </h3>
-              </div>
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                Balanço Semanal
+              </span>
+              <h3 className="text-sm font-black text-white truncate">
+                Adesão Nutricional
+              </h3>
             </div>
 
-            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full shrink-0 shadow-2xs">
-              {weeklyNutritionStats.loggedCount} de 7 dias logados
+            <span className="text-[10px] font-black text-white bg-blue-600 px-2.5 py-0.5 rounded-lg shrink-0">
+              {weeklyNutritionStats.loggedCount}/7 dias
             </span>
           </div>
 
+          <div className="p-4 sm:p-5 space-y-4 bg-white">
           {/* Grid 3 KPIs */}
           <div className="grid grid-cols-3 gap-2">
             {/* Calorias Médias */}
@@ -1118,11 +1107,11 @@ export const EvolutionScreen: React.FC = () => {
           </div>
 
           {/* Status do Perfil Calórico */}
-          <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between gap-2 shadow-2xs">
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 shadow-2xs">
             <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <Target className="w-4 h-4 text-blue-600 shrink-0" />
               <div className="min-w-0">
-                <span className="text-[10px] font-black uppercase text-emerald-700 block">
+                <span className="text-[10px] font-black uppercase text-blue-700 block">
                   Perfil Ativo: {weeklyNutritionStats.calorieMode === 'recomposicao' ? 'Recomposição Corporal' : 'Manutenção'}
                 </span>
                 <span className="text-xs font-bold text-slate-800">
@@ -1130,70 +1119,69 @@ export const EvolutionScreen: React.FC = () => {
                 </span>
               </div>
             </div>
-            <span className="text-xs font-black text-emerald-800 px-2 py-0.5 rounded-lg bg-white border border-emerald-200 shrink-0">
+            <span className="text-xs font-black text-white px-2 py-0.5 rounded-lg bg-slate-900 shrink-0">
               {weeklyNutritionStats.adherencePercent}% no alvo
             </span>
+          </div>
           </div>
         </div>
 
         {/* 2. DIAGNÓSTICO INTELIGENTE DA SEMANA */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-2.5 anim-card-2">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-2">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+            <h4 className="text-sm font-black text-white">
               Diagnóstico do Treinador
             </h4>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-medium">
-            {weeklyNutritionStats.loggedCount === 0 ? (
-              <p className="text-slate-500">
-                Nenhum dia registrado nesta semana ainda. Registre suas refeições na aba <strong>Nutrição</strong> para gerar o diagnóstico de recomposição corporal e déficit calórico.
-              </p>
-            ) : weeklyNutritionStats.avgCalories <= weeklyNutritionStats.calorieTarget + 50 &&
-              weeklyNutritionStats.avgProtein >= weeklyNutritionStats.proteinTarget * 0.85 ? (
-              <p>
-                🔥 <strong>Déficit e Proteínas no ponto!</strong> Você está mantendo a média em{' '}
-                <strong>{weeklyNutritionStats.avgCalories} kcal</strong> com ótimo aporte proteico ({weeklyNutritionStats.avgProtein}g/dia). Esse ritmo preserva sua massa muscular e oxida gordura com alta consistência.
-              </p>
-            ) : weeklyNutritionStats.avgCalories > weeklyNutritionStats.calorieTarget + 100 ? (
-              <p>
-                ⚠️ <strong>Atenção ao superávit:</strong> Sua média semanal de{' '}
-                <strong>{weeklyNutritionStats.avgCalories} kcal</strong> ficou acima do teto do déficit ({weeklyNutritionStats.calorieTarget} kcal). Experimente diminuir as porções de carboidratos ou evitar escapes noturnos para retomar a queima de gordura.
-              </p>
-            ) : weeklyNutritionStats.avgProtein < weeklyNutritionStats.proteinTarget * 0.85 ? (
-              <p>
-                💪 <strong>Proteínas abaixo do ideal:</strong> Sua média diária de{' '}
-                <strong>{weeklyNutritionStats.avgProtein}g</strong> está abaixo da meta ({weeklyNutritionStats.proteinTarget}g). Adicione doses extras de Whey, copos de leite ou ovos para blindar os músculos durante o déficit.
-              </p>
-            ) : (
-              <p>
-                👍 <strong>Bom progresso semanal:</strong> Você manteve{' '}
-                <strong>{weeklyNutritionStats.daysInCalorieGoal} de {weeklyNutritionStats.loggedCount} dias</strong> dentro do plano calórico. Mantenha a hidratação acima de {weeklyNutritionStats.waterTargetL}L para potencializar os treinos de força.
-              </p>
-            )}
+          <div className="p-4 bg-white">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed font-medium">
+              {weeklyNutritionStats.loggedCount === 0 ? (
+                <p className="text-slate-500">
+                  Nenhum dia registrado nesta semana ainda. Registre suas refeições na aba <strong>Nutrição</strong> para gerar o diagnóstico de recomposição corporal e déficit calórico.
+                </p>
+              ) : weeklyNutritionStats.avgCalories <= weeklyNutritionStats.calorieTarget + 50 &&
+                weeklyNutritionStats.avgProtein >= weeklyNutritionStats.proteinTarget * 0.85 ? (
+                <p>
+                  🔥 <strong>Déficit e Proteínas no ponto!</strong> Você está mantendo a média em{' '}
+                  <strong>{weeklyNutritionStats.avgCalories} kcal</strong> com ótimo aporte proteico ({weeklyNutritionStats.avgProtein}g/dia). Esse ritmo preserva sua massa muscular e oxida gordura com alta consistência.
+                </p>
+              ) : weeklyNutritionStats.avgCalories > weeklyNutritionStats.calorieTarget + 100 ? (
+                <p>
+                  ⚠️ <strong>Atenção ao superávit:</strong> Sua média semanal de{' '}
+                  <strong>{weeklyNutritionStats.avgCalories} kcal</strong> ficou acima do teto do déficit ({weeklyNutritionStats.calorieTarget} kcal). Experimente diminuir as porções de carboidratos ou evitar escapes noturnos para retomar a queima de gordura.
+                </p>
+              ) : weeklyNutritionStats.avgProtein < weeklyNutritionStats.proteinTarget * 0.85 ? (
+                <p>
+                  💪 <strong>Proteínas abaixo do ideal:</strong> Sua média diária de{' '}
+                  <strong>{weeklyNutritionStats.avgProtein}g</strong> está abaixo da meta ({weeklyNutritionStats.proteinTarget}g). Adicione doses extras de Whey, copos de leite ou ovos para blindar os músculos durante o déficit.
+                </p>
+              ) : (
+                <p>
+                  👍 <strong>Bom progresso semanal:</strong> Você manteve{' '}
+                  <strong>{weeklyNutritionStats.daysInCalorieGoal} de {weeklyNutritionStats.loggedCount} dias</strong> dentro do plano calórico. Mantenha a hidratação acima de {weeklyNutritionStats.waterTargetL}L para potencializar os treinos de força.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* 3. ACOMPANHAMENTO DIÁRIO (SEG A DOM) */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-3 anim-card-3">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-3">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-                <Calendar className="w-4 h-4" />
-              </div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                Dias da Semana (Seg a Dom)
+              <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+              <h4 className="text-sm font-black text-white">
+                Dias da Semana
               </h4>
             </div>
-            <span className="text-[10px] font-bold text-slate-400">
-              {weeklyNutritionStats.daysInCalorieGoal} dias dentro do déficit
+            <span className="text-[10px] font-black text-blue-200 bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 rounded-md">
+              {weeklyNutritionStats.daysInCalorieGoal} no déficit
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="p-4 space-y-2 bg-white">
             {weeklyNutritionStats.weekDays.map((day) => (
               <div
                 key={day.dateStr}
@@ -1215,7 +1203,7 @@ export const EvolutionScreen: React.FC = () => {
                             : day.calorieStatus === 'warning'
                             ? 'bg-amber-500 text-white'
                             : 'bg-rose-500 text-white'
-                          : 'bg-slate-200 text-slate-600'
+                          : 'bg-slate-900 text-white'
                       }`}
                     >
                       {day.shortLabel}
@@ -1300,234 +1288,239 @@ export const EvolutionScreen: React.FC = () => {
     )}
 
     {/* ========================================================= */}
-    {/* 3. PESAGEM SEMANAL & BOTÕES RÁPIDOS (+/- 0,5 KG) */}
+    {/* 3. PESAGEM SEMANAL & BOTÕES RÁPIDOS (+/- 0,5 KG)          */}
     {/* ========================================================= */}
-    <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs anim-card-3">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                <Scale className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Pesagem Semanal
-                </span>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-xl font-black text-slate-900">
-                    {weightStats ? `${weightStats.latest} kg` : '98.0 kg'}
-                  </h3>
-                  {weightStats && weightStats.delta !== 0 && (
-                    <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        weightStats.delta < 0
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-amber-50 text-amber-700'
-                      }`}
-                    >
-                      {weightStats.delta > 0 ? `+${weightStats.delta.toFixed(1)}` : weightStats.delta.toFixed(1)} kg
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+    <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-3">
+      <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Scale className="w-4 h-4 text-blue-400 shrink-0" />
+          <h3 className="text-sm font-black text-white truncate">
+            Pesagem Semanal
+          </h3>
+        </div>
 
-            <button
-              onClick={() => {
-                if (!showAddWeight && weightStats) {
-                  setNewWeight(weightStats.latest.toFixed(1));
-                }
-                setShowAddWeight(!showAddWeight);
-              }}
-              className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1 active:scale-95 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Pesar</span>
-            </button>
+        <button
+          onClick={() => {
+            if (!showAddWeight && weightStats) {
+              setNewWeight(weightStats.latest.toFixed(1));
+            }
+            setShowAddWeight(!showAddWeight);
+          }}
+          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black flex items-center gap-1 active:scale-95 transition-all shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Registrar Peso</span>
+        </button>
+      </div>
+
+      <div className="p-4 sm:p-5 bg-white">
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Peso Corporal Atual
+            </span>
+            <h4 className="text-xl font-black text-slate-900 tabular-nums">
+              {weightStats ? `${weightStats.latest} kg` : '98.0 kg'}
+            </h4>
           </div>
 
-          {/* Form com Stepper Rápido de +/- 0,5 kg */}
-          {showAddWeight && (
-            <form
-              onSubmit={handleAddWeightLog}
-              className="p-3.5 mb-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in"
+          {weightStats && weightStats.delta !== 0 && (
+            <span
+              className={`text-xs font-black px-2.5 py-1 rounded-xl ${
+                weightStats.delta < 0
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 mb-1 block">
-                    Peso Corporal (kg)
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        const cur =
-                          parseFloat(newWeight.replace(',', '.')) ||
-                          (weightStats?.latest ?? 97.5);
-                        setNewWeight(Math.max(30, cur - 0.5).toFixed(1));
-                      }}
-                      className="h-10 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs active:scale-95 shadow-2xs whitespace-nowrap"
-                    >
-                      -0,5 kg
-                    </button>
-
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="30"
-                      max="250"
-                      required
-                      value={newWeight}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => setNewWeight(e.target.value)}
-                      className="w-full h-10 text-center rounded-xl bg-white border border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        const cur =
-                          parseFloat(newWeight.replace(',', '.')) ||
-                          (weightStats?.latest ?? 97.5);
-                        setNewWeight((cur + 0.5).toFixed(1));
-                      }}
-                      className="h-10 px-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs active:scale-95 shadow-2xs whitespace-nowrap"
-                    >
-                      +0,5 kg
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 mb-1 block">
-                    Data da Pesagem
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={weightDate}
-                    onChange={(e) => setWeightDate(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  className="flex-1 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs active:scale-95 transition-all shadow-2xs"
-                >
-                  Salvar Pesagem
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddWeight(false)}
-                  className="px-3 h-9 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Minimalist SVG Weight Chart */}
-          {weightLogs && weightLogs.length > 1 ? (
-            <div className="mt-2 pt-2">
-              <svg viewBox="0 0 320 110" className="w-full h-24 overflow-visible">
-                {(() => {
-                  const values = weightLogs.map((l) => l.weightKg);
-                  const min = Math.min(...values) - 0.5;
-                  const max = Math.max(...values) + 0.5;
-                  const range = max - min || 1;
-
-                  const points = weightLogs.map((l, i) => {
-                    const x = (i / (weightLogs.length - 1)) * 300 + 10;
-                    const y = 100 - ((l.weightKg - min) / range) * 80;
-                    return { x, y, ...l };
-                  });
-
-                  const pathD = points
-                    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-                    .join(' ');
-
-                  return (
-                    <g>
-                      <line
-                        x1="10"
-                        y1="100"
-                        x2="310"
-                        y2="100"
-                        stroke="#e2e8f0"
-                        strokeDasharray="4 4"
-                      />
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke="#2563eb"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      {points.map((p, idx) => (
-                        <g key={idx}>
-                          <circle
-                            cx={p.x}
-                            cy={p.y}
-                            r="4.5"
-                            fill="#ffffff"
-                            stroke="#2563eb"
-                            strokeWidth="2.5"
-                          />
-                          <text
-                            x={p.x}
-                            y={p.y - 8}
-                            textAnchor="middle"
-                            fontSize="9"
-                            fontWeight="bold"
-                            fill="#0f172a"
-                          >
-                            {p.weightKg}k
-                          </text>
-                        </g>
-                      ))}
-                    </g>
-                  );
-                })()}
-              </svg>
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-semibold">
-                <span>{weightLogs[0].date}</span>
-                <span>{weightLogs[weightLogs.length - 1].date}</span>
-              </div>
-
-              {/* Past entries mini list */}
-              <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
-                {weightLogs.slice(-4).map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-100 text-[11px] font-bold text-slate-700"
-                  >
-                    <span>{entry.weightKg}kg</span>
-                    <span className="text-[10px] text-slate-400 font-normal">({entry.date.slice(5)})</span>
-                    {weightLogs.length > 1 && (
-                      <button
-                        onClick={() => handleDeleteWeight(entry.id)}
-                        className="text-slate-400 hover:text-red-500 ml-0.5 p-0.5"
-                        title="Excluir pesagem"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 text-center py-4">
-              Registre ao menos 2 pesagens semanais para gerar a curva de evolução.
-            </p>
+              {weightStats.delta > 0 ? `+${weightStats.delta.toFixed(1)}` : weightStats.delta.toFixed(1)} kg
+            </span>
           )}
         </div>
+
+        {/* Form com Stepper Rápido de +/- 0,5 kg */}
+        {showAddWeight && (
+          <form
+            onSubmit={handleAddWeightLog}
+            className="p-3.5 mb-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 mb-1 block">
+                  Peso Corporal (kg)
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      const cur =
+                        parseFloat(newWeight.replace(',', '.')) ||
+                        (weightStats?.latest ?? 97.5);
+                      setNewWeight(Math.max(30, cur - 0.5).toFixed(1));
+                    }}
+                    className="h-10 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs active:scale-95 shadow-2xs whitespace-nowrap"
+                  >
+                    -0,5 kg
+                  </button>
+
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="30"
+                    max="250"
+                    required
+                    value={newWeight}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    className="w-full h-10 text-center rounded-xl bg-white border border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      const cur =
+                        parseFloat(newWeight.replace(',', '.')) ||
+                        (weightStats?.latest ?? 97.5);
+                      setNewWeight((cur + 0.5).toFixed(1));
+                    }}
+                    className="h-10 px-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs active:scale-95 shadow-2xs whitespace-nowrap"
+                  >
+                    +0,5 kg
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 mb-1 block">
+                  Data da Pesagem
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={weightDate}
+                  onChange={(e) => setWeightDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="submit"
+                className="flex-1 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-95 transition-all shadow-2xs"
+              >
+                Salvar Pesagem
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddWeight(false)}
+                className="px-3 h-9 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Minimalist SVG Weight Chart */}
+        {weightLogs && weightLogs.length > 1 ? (
+          <div className="mt-2 pt-2">
+            <svg viewBox="0 0 320 110" className="w-full h-24 overflow-visible">
+              {(() => {
+                const values = weightLogs.map((l) => l.weightKg);
+                const min = Math.min(...values) - 0.5;
+                const max = Math.max(...values) + 0.5;
+                const range = max - min || 1;
+
+                const points = weightLogs.map((l, i) => {
+                  const x = (i / (weightLogs.length - 1)) * 300 + 10;
+                  const y = 100 - ((l.weightKg - min) / range) * 80;
+                  return { x, y, ...l };
+                });
+
+                const pathD = points
+                  .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+                  .join(' ');
+
+                return (
+                  <g>
+                    <line
+                      x1="10"
+                      y1="100"
+                      x2="310"
+                      y2="100"
+                      stroke="#e2e8f0"
+                      strokeDasharray="4 4"
+                    />
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {points.map((p, idx) => (
+                      <g key={idx}>
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r="4.5"
+                          fill="#ffffff"
+                          stroke="#2563eb"
+                          strokeWidth="2.5"
+                        />
+                        <text
+                          x={p.x}
+                          y={p.y - 8}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fontWeight="bold"
+                          fill="#0f172a"
+                        >
+                          {p.weightKg}k
+                        </text>
+                      </g>
+                    ))}
+                  </g>
+                );
+              })()}
+            </svg>
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-semibold">
+              <span>{weightLogs[0].date}</span>
+              <span>{weightLogs[weightLogs.length - 1].date}</span>
+            </div>
+
+            {/* Past entries mini list */}
+            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+              {weightLogs.slice(-4).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-100 text-[11px] font-bold text-slate-700"
+                >
+                  <span>{entry.weightKg}kg</span>
+                  <span className="text-[10px] text-slate-400 font-normal">({entry.date.slice(5)})</span>
+                  {weightLogs.length > 1 && (
+                    <button
+                      onClick={() => handleDeleteWeight(entry.id)}
+                      className="text-slate-400 hover:text-red-500 ml-0.5 p-0.5"
+                      title="Excluir pesagem"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 text-center py-4">
+            Registre ao menos 2 pesagens semanais para gerar a curva de evolução.
+          </p>
+        )}
+      </div>
+    </div>
       </div>
     </div>
   );

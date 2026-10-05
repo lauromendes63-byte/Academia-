@@ -1028,27 +1028,35 @@ export const NutritionScreen: React.FC = () => {
 
   return (
     <div className="pb-36 pt-1 max-w-lg mx-auto px-2.5 sm:px-4">
-      {/* HEADER MINIMALISTA DE ALTO CONTRASTE */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md py-2.5 mb-3 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 border-b border-slate-200/80">
-        <div className="flex items-center justify-between gap-2">
+      {/* HEADER DE ALTO CONTRASTE (SLATE-900 + BLUE-600) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1.5 pb-2.5 mb-2.5 -mx-2.5 px-2.5 sm:-mx-4 sm:px-4">
+        <div className="bg-slate-900 text-white rounded-3xl px-4 py-3 shadow-md border border-slate-800 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">
-              Nutrição
-            </h1>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/30 mb-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span className="text-[9px] font-black uppercase tracking-wider text-blue-200">
+                  Recomposição
+                </span>
+              </div>
+              <h1 className="text-base font-black text-white tracking-tight leading-tight">
+                Dieta & Macros
+              </h1>
+            </div>
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(todayStr)}
-                className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200 active:scale-95 whitespace-nowrap"
+                className="text-[10px] font-extrabold text-white bg-blue-600 px-2.5 py-1 rounded-xl active:scale-95 whitespace-nowrap shadow-2xs"
               >
-                Voltar p/ Hoje
+                Hoje
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1 bg-white px-1.5 py-1 rounded-xl border border-slate-200/90 shadow-2xs shrink-0">
+          <div className="flex items-center gap-1 bg-slate-950/60 px-1.5 py-1 rounded-2xl border border-white/10 shrink-0">
             <button
               onClick={() => handleShiftDate(-1)}
-              className="w-6 h-6 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-transform"
+              className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform"
               title="Dia anterior"
               aria-label="Dia anterior"
             >
@@ -1056,16 +1064,16 @@ export const NutritionScreen: React.FC = () => {
             </button>
             <div className="px-2 flex items-center gap-1.5 whitespace-nowrap">
               {isToday && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               )}
-              <span className="text-xs font-black text-slate-900 tracking-tight">
+              <span className="text-xs font-black text-white tracking-tight">
                 {isToday ? `Hoje, ${dayNumber} ${monthShort}` : `${dayNumber} ${monthShort}`}
               </span>
             </div>
             <button
               onClick={() => handleShiftDate(1)}
               disabled={isToday}
-              className="w-6 h-6 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-transform disabled:opacity-25"
+              className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-slate-200 active:scale-90 transition-transform disabled:opacity-25"
               title="Próximo dia"
               aria-label="Próximo dia"
             >
@@ -1077,220 +1085,256 @@ export const NutritionScreen: React.FC = () => {
 
       <div className="space-y-3">
         {/* ========================================================= */}
-        {/* 1. PAINEL DE METAS & MACROS DO DIA (MINIMALISTA) */}
+        {/* 1. PAINEL DE METAS & MACROS DO DIA (ALTO CONTRASTE)       */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/90 shadow-xs space-y-3.5 anim-card-1">
-          {/* TRACKER DE PROTEÍNA */}
-          <div>
-            <div className="flex items-baseline justify-between mb-1.5">
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
-                  Proteína
-                </span>
-                <span className="text-sm font-black text-blue-600">
-                  {dailyTotals.protein}g
-                  <span className="text-xs font-bold text-slate-400"> / {targetProtein}g</span>
-                </span>
-              </div>
-
-              <span
-                className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                  dailyTotals.protein >= targetProtein
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                }`}
-              >
-                {proteinProgress}%
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-1">
+          {/* Header Navy Slate-900 */}
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Resumo Diário
               </span>
+              <h3 className="text-sm font-black text-white truncate">
+                Metas & Macros
+              </h3>
             </div>
-
-            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ease-out rounded-full ${
-                  dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
-                }`}
-                style={{ width: `${proteinProgress}%` }}
-              />
-            </div>
+            <span
+              className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg whitespace-nowrap ${
+                remainingCalories >= 0
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-rose-500 text-white'
+              }`}
+            >
+              {remainingCalories >= 0
+                ? `Restam ${remainingCalories} kcal`
+                : `+${Math.abs(remainingCalories)} kcal`}
+            </span>
           </div>
 
-          {/* TRACKER DE CALORIAS */}
-          <div className="pt-3 border-t border-slate-100">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
-                  Calorias
-                </span>
-                <span className="text-sm font-black text-slate-900">
-                  {dailyTotals.calories.toLocaleString('pt-BR')}
-                  <span className="text-xs font-bold text-slate-400">
-                    {' '}
-                    / {targetCalories.toLocaleString('pt-BR')} kcal
+          <div className="p-4 space-y-3.5 bg-white">
+            {/* TRACKER DE PROTEÍNA */}
+            <div>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    Proteína
                   </span>
+                  <span className="text-sm font-black text-blue-600">
+                    {dailyTotals.protein}g
+                    <span className="text-xs font-bold text-slate-400"> / {targetProtein}g</span>
+                  </span>
+                </div>
+
+                <span
+                  className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                    dailyTotals.protein >= targetProtein
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 text-white'
+                  }`}
+                >
+                  {proteinProgress}%
                 </span>
               </div>
 
-              <span
-                className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                  remainingCalories >= 0
-                    ? 'bg-slate-100 text-slate-800 border border-slate-200/80'
-                    : 'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
-              >
-                {remainingCalories >= 0
-                  ? `Restam ${remainingCalories} kcal`
-                  : `+${Math.abs(remainingCalories)} kcal`}
+              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ease-out rounded-full ${
+                    dailyTotals.protein >= targetProtein ? 'bg-emerald-500' : 'bg-blue-600'
+                  }`}
+                  style={{ width: `${proteinProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* TRACKER DE CALORIAS */}
+            <div className="pt-3 border-t border-slate-100">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    Calorias
+                  </span>
+                  <span className="text-sm font-black text-slate-900">
+                    {dailyTotals.calories.toLocaleString('pt-BR')}
+                    <span className="text-xs font-bold text-slate-400">
+                      {' '}
+                      / {targetCalories.toLocaleString('pt-BR')} kcal
+                    </span>
+                  </span>
+                </div>
+
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 border border-slate-200/80 whitespace-nowrap">
+                  {calorieProgress}%
+                </span>
+              </div>
+
+              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ease-out rounded-full ${
+                    dailyTotals.calories <= targetCalories
+                      ? 'bg-blue-600'
+                      : dailyTotals.calories <= targetCalories + 300
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${calorieProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Breakdown de Macros Padronizado */}
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                  <span>Proteínas</span>
+                </div>
+                <div className="text-base font-black text-slate-900 mt-0.5">
+                  {dailyTotals.protein}g
+                </div>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>Carboidratos</span>
+                </div>
+                <div className="text-base font-black text-slate-900 mt-0.5">
+                  {dailyTotals.carbs}g
+                </div>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-full bg-slate-900 shrink-0" />
+                  <span>Gorduras</span>
+                </div>
+                <div className="text-base font-black text-slate-900 mt-0.5">
+                  {dailyTotals.fat}g
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* 2. PROTEÍNA RÁPIDA (WHEY + LEITE)                         */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-2">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Suplemento
               </span>
+              <h3 className="text-sm font-black text-white">
+                Proteína Rápida
+              </h3>
             </div>
-
-            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ease-out rounded-full ${
-                  dailyTotals.calories <= targetCalories
-                    ? 'bg-amber-500'
-                    : dailyTotals.calories <= targetCalories + 300
-                    ? 'bg-orange-500'
-                    : 'bg-rose-500'
-                }`}
-                style={{ width: `${calorieProgress}%` }}
-              />
-            </div>
+            {(wheyScoops > 0 || milkGlasses > 0) && (
+              <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-black tabular-nums">
+                +{wheyScoops * 20 + milkGlasses * 6}g Prot
+              </span>
+            )}
           </div>
 
-          {/* Breakdown de Macros Padronizado */}
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
-            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                <span>Proteínas</span>
+          <div className="p-3.5 sm:p-4 space-y-2.5 bg-white">
+            {/* WHEY PROTEIN */}
+            <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                    🥤
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 leading-snug">
+                      Whey Protein
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-medium leading-snug">
+                      Dose padrão (30g)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                  <button
+                    onClick={() => handleAdjustWheyScoops(-1)}
+                    disabled={wheyScoops <= 0}
+                    className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
+                    aria-label="Diminuir scoop"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-5 text-center font-black text-xs text-slate-900">
+                    {wheyScoops}
+                  </div>
+                  <button
+                    onClick={() => handleAdjustWheyScoops(1)}
+                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                    aria-label="Aumentar scoop"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="text-base font-black text-slate-900 mt-0.5">
-                {dailyTotals.protein}g
-              </div>
+              <MacroPills calories={95} protein={20} carbs={2} fat={1} />
             </div>
-            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                <span>Carboidratos</span>
+
+            {/* COPO DE LEITE */}
+            <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                    🥛
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 leading-snug">
+                      Copo de Leite (200ml)
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-medium leading-snug">
+                      Integral ou semidesnatado
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                  <button
+                    onClick={() => handleAdjustMilkGlasses(-1)}
+                    disabled={milkGlasses <= 0}
+                    className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
+                    aria-label="Diminuir copo de leite"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-5 text-center font-black text-xs text-slate-900">
+                    {milkGlasses}
+                  </div>
+                  <button
+                    onClick={() => handleAdjustMilkGlasses(1)}
+                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
+                    aria-label="Aumentar copo de leite"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="text-base font-black text-slate-900 mt-0.5">
-                {dailyTotals.carbs}g
-              </div>
-            </div>
-            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90">
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-slate-700 shrink-0" />
-                <span>Gorduras</span>
-              </div>
-              <div className="text-base font-black text-slate-900 mt-0.5">
-                {dailyTotals.fat}g
-              </div>
+              <MacroPills calories={110} protein={6} carbs={9} fat={5} />
             </div>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* 2. PROTEÍNA RÁPIDA (WHEY + LEITE) */}
+        {/* 3. REFEIÇÕES DO DIA (CAFÉ, ALMOÇO, LANCHE, JANTAR)        */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-2.5 anim-card-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-              Proteína Rápida
-            </h3>
-          </div>
-
-          {/* WHEY PROTEIN */}
-          <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
-            <div className="flex items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
-                  🥤
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-black text-slate-900 leading-snug">
-                    Whey Protein
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium leading-snug">
-                    Dose padrão (30g)
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                <button
-                  onClick={() => handleAdjustWheyScoops(-1)}
-                  disabled={wheyScoops <= 0}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
-                  aria-label="Diminuir scoop"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <div className="w-5 text-center font-black text-xs text-slate-900">
-                  {wheyScoops}
-                </div>
-                <button
-                  onClick={() => handleAdjustWheyScoops(1)}
-                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
-                  aria-label="Aumentar scoop"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-3">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Cardápio
+              </span>
+              <h3 className="text-sm font-black text-white">
+                Refeições do Dia
+              </h3>
             </div>
-            <MacroPills calories={95} protein={20} carbs={2} fat={1} />
           </div>
 
-          {/* COPO DE LEITE */}
-          <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/90">
-            <div className="flex items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
-                  🥛
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-black text-slate-900 leading-snug">
-                    Copo de Leite (200ml)
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium leading-snug">
-                    Integral ou semidesnatado
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                <button
-                  onClick={() => handleAdjustMilkGlasses(-1)}
-                  disabled={milkGlasses <= 0}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 font-bold"
-                  aria-label="Diminuir copo de leite"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <div className="w-5 text-center font-black text-xs text-slate-900">
-                  {milkGlasses}
-                </div>
-                <button
-                  onClick={() => handleAdjustMilkGlasses(1)}
-                  className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-90 transition-transform font-bold"
-                  aria-label="Aumentar copo de leite"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-            <MacroPills calories={110} protein={6} carbs={9} fat={5} />
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* 3. REFEIÇÕES DO DIA (CAFÉ, ALMOÇO, LANCHE, JANTAR) */}
-        {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-3.5 anim-card-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-              Refeições
-            </h3>
-          </div>
+          <div className="p-3.5 sm:p-4 space-y-3.5 bg-white">
 
           {/* 3.1 CAFÉ DA MANHÃ */}
           <CustomMealBuilder
@@ -2037,201 +2081,222 @@ export const NutritionScreen: React.FC = () => {
               </div>
             )}
           </div>
+          </div>
         </div>
 
         {/* ========================================================= */}
-        {/* 4. HIDRATAÇÃO (META 4.0L) */}
+        {/* 4. HIDRATAÇÃO (META 4.0L)                                 */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs anim-card-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-200/70 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
-                💧
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
-                  Hidratação
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <h3 className="text-base font-black text-slate-900 leading-none">
-                    {(currentData.waterMl / 1000).toFixed(2)}L
-                  </h3>
-                  <span className="text-xs font-bold text-slate-400">
-                    / {(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L
-                  </span>
-                </div>
-              </div>
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-4">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Água
+              </span>
+              <h3 className="text-sm font-black text-white">
+                Hidratação Diária
+              </h3>
             </div>
 
             <span
-              className={`text-xs font-black px-2.5 py-1 rounded-xl ${
+              className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg tabular-nums ${
                 waterProgress >= 100
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-cyan-50 text-cyan-800 border border-cyan-200/80'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-600 text-white'
               }`}
             >
               {waterProgress}%
             </span>
           </div>
 
-          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
-            <div
-              className={`h-full transition-all duration-300 ease-out rounded-full ${
-                waterProgress >= 100 ? 'bg-emerald-500' : 'bg-cyan-500'
-              }`}
-              style={{ width: `${Math.min(100, waterProgress)}%` }}
-            />
-          </div>
+          <div className="p-3.5 sm:p-4 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                  💧
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                    Volume Consumido
+                  </span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <h3 className="text-base font-black text-slate-900 leading-none tabular-nums">
+                      {(currentData.waterMl / 1000).toFixed(2)}L
+                    </h3>
+                    <span className="text-xs font-bold text-slate-400 tabular-nums">
+                      / {(targetWaterMl / 1000).toFixed(1).replace('.', ',')}L
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              onClick={() => handleAdjustWater(-250)}
-              disabled={currentData.waterMl <= 0}
-              className="py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-black active:scale-95 transition-all disabled:opacity-40 min-h-[40px] whitespace-nowrap"
-            >
-              -250 ml
-            </button>
-            <button
-              onClick={() => handleAdjustWater(250)}
-              className="py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap"
-            >
-              +250 ml
-            </button>
-            <button
-              onClick={() => handleAdjustWater(500)}
-              className="py-2 rounded-xl border border-blue-200 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap shadow-2xs"
-            >
-              +500 ml
-            </button>
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+              <div
+                className={`h-full transition-all duration-300 ease-out rounded-full ${
+                  waterProgress >= 100 ? 'bg-emerald-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${Math.min(100, waterProgress)}%` }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => handleAdjustWater(-250)}
+                disabled={currentData.waterMl <= 0}
+                className="py-2 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black active:scale-95 transition-all disabled:opacity-40 min-h-[40px] whitespace-nowrap"
+              >
+                -250 ml
+              </button>
+              <button
+                onClick={() => handleAdjustWater(250)}
+                className="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap shadow-2xs"
+              >
+                +250 ml
+              </button>
+              <button
+                onClick={() => handleAdjustWater(500)}
+                className="py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black active:scale-95 transition-all min-h-[40px] whitespace-nowrap shadow-2xs"
+              >
+                +500 ml
+              </button>
+            </div>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* 5. ESCAPES (5 NÍVEIS PADRONIZADOS) */}
+        {/* 5. ESCAPES (5 NÍVEIS PADRONIZADOS)                        */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-2.5 anim-card-5">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-              Escapes
-            </h3>
+        <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs anim-card-5">
+          <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Controle
+              </span>
+              <h3 className="text-sm font-black text-white">
+                Escapes
+              </h3>
+            </div>
             {escapeMacros.calories > 0 && (
-              <span className="text-[11px] font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200 whitespace-nowrap shrink-0">
+              <span className="text-[10px] font-black text-white bg-rose-500 px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0">
                 +{escapeMacros.calories} kcal
               </span>
             )}
           </div>
 
-          <div className="space-y-2">
-            {escapeItems.map((item) => {
-              const count = (currentData.escapes?.[item.key] as number) || 0;
-              return (
-                <div
-                  key={item.key}
-                  className={`p-3 rounded-2xl border transition-all ${
-                    count > 0
-                      ? 'bg-amber-50/40 border-amber-300 shadow-2xs'
-                      : 'bg-slate-50/80 border-slate-200/90'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
-                        {item.emoji}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-black text-slate-900 leading-snug">
-                          {item.title}
+          <div className="p-3.5 sm:p-4 space-y-2.5 bg-white">
+            <div className="space-y-2">
+              {escapeItems.map((item) => {
+                const count = (currentData.escapes?.[item.key] as number) || 0;
+                return (
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-2xl border transition-all ${
+                      count > 0
+                        ? 'bg-amber-50/40 border-amber-300 shadow-2xs'
+                        : 'bg-slate-50/80 border-slate-200/90'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                          {item.emoji}
                         </div>
-                        <p className="text-[11px] text-slate-500 font-medium leading-snug mt-0.5">
-                          {item.examples}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-black text-slate-900 leading-snug">
+                            {item.title}
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium leading-snug mt-0.5">
+                            {item.examples}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Stepper de Escape */}
+                      <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustEscape(item.key, -1)}
+                          disabled={count <= 0}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30 active:scale-90 transition-transform"
+                          aria-label={`Diminuir ${item.title}`}
+                        >
+                          -
+                        </button>
+                        <span className="w-5 text-center font-black text-xs text-slate-900">
+                          {count}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustEscape(item.key, 1, item.title)}
+                          className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-90 transition-transform"
+                          aria-label={`Adicionar ${item.title}`}
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
 
-                    {/* Stepper de Escape */}
-                    <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <MacroPills
+                      calories={item.kcal}
+                      protein={item.prot}
+                      carbs={item.carbs}
+                      fat={item.fat}
+                    />
+                  </div>
+                );
+              })}
+
+              {/* Caso exista besteiraCount legado salvo no dia, exibir para permitir ajuste */}
+              {(currentData.escapes?.besteiraCount || 0) > 0 && (
+                <div className="p-3 rounded-2xl border border-amber-300 bg-amber-50/40">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
+                        🍩
+                      </div>
+                      <div className="text-xs font-black text-slate-900">
+                        Escape Rápido (Atalho)
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
                       <button
-                        type="button"
-                        onClick={() => handleAdjustEscape(item.key, -1)}
-                        disabled={count <= 0}
-                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs disabled:opacity-30 active:scale-90 transition-transform"
-                        aria-label={`Diminuir ${item.title}`}
+                        onClick={() => handleAdjustEscape('besteiraCount', -1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
                       >
                         -
                       </button>
-                      <span className="w-5 text-center font-black text-xs text-slate-900">
-                        {count}
+                      <span className="w-5 text-center font-black text-xs">
+                        {currentData.escapes.besteiraCount}
                       </span>
                       <button
-                        type="button"
-                        onClick={() => handleAdjustEscape(item.key, 1, item.title)}
-                        className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs active:scale-90 transition-transform"
-                        aria-label={`Adicionar ${item.title}`}
+                        onClick={() => handleAdjustEscape('besteiraCount', 1)}
+                        className="w-7 h-7 rounded-lg bg-slate-900 text-white font-bold text-xs"
                       >
                         +
                       </button>
                     </div>
                   </div>
-
-                  <MacroPills
-                    calories={item.kcal}
-                    protein={item.prot}
-                    carbs={item.carbs}
-                    fat={item.fat}
-                  />
+                  <MacroPills calories={600} protein={6} carbs={65} fat={30} />
                 </div>
-              );
-            })}
+              )}
+            </div>
 
-            {/* Caso exista besteiraCount legado salvo no dia, exibir para permitir ajuste */}
-            {(currentData.escapes?.besteiraCount || 0) > 0 && (
-              <div className="p-3 rounded-2xl border border-amber-300 bg-amber-50/40">
-                <div className="flex items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center text-lg leading-none shrink-0 shadow-2xs">
-                      🍩
-                    </div>
-                    <div className="text-xs font-black text-slate-900">
-                      Escape Rápido (Atalho)
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
-                    <button
-                      onClick={() => handleAdjustEscape('besteiraCount', -1)}
-                      className="w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-bold text-xs"
-                    >
-                      -
-                    </button>
-                    <span className="w-5 text-center font-black text-xs">
-                      {currentData.escapes.besteiraCount}
-                    </span>
-                    <button
-                      onClick={() => handleAdjustEscape('besteiraCount', 1)}
-                      className="w-7 h-7 rounded-lg bg-slate-900 text-white font-bold text-xs"
-                    >
-                      +
-                    </button>
-                  </div>
+            {escapeToast && (
+              <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-center justify-between gap-2 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="text-[11px] font-bold">{escapeToast}</span>
                 </div>
-                <MacroPills calories={600} protein={6} carbs={65} fat={30} />
+                <button
+                  onClick={() => setEscapeToast(null)}
+                  className="text-slate-400 hover:text-slate-700 font-bold text-xs"
+                >
+                  ✕
+                </button>
               </div>
             )}
           </div>
-
-          {escapeToast && (
-            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-center justify-between gap-2 animate-in fade-in duration-150">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                <span className="text-[11px] font-bold">{escapeToast}</span>
-              </div>
-              <button
-                onClick={() => setEscapeToast(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
