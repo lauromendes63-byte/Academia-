@@ -4,6 +4,7 @@
  */
 
 let audioCtx: AudioContext | null = null;
+let audioWarmedUp = false;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -15,9 +16,20 @@ function getAudioContext(): AudioContext | null {
     }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => {});
   }
   return audioCtx;
+}
+
+if (typeof window !== 'undefined' && !audioWarmedUp) {
+  audioWarmedUp = true;
+  window.addEventListener(
+    'pointerdown',
+    () => {
+      getAudioContext();
+    },
+    { once: true, passive: true }
+  );
 }
 
 /**
@@ -91,19 +103,19 @@ export function playSetCompleteSound(): void {
 }
 
 /**
- * Triggers phone vibration with subtle tactile feedback
+ * Triggers phone vibration calibrated for linear haptic motors (e.g., Galaxy A54)
  */
 export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'alert' = 'light'): void {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     try {
       if (type === 'light') {
-        navigator.vibrate(25);
+        navigator.vibrate(10);
       } else if (type === 'medium') {
-        navigator.vibrate(50);
+        navigator.vibrate(22);
       } else if (type === 'success') {
-        navigator.vibrate([40, 60, 80]);
+        navigator.vibrate([18, 40, 35]);
       } else if (type === 'alert') {
-        navigator.vibrate([100, 80, 150]);
+        navigator.vibrate([60, 50, 90]);
       }
     } catch (e) {
       // Haptics may be disabled in user settings

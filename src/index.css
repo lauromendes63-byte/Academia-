@@ -26,6 +26,14 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  button,
+  [role="button"],
+  input,
+  select,
+  label {
+    touch-action: manipulation;
+  }
 }
 
 /* Custom scrollbars hidden or subtle for app feel */
@@ -124,13 +132,17 @@ input[type="number"] {
 }
 
 .animate-slide-forward {
-  animation: slideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  animation: slideFromRight 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-slide-backward {
-  animation: slideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  animation: slideFromLeft 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Prevent double-animation when Native View Transitions are running */
+html:active-view-transition .animate-slide-forward,
+html:active-view-transition .animate-slide-backward {
+  animation: none !important;
 }
 
 /* Staggered card reveals for tabs (delicate 60/120fps feel) */
@@ -152,8 +164,13 @@ input[type="number"] {
 
 /* Native View Transitions (Baseline CSS specification) */
 ::view-transition-group(root) {
-  animation-duration: 0.22s;
+  animation-duration: 0.2s;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Keep Bottom Navigation Bar stationary during tab View Transitions */
+::view-transition-group(bottom-nav) {
+  animation: none;
 }
 
 html:active-view-transition-type(forward)::view-transition-old(root) {
@@ -171,17 +188,17 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 }
 
 @keyframes slide-to-left {
-  to { transform: translateX(-15%); opacity: 0; }
+  to { transform: translateX(-12%); opacity: 0; }
 }
 @keyframes slide-from-right {
-  from { transform: translateX(15%); opacity: 0; }
+  from { transform: translateX(12%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 @keyframes slide-to-right {
-  to { transform: translateX(15%); opacity: 0; }
+  to { transform: translateX(12%); opacity: 0; }
 }
 @keyframes slide-from-left {
-  from { transform: translateX(-15%); opacity: 0; }
+  from { transform: translateX(-12%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 

@@ -29,137 +29,178 @@ export class AcademiaDatabase extends Dexie {
 
 export const db = new AcademiaDatabase();
 
+const MIGRATION_FLAG_KEY = 'academia_db_migrated_v214';
+
 /**
- * Initializes database with default routines and user profile if not present
+ * Initializes database with default routines and user profile if not present.
+ * Uses Promise.all to eliminate sequential IndexedDB waterfalls on startup.
  */
 export async function initializeDatabase(): Promise<void> {
-  const profileCount = await db.userProfile.count();
-  if (profileCount === 0) {
-    await db.userProfile.put(DEFAULT_USER_PROFILE);
-  } else {
-    const existing = await db.userProfile.get('main_user');
-    if (existing && (!existing.targetCaloriesKcal || !existing.calorieMode)) {
-      await db.userProfile.update('main_user', {
-        targetCaloriesKcal: existing.targetCaloriesKcal || 2200,
-        calorieMode: existing.calorieMode || 'recomposicao'
-      });
-    }
+  const [existingProfile, routinesCount, weightCount, workoutCount] =
+    await Promise.all([
+      db.userProfile.get('main_user'),
+      db.routines.count(),
+      db.weightLogs.count(),
+      db.workoutSessions.count()
+    ]);
+
+  const initTasks: Promise<unknown>[] = [];
+
+  if (!existingProfile) {
+    initTasks.push(db.userProfile.put(DEFAULT_USER_PROFILE));
+  } else if (!existingProfile.targetCaloriesKcal || !existingProfile.calorieMode) {
+    initTasks.push(
+      db.userProfile.update('main_user', {
+        targetCaloriesKcal: existingProfile.targetCaloriesKcal || 2200,
+        calorieMode: existingProfile.calorieMode || 'recomposicao'
+      })
+    );
   }
 
-  const routinesCount = await db.routines.count();
   if (routinesCount === 0) {
-    await db.routines.bulkPut(DEFAULT_ROUTINES);
+    initTasks.push(db.routines.bulkPut(DEFAULT_ROUTINES));
+    try {
+      localStorage.setItem(MIGRATION_FLAG_KEY, '1');
+    } catch {
+      // ignore storage errors
+    }
   } else {
-    // Migration: ensure Treino A has Rosca Bayesiana na Polia
-    const routineA = await db.routines.get('A');
-    if (routineA) {
-      const needsUpdate = routineA.exercises.some(
-        (e) => e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia'
-      );
-      if (needsUpdate) {
-        routineA.exercises = routineA.exercises.map((e) => {
-          if (e.id === 'pull_4') {
-            return {
-              id: 'pull_4',
-              name: 'Rosca Bayesiana na Polia',
-              muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
-              gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
-              defaultSets: 3,
-              targetReps: '12-15',
-              restSeconds: 60,
-              defaultWeightKg: 15,
-              substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
-            };
-          }
-          return e;
-        });
-        await db.routines.put(routineA);
-      }
+    let alreadyMigrated = false;
+    try {
+      alreadyMigrated = localStorage.getItem(MIGRATION_FLAG_KEY) === '1';
+    } catch {
+      alreadyMigrated = false;
     }
 
-    // Also migrate any past session logs if they had "Rosca Baiana na Polia"
-    const allSessions = await db.workoutSessions.toArray();
-    for (const s of allSessions) {
-      let modified = false;
-      const updatedExercises = s.exercises?.map((ex) => {
-        if (
-          ex.exerciseId === 'pull_4' &&
-          (ex.exerciseName.includes('Baiana') || ex.activeExerciseName.includes('Baiana'))
-        ) {
-          modified = true;
-          return {
-            ...ex,
-            exerciseName: 'Rosca Bayesiana na Polia',
-            activeExerciseName: 'Rosca Bayesiana na Polia'
-          };
-        }
-        return ex;
-      });
-      if (modified && s.id) {
-        await db.workoutSessions.update(s.id, { exercises: updatedExercises });
-      }
+    if (!alreadyMigrated) {
+      initTasks.push(
+        (async () => {
+          const routineA = await db.routines.get('A');
+          if (routineA) {
+            const needsUpdate = routineA.exercises.some(
+              (e) => e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia'
+            );
+            if (needsUpdate) {
+              routineA.exercises = routineA.exercises.map((e) => {
+                if (e.id === 'pull_4') {
+                  return {
+                    id: 'pull_4',
+                    name: 'Rosca Bayesiana na Polia',
+                    muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
+                    gripOrForm:
+                      'Polia Baixa, pegada supinada, cotovelos levemente à frente',
+                    defaultSets: 3,
+                    targetReps: '12-15',
+                    restSeconds: 60,
+                    defaultWeightKg: 15,
+                    substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
+                  };
+                }
+                return e;
+              });
+              await db.routines.put(routineA);
+            }
+          }
+
+          const allSessions = await db.workoutSessions.toArray();
+          for (const s of allSessions) {
+            let modified = false;
+            const updatedExercises = s.exercises?.map((ex) => {
+              if (
+                ex.exerciseId === 'pull_4' &&
+                (ex.exerciseName.includes('Baiana') ||
+                  ex.activeExerciseName.includes('Baiana'))
+              ) {
+                modified = true;
+                return {
+                  ...ex,
+                  exerciseName: 'Rosca Bayesiana na Polia',
+                  activeExerciseName: 'Rosca Bayesiana na Polia'
+                };
+              }
+              return ex;
+            });
+            if (modified && s.id) {
+              await db.workoutSessions.update(s.id, {
+                exercises: updatedExercises
+              });
+            }
+          }
+
+          try {
+            localStorage.setItem(MIGRATION_FLAG_KEY, '1');
+          } catch {
+            // ignore storage errors
+          }
+        })()
+      );
     }
   }
 
-  const weightCount = await db.weightLogs.count();
   if (weightCount === 0) {
     const today = new Date().toISOString().split('T')[0];
-    await db.weightLogs.add({
-      date: today,
-      weightKg: 98,
-      notes: 'Peso inicial para recomposição corporal'
-    });
+    initTasks.push(
+      db.weightLogs.add({
+        date: today,
+        weightKg: 98,
+        notes: 'Peso inicial para recomposição corporal'
+      })
+    );
   }
 
-  // Pre-seed a friendly initial workout history so "Último: XX kg x YY reps" has realistic values
-  const workoutCount = await db.workoutSessions.count();
   if (workoutCount === 0) {
     const sampleDate = '2026-09-18';
-    await db.workoutSessions.add({
-      routineId: 'A',
-      date: sampleDate,
-      startTime: Date.now() - 6 * 86400000,
-      endTime: Date.now() - 6 * 86400000 + 3600000,
-      completed: true,
-      exercises: [
-        {
-          exerciseId: 'pull_1',
-          exerciseName: 'Barra Fixa no Graviton',
-          activeExerciseName: 'Barra Fixa no Graviton',
-          isSubstituted: false,
-          abortedForFatigue: false,
-          sets: [
-            { setNumber: 1, weightKg: 40, reps: 8, completed: true },
-            { setNumber: 2, weightKg: 40, reps: 8, completed: true },
-            { setNumber: 3, weightKg: 40, reps: 7, completed: true }
-          ]
-        },
-        {
-          exerciseId: 'pull_2',
-          exerciseName: 'Remada Baixa na Polia',
-          activeExerciseName: 'Remada Baixa na Polia',
-          isSubstituted: false,
-          abortedForFatigue: false,
-          sets: [
-            { setNumber: 1, weightKg: 50, reps: 10, completed: true },
-            { setNumber: 2, weightKg: 50, reps: 9, completed: true },
-            { setNumber: 3, weightKg: 50, reps: 8, completed: true }
-          ]
-        },
-        {
-          exerciseId: 'pull_4',
-          exerciseName: 'Rosca Bayesiana na Polia',
-          activeExerciseName: 'Rosca Bayesiana na Polia',
-          isSubstituted: false,
-          abortedForFatigue: false,
-          sets: [
-            { setNumber: 1, weightKg: 15, reps: 12, completed: true },
-            { setNumber: 2, weightKg: 15, reps: 12, completed: true },
-            { setNumber: 3, weightKg: 15, reps: 12, completed: true }
-          ]
-        }
-      ]
-    });
+    initTasks.push(
+      db.workoutSessions.add({
+        routineId: 'A',
+        date: sampleDate,
+        startTime: Date.now() - 6 * 86400000,
+        endTime: Date.now() - 6 * 86400000 + 3600000,
+        completed: true,
+        exercises: [
+          {
+            exerciseId: 'pull_1',
+            exerciseName: 'Barra Fixa no Graviton',
+            activeExerciseName: 'Barra Fixa no Graviton',
+            isSubstituted: false,
+            abortedForFatigue: false,
+            sets: [
+              { setNumber: 1, weightKg: 40, reps: 8, completed: true },
+              { setNumber: 2, weightKg: 40, reps: 8, completed: true },
+              { setNumber: 3, weightKg: 40, reps: 7, completed: true }
+            ]
+          },
+          {
+            exerciseId: 'pull_2',
+            exerciseName: 'Remada Baixa na Polia',
+            activeExerciseName: 'Remada Baixa na Polia',
+            isSubstituted: false,
+            abortedForFatigue: false,
+            sets: [
+              { setNumber: 1, weightKg: 50, reps: 10, completed: true },
+              { setNumber: 2, weightKg: 50, reps: 9, completed: true },
+              { setNumber: 3, weightKg: 50, reps: 8, completed: true }
+            ]
+          },
+          {
+            exerciseId: 'pull_4',
+            exerciseName: 'Rosca Bayesiana na Polia',
+            activeExerciseName: 'Rosca Bayesiana na Polia',
+            isSubstituted: false,
+            abortedForFatigue: false,
+            sets: [
+              { setNumber: 1, weightKg: 15, reps: 12, completed: true },
+              { setNumber: 2, weightKg: 15, reps: 12, completed: true },
+              { setNumber: 3, weightKg: 15, reps: 12, completed: true }
+            ]
+          }
+        ]
+      })
+    );
+  }
+
+  if (initTasks.length > 0) {
+    await Promise.all(initTasks);
   }
 }
 
@@ -176,25 +217,22 @@ export async function getLastExercisePerformance(
   exerciseId: string,
   exerciseName: string
 ): Promise<{ weightKg: number; reps: number; date: string; bestWeightKg?: number } | null> {
-  const allSessions = await db.workoutSessions.toArray();
-  const sessions = allSessions
-    .filter((s) => s.completed)
-    .sort((a, b) => {
-      if (b.date !== a.date) return b.date.localeCompare(a.date);
-      return (b.id || 0) - (a.id || 0);
-    });
-
+  const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
+  const targetNameLower = exerciseName.toLowerCase();
   const isAssisted = isGravitonExercise(exerciseName);
+
   let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
   let bestWeightKg: number | undefined = undefined;
 
-  for (const session of sessions) {
+  for (const session of orderedSessions) {
+    if (!session.completed) continue;
+
     const exLog = session.exercises?.find(
       (e) =>
         e.exerciseId === exerciseId ||
-        e.exerciseName.toLowerCase() === exerciseName.toLowerCase() ||
+        e.exerciseName.toLowerCase() === targetNameLower ||
         (e.activeExerciseName &&
-          e.activeExerciseName.toLowerCase() === exerciseName.toLowerCase())
+          e.activeExerciseName.toLowerCase() === targetNameLower)
     );
 
     if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
@@ -243,13 +281,8 @@ export async function getRoutineLastPerformances(
 ): Promise<
   Record<string, { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null>
 > {
-  const allSessions = await db.workoutSessions.toArray();
-  const sessions = allSessions
-    .filter((s) => s.completed)
-    .sort((a, b) => {
-      if (b.date !== a.date) return b.date.localeCompare(a.date);
-      return (b.id || 0) - (a.id || 0);
-    });
+  const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
+  const sessions = orderedSessions.filter((s) => s.completed);
 
   const perfMap: Record<
     string,
@@ -258,6 +291,7 @@ export async function getRoutineLastPerformances(
 
   for (const ex of exercises) {
     perfMap[ex.id] = null;
+    const targetNameLower = ex.name.toLowerCase();
     const isAssisted = isGravitonExercise(ex.name, ex.isAssisted);
     let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
     let bestWeightKg: number | undefined = undefined;
@@ -266,9 +300,9 @@ export async function getRoutineLastPerformances(
       const exLog = session.exercises?.find(
         (e) =>
           e.exerciseId === ex.id ||
-          e.exerciseName.toLowerCase() === ex.name.toLowerCase() ||
+          e.exerciseName.toLowerCase() === targetNameLower ||
           (e.activeExerciseName &&
-            e.activeExerciseName.toLowerCase() === ex.name.toLowerCase())
+            e.activeExerciseName.toLowerCase() === targetNameLower)
       );
 
       if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {

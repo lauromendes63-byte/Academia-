@@ -32,7 +32,7 @@ interface ExerciseCardProps {
   onUpdateLog: (updatedLog: ExerciseLog) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({
+export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   exercise,
   log,
   lastPerformance,
@@ -143,12 +143,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   return (
     <>
       <div
-        className={`relative bg-white rounded-2xl p-4 border transition-all duration-200 shadow-2xs ${
+        className={`relative bg-white rounded-2xl p-4 border transition-[border-color,background-color,opacity] duration-150 ease-out shadow-2xs ${
           isAborted
             ? 'border-red-200 bg-red-50/20 opacity-80'
             : allSetsDone
             ? 'border-emerald-300/90 bg-emerald-50/10 ring-1 ring-emerald-400/20'
-            : 'border-slate-200/80 hover:border-slate-300'
+            : 'border-slate-200/80'
         }`}
       >
         {/* TOP ROW: Muscle, Target Reps and Action Buttons */}
@@ -181,7 +181,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   triggerHaptic('light');
                   setIsExecModalOpen(true);
                 }}
-                className="text-base font-black text-slate-900 tracking-tight leading-snug truncate cursor-pointer hover:text-blue-600 transition-colors"
+                className="text-base font-black text-slate-900 tracking-tight leading-snug truncate cursor-pointer active:text-blue-600 transition-colors"
                 title="Toque para ver animação de execução"
               >
                 {displayName}
@@ -201,7 +201,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 triggerHaptic('light');
                 setIsExecModalOpen(true);
               }}
-              className="h-8 px-2 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 flex items-center gap-1 active:scale-95 transition-all shadow-2xs"
+              className="h-8 px-2 rounded-xl border border-blue-200 bg-blue-50/80 text-blue-700 flex items-center gap-1 active:scale-[0.96] transition-transform duration-120 ease-out shadow-2xs"
               title="Ver animação e execução"
               aria-label="Como executar"
             >
@@ -210,8 +210,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             </button>
 
             <button
-              onClick={() => setIsSubModalOpen(true)}
-              className="w-8 h-8 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center active:scale-95 transition-all shadow-2xs"
+              onClick={() => {
+                triggerHaptic('light');
+                setIsSubModalOpen(true);
+              }}
+              className="w-8 h-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center active:scale-[0.95] transition-transform duration-120 ease-out shadow-2xs"
               title="Substituir exercício"
               aria-label="Substituir exercício"
             >
@@ -220,10 +223,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
             <button
               onClick={handleToggleFatigue}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs active:scale-95 transition-all shadow-2xs ${
+              className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs active:scale-[0.95] transition-[transform,background-color] duration-120 ease-out shadow-2xs ${
                 isAborted
                   ? 'bg-red-500 text-white shadow-xs ring-2 ring-red-400'
-                  : 'border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-600'
+                  : 'border border-red-200 bg-red-50/80 text-red-600'
               }`}
               title="Pular por Fadiga"
               aria-label="Pular por Fadiga"
@@ -242,7 +245,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             </div>
             <button
               onClick={handleToggleFatigue}
-              className="text-[10px] underline font-bold hover:text-red-950 shrink-0"
+              className="text-[10px] underline font-bold shrink-0"
             >
               Reativar
             </button>
@@ -282,7 +285,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             <button
               onClick={() => handleAdjustWeight(-5)}
               disabled={isAborted || currentWeight <= 0}
-              className="h-8 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
               title="Diminuir 5kg"
               aria-label="-5kg"
             >
@@ -311,7 +314,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             <button
               onClick={() => handleAdjustWeight(5)}
               disabled={isAborted}
-              className="h-8 px-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+              className="h-8 px-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-bold text-[11px] flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
               title="Aumentar 5kg"
               aria-label="+5kg"
             >
@@ -330,12 +333,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 key={set.setNumber}
                 onClick={() => handleToggleSet(idx)}
                 disabled={isAborted}
-                className={`h-11 rounded-xl flex flex-col items-center justify-center transition-all duration-150 font-semibold active:scale-[0.96] border ${
+                className={`h-11 rounded-xl flex flex-col items-center justify-center transition-[transform,background-color,border-color,color] duration-120 ease-out font-semibold active:scale-[0.96] border ${
                   isAborted
                     ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                     : isDone
                     ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
-                    : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100'
+                    : 'bg-slate-50 border-slate-200/80 text-slate-700'
                 }`}
                 aria-label={`Série ${set.setNumber}`}
               >
@@ -361,26 +364,30 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </div>
       </div>
 
-      {/* Modal de Guia de Execução & Animação */}
-      <ExerciseExecutionModal
-        isOpen={isExecModalOpen}
-        onClose={() => setIsExecModalOpen(false)}
-        exerciseId={exercise.id}
-        exerciseName={displayName}
-        muscleGroup={exercise.muscleGroup}
-        gripOrForm={exercise.gripOrForm}
-      />
+      {/* Modal de Guia de Execução & Animação (montado sob demanda) */}
+      {isExecModalOpen && (
+        <ExerciseExecutionModal
+          isOpen={isExecModalOpen}
+          onClose={() => setIsExecModalOpen(false)}
+          exerciseId={exercise.id}
+          exerciseName={displayName}
+          muscleGroup={exercise.muscleGroup}
+          gripOrForm={exercise.gripOrForm}
+        />
+      )}
 
-      {/* Modal de Substituição Rápida */}
-      <SubstituteModal
-        isOpen={isSubModalOpen}
-        onClose={() => setIsSubModalOpen(false)}
-        originalExerciseName={exercise.name}
-        currentActiveName={log.activeExerciseName}
-        substitutes={exercise.substitutes}
-        onSelectSubstitute={handleSelectSubstitute}
-      />
+      {/* Modal de Substituição Rápida (montado sob demanda) */}
+      {isSubModalOpen && (
+        <SubstituteModal
+          isOpen={isSubModalOpen}
+          onClose={() => setIsSubModalOpen(false)}
+          originalExerciseName={exercise.name}
+          currentActiveName={log.activeExerciseName}
+          substitutes={exercise.substitutes}
+          onSelectSubstitute={handleSelectSubstitute}
+        />
+      )}
     </>
   );
-};
+});
 

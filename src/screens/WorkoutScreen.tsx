@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type {
   RoutineId,
   RoutineDefinition,
@@ -106,24 +106,44 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     };
   }, [selectedRoutineId]);
 
-  // Update an exercise log & immediately persist load
+  // Debounce timers per exercise so rapid +5/-5 taps update UI in 0ms without triggering useLiveQuery cascades
+  const weightPersistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    const timers = weightPersistTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
+  // Update an exercise log in 0ms & persist load with a 350ms debounce
   const handleUpdateLog = useCallback(
-    async (updated: ExerciseLog) => {
+    (updated: ExerciseLog) => {
       setExerciseLogs((prev) =>
         prev.map((item) => (item.exerciseId === updated.exerciseId ? updated : item))
       );
 
-      // Instantly persist the updated weight into db.routines so it is permanently remembered
+      // Persist the updated weight into db.routines after rapid taps settle (350ms)
       if (updated.sets && updated.sets[0] && updated.sets[0].weightKg > 0) {
         const newWeight = updated.sets[0].weightKg;
-        const routine = await db.routines.get(selectedRoutineId);
-        if (routine) {
-          const exIdx = routine.exercises.findIndex((e) => e.id === updated.exerciseId);
-          if (exIdx !== -1 && routine.exercises[exIdx].defaultWeightKg !== newWeight) {
-            routine.exercises[exIdx].defaultWeightKg = newWeight;
-            await db.routines.put(routine);
-          }
+        const exId = updated.exerciseId;
+        const routineId = selectedRoutineId;
+
+        if (weightPersistTimersRef.current[exId]) {
+          clearTimeout(weightPersistTimersRef.current[exId]);
         }
+
+        weightPersistTimersRef.current[exId] = setTimeout(async () => {
+          delete weightPersistTimersRef.current[exId];
+          const routine = await db.routines.get(routineId);
+          if (routine) {
+            const exIdx = routine.exercises.findIndex((e) => e.id === exId);
+            if (exIdx !== -1 && routine.exercises[exIdx].defaultWeightKg !== newWeight) {
+              routine.exercises[exIdx].defaultWeightKg = newWeight;
+              await db.routines.put(routine);
+            }
+          }
+        }, 350);
       }
     },
     [selectedRoutineId]

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../db/db';
-import type { RoutineId, RoutineDefinition, NutritionLog } from '../types';
+import type { RoutineId, RoutineDefinition, NutritionLog, WorkoutSession } from '../types';
 import {
   calculatePlateMacros,
   calculateSubwayMacros,
@@ -11,7 +11,7 @@ import {
   calculateEscapesMacros,
   getResolvedBreakfastConfig,
   getResolvedSnackConfig
-} from './NutritionScreen';
+} from '../utils/nutritionMath';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
 import {
@@ -133,26 +133,32 @@ export function computeNutritionLogTotals(log: NutritionLog) {
   };
 }
 
+const EMPTY_WORKOUT_SESSIONS: WorkoutSession[] = [];
+const EMPTY_NUTRITION_LOGS: NutritionLog[] = [];
+
 export const EvolutionScreen: React.FC = () => {
   const weightLogs = useLiveQuery(() => db.weightLogs.orderBy('date').toArray());
 
-  // Query all completed sessions reliably
-  const workoutSessions = useLiveQuery(async () => {
-    const list = await db.workoutSessions.toArray();
-    return list
-      .filter((s) => s.completed)
-      .sort((a, b) => {
-        if (b.date !== a.date) return b.date.localeCompare(a.date);
-        return (b.id || 0) - (a.id || 0);
-      });
-  }) || [];
+  // Query all completed sessions via indexed date order
+  const workoutSessions = useLiveQuery(
+    async () => {
+      const list = await db.workoutSessions.orderBy('date').reverse().toArray();
+      return list.filter((s) => s.completed);
+    },
+    [],
+    EMPTY_WORKOUT_SESSIONS
+  );
 
   const routines = useLiveQuery(() => db.routines.toArray());
 
   // Sub-aba de visualização: 'treinos' | 'nutricao'
   const [evolutionTab, setEvolutionTab] = useState<'treinos' | 'nutricao'>('treinos');
 
-  const nutritionLogs = useLiveQuery(() => db.nutritionLogs.toArray()) || [];
+  const nutritionLogs = useLiveQuery(
+    () => db.nutritionLogs.toArray(),
+    [],
+    EMPTY_NUTRITION_LOGS
+  );
   const profile = useLiveQuery(() => db.userProfile.get('main_user'));
 
   // Selected routine tab for routine-level overload analysis (A, B, C, D)

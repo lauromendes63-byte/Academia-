@@ -26,6 +26,12 @@ export const AppContent: React.FC = () => {
   });
 
   const [navDirection, setNavDirection] = useState<'forward' | 'backward'>('forward');
+  const [visitedTabs, setVisitedTabs] = useState<Record<TabType, boolean>>(() => ({
+    treino: true,
+    nutricao: activeTab === 'nutricao',
+    evolucao: activeTab === 'evolucao',
+    ajustes: activeTab === 'ajustes'
+  }));
   const [quickNotification, setQuickNotification] = useState<string | null>(null);
   const [isDbReady, setIsDbReady] = useState(false);
 
@@ -108,14 +114,26 @@ export const AppContent: React.FC = () => {
     executeQuickAction();
   }, [isDbReady]);
 
-  // Smooth Tab Switcher (Uses Native View Transitions if supported, or CSS slide)
+  // Smooth Tab Switcher (Uses Native View Transitions + Keep-Alive tabs for 0ms lag)
   const handleTabChange = (newTab: TabType) => {
     if (newTab === activeTab) return;
-    checkForUpdate(false);
+
+    // Defer update check outside the 120fps animation frame
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => checkForUpdate(false), { timeout: 1500 });
+    } else {
+      setTimeout(() => checkForUpdate(false), 400);
+    }
+
     const oldIdx = TAB_ORDER.indexOf(activeTab);
     const newIdx = TAB_ORDER.indexOf(newTab);
     const direction = newIdx >= oldIdx ? 'forward' : 'backward';
     setNavDirection(direction);
+
+    const commitTabSwitch = () => {
+      setVisitedTabs((prev) => (prev[newTab] ? prev : { ...prev, [newTab]: true }));
+      setActiveTab(newTab);
+    };
 
     if (
       typeof document !== 'undefined' &&
@@ -125,17 +143,19 @@ export const AppContent: React.FC = () => {
       try {
         (document as any).startViewTransition({
           update: () => {
-            setActiveTab(newTab);
+            commitTabSwitch();
           },
           types: [direction]
         });
         return;
       } catch {
-        // Fallback to state update
+        // Fallback to React transition
       }
     }
 
-    setActiveTab(newTab);
+    React.startTransition(() => {
+      commitTabSwitch();
+    });
   };
 
   if (!isDbReady) {
@@ -150,6 +170,9 @@ export const AppContent: React.FC = () => {
       </div>
     );
   }
+
+  const slideAnimClass =
+    navDirection === 'forward' ? 'animate-slide-forward' : 'animate-slide-backward';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100">
@@ -199,7 +222,7 @@ export const AppContent: React.FC = () => {
             <button
               type="button"
               onClick={dismissBanner}
-              className="w-7 h-7 rounded-xl text-blue-200 hover:text-white hover:bg-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-all"
+              className="w-7 h-7 rounded-xl text-blue-200 hover:text-white hover:bg-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-[transform,color,background-color]"
               aria-label="Adiar atualização"
               title="Agora não"
             >
@@ -234,21 +257,43 @@ export const AppContent: React.FC = () => {
         </aside>
       )}
 
-      {/* Active Screen View with smooth GPU-accelerated transition */}
+      {/* Active Screen View with Keep-Alive + GPU-accelerated transition */}
       <main className="flex-1 w-full max-w-lg mx-auto">
-        <div
-          key={activeTab}
-          className={navDirection === 'forward' ? 'animate-slide-forward' : 'animate-slide-backward'}
-        >
-          {activeTab === 'treino' && (
-            <WorkoutScreen
-              onGoToEvolution={() => handleTabChange('evolucao')}
-            />
-          )}
-          {activeTab === 'nutricao' && <NutritionScreen />}
-          {activeTab === 'evolucao' && <EvolutionScreen />}
-          {activeTab === 'ajustes' && <SettingsScreen />}
-        </div>
+        {visitedTabs.treino && (
+          <section
+            aria-hidden={activeTab !== 'treino'}
+            className={activeTab === 'treino' ? `block ${slideAnimClass}` : 'hidden'}
+          >
+            <WorkoutScreen onGoToEvolution={() => handleTabChange('evolucao')} />
+          </section>
+        )}
+
+        {visitedTabs.nutricao && (
+          <section
+            aria-hidden={activeTab !== 'nutricao'}
+            className={activeTab === 'nutricao' ? `block ${slideAnimClass}` : 'hidden'}
+          >
+            <NutritionScreen />
+          </section>
+        )}
+
+        {visitedTabs.evolucao && (
+          <section
+            aria-hidden={activeTab !== 'evolucao'}
+            className={activeTab === 'evolucao' ? `block ${slideAnimClass}` : 'hidden'}
+          >
+            <EvolutionScreen />
+          </section>
+        )}
+
+        {visitedTabs.ajustes && (
+          <section
+            aria-hidden={activeTab !== 'ajustes'}
+            className={activeTab === 'ajustes' ? `block ${slideAnimClass}` : 'hidden'}
+          >
+            <SettingsScreen />
+          </section>
+        )}
       </main>
 
       {/* Persistent Bottom Nav Bar (Thumb Zone) */}
