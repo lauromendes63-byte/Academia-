@@ -46,6 +46,22 @@ export interface WorkoutSession {
   exercises: ExerciseLog[];
 }
 
+export interface ExercisePerformanceSummary {
+  weightKg: number;
+  reps: number;
+  date: string;
+  bestWeightKg?: number;
+  lastSetsReps: number[];
+  minReps: number;
+  maxReps: number;
+  perfectStreak: number;
+  sessionsAtCurrentWeight: number;
+  lastWasFatiguedOrIncomplete: boolean;
+  readyToProgress: boolean;
+  suggestedNextWeightKg: number;
+  suggestedStepKg: number;
+}
+
 export interface PlateConfig {
   proteinType: 'carne' | 'frango' | 'peixe';
   proteinPortions: number; // 1, 2, 3, 4, 5

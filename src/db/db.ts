@@ -211,138 +211,225 @@ export function isGravitonExercise(name?: string, isAssisted?: boolean): boolean
 }
 
 /**
- * Gets the last recorded weight, reps, date and all-time best weight for a given exercise
+ * Extracts min and max target reps from strings like '8-10', '12-15/lado', '6-8'
  */
-export async function getLastExercisePerformance(
-  exerciseId: string,
-  exerciseName: string
-): Promise<{ weightKg: number; reps: number; date: string; bestWeightKg?: number } | null> {
-  const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
-  const targetNameLower = exerciseName.toLowerCase();
-  const isAssisted = isGravitonExercise(exerciseName);
+export function parseRepRange(targetReps?: string): { minReps: number; maxReps: number } {
+  if (!targetReps) return { minReps: 8, maxReps: 10 };
+  const matches = targetReps.match(/\d+/g);
+  if (!matches || matches.length === 0) return { minReps: 8, maxReps: 10 };
+  if (matches.length === 1) {
+    const val = parseInt(matches[0], 10) || 10;
+    return { minReps: val, maxReps: val };
+  }
+  const minReps = parseInt(matches[0], 10) || 8;
+  const maxReps = parseInt(matches[1], 10) || minReps;
+  return { minReps, maxReps: Math.max(minReps, maxReps) };
+}
 
-  let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
+/**
+ * Returns the ideal weight progression step in kg:
+ * - Graviton (assisted): -5kg (less counterweight = more strength)
+ * - Unilateral / Isolation / Dumbbells: +2kg
+ * - Compound / Heavy Machines: +5kg
+ */
+export function getSuggestedWeightStep(
+  exerciseId: string,
+  exerciseName: string,
+  isAssisted?: boolean
+): number {
+  if (isGravitonExercise(exerciseName, isAssisted)) {
+    return -5;
+  }
+  const lowerName = exerciseName.toLowerCase();
+  const isSmallStepIsolation =
+    ['pull_4', 'pull_5', 'push_2', 'push_3', 'push_6', 'push_7', 'lower2_1'].includes(
+      exerciseId
+    ) ||
+    lowerName.includes('haltere') ||
+    lowerName.includes('rosca') ||
+    lowerName.includes('elevação lateral') ||
+    lowerName.includes('tríceps');
+
+  return isSmallStepIsolation ? 2 : 5;
+}
+
+/**
+ * Evaluates an exercise's historical performance and Double Progression (3-session perfect target rule)
+ */
+export function evaluateExerciseHistory(
+  ex: {
+    id: string;
+    name: string;
+    targetReps?: string;
+    defaultSets?: number;
+    isAssisted?: boolean;
+  },
+  completedSessionsNewestFirst: WorkoutSession[]
+): import('../types').ExercisePerformanceSummary | null {
+  const targetNameLower = ex.name.toLowerCase();
+  const isAssisted = isGravitonExercise(ex.name, ex.isAssisted);
+  const { minReps, maxReps } = parseRepRange(ex.targetReps);
+  const suggestedStepKg = getSuggestedWeightStep(ex.id, ex.name, isAssisted);
+  const requiredSets = ex.defaultSets || 3;
+
+  interface SessionEval {
+    date: string;
+    weightKg: number;
+    bestReps: number;
+    setsReps: number[];
+    wasFatiguedOrIncomplete: boolean;
+    isPerfectAtTarget: boolean;
+  }
+
+  const history: SessionEval[] = [];
   let bestWeightKg: number | undefined = undefined;
 
-  for (const session of orderedSessions) {
+  for (const session of completedSessionsNewestFirst) {
     if (!session.completed) continue;
 
     const exLog = session.exercises?.find(
       (e) =>
-        e.exerciseId === exerciseId ||
+        e.exerciseId === ex.id ||
         e.exerciseName.toLowerCase() === targetNameLower ||
         (e.activeExerciseName &&
           e.activeExerciseName.toLowerCase() === targetNameLower)
     );
 
-    if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
-      const completedSets = exLog.sets.filter((s) => s.completed && s.weightKg > 0);
-      const targetSets =
-        completedSets.length > 0
-          ? completedSets
-          : exLog.sets.filter((s) => s.weightKg > 0);
+    if (!exLog || !exLog.sets || exLog.sets.length === 0) continue;
 
-      if (targetSets.length > 0) {
-        const bestSetInSession = targetSets.reduce((best, s) => {
-          if (isAssisted) {
-            return s.weightKg < best.weightKg ? s : best;
-          }
-          return s.weightKg > best.weightKg ? s : best;
-        }, targetSets[0]);
+    const completedSets = exLog.sets.filter((s) => s.completed && s.weightKg > 0);
+    if (!exLog.abortedForFatigue && completedSets.length === 0) continue;
 
-        if (bestSetInSession && bestSetInSession.weightKg > 0) {
-          if (!latestPerf) {
-            latestPerf = {
-              weightKg: bestSetInSession.weightKg,
-              reps: bestSetInSession.reps,
-              date: session.date
-            };
-          }
-          if (bestWeightKg === undefined) {
-            bestWeightKg = bestSetInSession.weightKg;
-          } else {
-            bestWeightKg = isAssisted
-              ? Math.min(bestWeightKg, bestSetInSession.weightKg)
-              : Math.max(bestWeightKg, bestSetInSession.weightKg);
-          }
-        }
+    const targetSets =
+      completedSets.length > 0
+        ? completedSets
+        : exLog.sets.filter((s) => s.weightKg > 0);
+
+    if (targetSets.length === 0) continue;
+
+    const bestSetInSession = targetSets.reduce((best, s) => {
+      if (isAssisted) {
+        return s.weightKg < best.weightKg ? s : best;
       }
+      return s.weightKg > best.weightKg ? s : best;
+    }, targetSets[0]);
+
+    const sessionWeight = bestSetInSession.weightKg;
+    if (sessionWeight <= 0) continue;
+
+    if (!exLog.abortedForFatigue && completedSets.length > 0) {
+      if (bestWeightKg === undefined) {
+        bestWeightKg = sessionWeight;
+      } else {
+        bestWeightKg = isAssisted
+          ? Math.min(bestWeightKg, sessionWeight)
+          : Math.max(bestWeightKg, sessionWeight);
+      }
+    }
+
+    const wasFatiguedOrIncomplete =
+      Boolean(exLog.abortedForFatigue) || completedSets.length < requiredSets;
+
+    const isPerfectAtTarget =
+      !wasFatiguedOrIncomplete &&
+      completedSets.every((s) => s.reps >= maxReps && s.weightKg === sessionWeight);
+
+    history.push({
+      date: session.date,
+      weightKg: sessionWeight,
+      bestReps: bestSetInSession.reps,
+      setsReps:
+        completedSets.length > 0
+          ? completedSets.map((s) => s.reps)
+          : targetSets.map((s) => s.reps),
+      wasFatiguedOrIncomplete,
+      isPerfectAtTarget
+    });
+  }
+
+  if (history.length === 0) return null;
+
+  const latest = history[0];
+  const currentRefWeight = latest.weightKg;
+
+  let sessionsAtCurrentWeight = 0;
+  for (const h of history) {
+    if (h.weightKg === currentRefWeight) {
+      sessionsAtCurrentWeight++;
+    } else {
+      break;
     }
   }
 
-  return latestPerf ? { ...latestPerf, bestWeightKg } : null;
+  let perfectStreak = 0;
+  for (const h of history) {
+    if (h.weightKg === currentRefWeight && h.isPerfectAtTarget) {
+      perfectStreak++;
+    } else {
+      break;
+    }
+  }
+
+  const readyToProgress = perfectStreak >= 3;
+  const suggestedNextWeightKg = Math.max(
+    0,
+    Number((currentRefWeight + suggestedStepKg).toFixed(1))
+  );
+
+  return {
+    weightKg: latest.weightKg,
+    reps: latest.bestReps,
+    date: latest.date,
+    bestWeightKg,
+    lastSetsReps: latest.setsReps,
+    minReps,
+    maxReps,
+    perfectStreak,
+    sessionsAtCurrentWeight,
+    lastWasFatiguedOrIncomplete: latest.wasFatiguedOrIncomplete,
+    readyToProgress,
+    suggestedNextWeightKg,
+    suggestedStepKg
+  };
+}
+
+/**
+ * Gets the last recorded weight, reps, date and progression status for a given exercise
+ */
+export async function getLastExercisePerformance(
+  exerciseId: string,
+  exerciseName: string,
+  targetReps?: string,
+  defaultSets?: number,
+  isAssisted?: boolean
+): Promise<import('../types').ExercisePerformanceSummary | null> {
+  const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
+  const sessions = orderedSessions.filter((s) => s.completed);
+  return evaluateExerciseHistory(
+    { id: exerciseId, name: exerciseName, targetReps, defaultSets, isAssisted },
+    sessions
+  );
 }
 
 /**
  * Single-pass performance fetch for all exercises in a routine (drastically reduces CPU & DB overhead)
  */
 export async function getRoutineLastPerformances(
-  exercises: { id: string; name: string; isAssisted?: boolean }[]
-): Promise<
-  Record<string, { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null>
-> {
+  exercises: {
+    id: string;
+    name: string;
+    targetReps?: string;
+    defaultSets?: number;
+    isAssisted?: boolean;
+  }[]
+): Promise<Record<string, import('../types').ExercisePerformanceSummary | null>> {
   const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
   const sessions = orderedSessions.filter((s) => s.completed);
 
-  const perfMap: Record<
-    string,
-    { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null
-  > = {};
+  const perfMap: Record<string, import('../types').ExercisePerformanceSummary | null> = {};
 
   for (const ex of exercises) {
-    perfMap[ex.id] = null;
-    const targetNameLower = ex.name.toLowerCase();
-    const isAssisted = isGravitonExercise(ex.name, ex.isAssisted);
-    let latestPerf: { weightKg: number; reps: number; date: string } | null = null;
-    let bestWeightKg: number | undefined = undefined;
-
-    for (const session of sessions) {
-      const exLog = session.exercises?.find(
-        (e) =>
-          e.exerciseId === ex.id ||
-          e.exerciseName.toLowerCase() === targetNameLower ||
-          (e.activeExerciseName &&
-            e.activeExerciseName.toLowerCase() === targetNameLower)
-      );
-
-      if (exLog && !exLog.abortedForFatigue && exLog.sets && exLog.sets.length > 0) {
-        const completedSets = exLog.sets.filter((s) => s.completed && s.weightKg > 0);
-        const targetSets =
-          completedSets.length > 0
-            ? completedSets
-            : exLog.sets.filter((s) => s.weightKg > 0);
-
-        if (targetSets.length > 0) {
-          const bestSetInSession = targetSets.reduce((best, s) => {
-            if (isAssisted) {
-              return s.weightKg < best.weightKg ? s : best;
-            }
-            return s.weightKg > best.weightKg ? s : best;
-          }, targetSets[0]);
-
-          if (bestSetInSession && bestSetInSession.weightKg > 0) {
-            if (!latestPerf) {
-              latestPerf = {
-                weightKg: bestSetInSession.weightKg,
-                reps: bestSetInSession.reps,
-                date: session.date
-              };
-            }
-            if (bestWeightKg === undefined) {
-              bestWeightKg = bestSetInSession.weightKg;
-            } else {
-              bestWeightKg = isAssisted
-                ? Math.min(bestWeightKg, bestSetInSession.weightKg)
-                : Math.max(bestWeightKg, bestSetInSession.weightKg);
-            }
-          }
-        }
-      }
-    }
-
-    if (latestPerf) {
-      perfMap[ex.id] = { ...latestPerf, bestWeightKg };
-    }
+    perfMap[ex.id] = evaluateExerciseHistory(ex, sessions);
   }
 
   return perfMap;

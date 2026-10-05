@@ -3,11 +3,13 @@ import type {
   RoutineId,
   RoutineDefinition,
   ExerciseLog,
-  WorkoutSession
+  WorkoutSession,
+  ExercisePerformanceSummary
 } from '../types';
 import {
   db,
-  getRoutineLastPerformances
+  getRoutineLastPerformances,
+  parseRepRange
 } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseCard } from '../components/ExerciseCard';
@@ -54,7 +56,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   // Active session in-memory state
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [lastPerfMap, setLastPerfMap] = useState<
-    Record<string, { weightKg: number; reps: number; date: string; bestWeightKg?: number } | null>
+    Record<string, ExercisePerformanceSummary | null>
   >({});
   const [isFinishing, setIsFinishing] = useState(false);
   const [completedSummary, setCompletedSummary] = useState<{
@@ -77,6 +79,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       const initialLogs: ExerciseLog[] = routine.exercises.map((ex) => {
         const last = perfMap[ex.id];
         const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
+        const { minReps } = parseRepRange(ex.targetReps);
 
         return {
           exerciseId: ex.id,
@@ -84,12 +87,18 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
           activeExerciseName: ex.name,
           isSubstituted: false,
           abortedForFatigue: false,
-          sets: Array.from({ length: ex.defaultSets }, (_, i) => ({
-            setNumber: i + 1,
-            weightKg: baseWeight,
-            reps: parseInt(ex.targetReps.split('-')[0], 10) || 10,
-            completed: false
-          }))
+          sets: Array.from({ length: ex.defaultSets }, (_, i) => {
+            const prevSetReps =
+              last && last.weightKg === baseWeight
+                ? last.lastSetsReps?.[i] ?? last.reps
+                : minReps;
+            return {
+              setNumber: i + 1,
+              weightKg: baseWeight,
+              reps: prevSetReps || minReps,
+              completed: false
+            };
+          })
         };
       });
 
@@ -197,6 +206,8 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         return ex;
       });
       await db.routines.update(currentRoutine.id, { exercises: updatedExercises });
+      const refreshedPerf = await getRoutineLastPerformances(updatedExercises);
+      setLastPerfMap(refreshedPerf);
     }
 
     // Advance active routine in cycle (A -> B -> C -> D -> A)

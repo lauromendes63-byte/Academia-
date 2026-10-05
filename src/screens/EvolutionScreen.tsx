@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { db } from '../db/db';
+import { db, evaluateExerciseHistory, parseRepRange } from '../db/db';
 import type { RoutineId, RoutineDefinition, NutritionLog, WorkoutSession } from '../types';
 import {
   calculatePlateMacros,
@@ -447,6 +447,8 @@ export const EvolutionScreen: React.FC = () => {
 
       const delta = latestWeight - initialWeight;
       const hasProgress = isAssisted ? delta < 0 : delta > 0;
+      const progression = evaluateExerciseHistory(exDef, workoutSessions);
+      const { maxReps } = parseRepRange(exDef.targetReps);
 
       return {
         id: exDef.id,
@@ -454,6 +456,7 @@ export const EvolutionScreen: React.FC = () => {
         muscleGroup: exDef.muscleGroup,
         targetReps: exDef.targetReps,
         defaultSets: exDef.defaultSets,
+        maxReps,
         isAssisted,
         color,
         points,
@@ -461,10 +464,11 @@ export const EvolutionScreen: React.FC = () => {
         latestWeight,
         bestWeight,
         delta,
-        hasProgress
+        hasProgress,
+        progression
       };
     });
-  }, [currentRoutine, routineSessionsChronological]);
+  }, [currentRoutine, routineSessionsChronological, workoutSessions]);
 
   const evolvedCount = exerciseCurves.filter((e) => e.hasProgress).length;
 
@@ -887,61 +891,101 @@ export const EvolutionScreen: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {exerciseCurves.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-2 shadow-2xs"
-                >
-                  <div className="min-w-0 flex-1 flex items-start gap-2">
-                    {/* Indicador de cor correspondente à linha do gráfico */}
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 mt-1 shadow-2xs"
-                      style={{ backgroundColor: item.color }}
-                    />
+              {exerciseCurves.map((item) => {
+                const prog = item.progression;
+                const streak = prog?.perfectStreak || 0;
+                const isReady = Boolean(prog?.readyToProgress);
+                const lastRepsStr =
+                  prog?.lastSetsReps && prog.lastSetsReps.length > 0
+                    ? prog.lastSetsReps.join('/')
+                    : null;
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 whitespace-nowrap">
-                          {item.muscleGroup}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
-                          {item.defaultSets}× {item.targetReps}
-                        </span>
-                      </div>
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-2.5 rounded-2xl border transition-[border-color,background-color] flex items-center justify-between gap-2 shadow-2xs ${
+                      isReady
+                        ? 'border-amber-200/90 bg-amber-50/20'
+                        : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 flex items-start gap-2">
+                      {/* Indicador de cor correspondente à linha do gráfico */}
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 mt-1 shadow-2xs"
+                        style={{ backgroundColor: item.color }}
+                      />
 
-                      <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug truncate">
-                        {item.name}
-                      </h4>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 whitespace-nowrap">
+                            {item.muscleGroup}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
+                            {item.defaultSets}× {item.targetReps}
+                          </span>
+                          {prog && (
+                            <span
+                              className={`text-[9px] font-black px-1.5 py-0.2 rounded border whitespace-nowrap tabular-nums ${
+                                isReady
+                                  ? 'bg-amber-100/80 text-amber-800 border-amber-300'
+                                  : streak > 0
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200/70'
+                              }`}
+                            >
+                              {isReady
+                                ? `🔥 3/3 • Ir p/ ${prog.suggestedNextWeightKg}kg`
+                                : `Teto ${Math.min(3, streak)}/3`}
+                            </span>
+                          )}
+                        </div>
 
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium whitespace-nowrap">
-                        <span>Base: <strong className="text-slate-700">{item.initialWeight}kg</strong></span>
-                        <span>•</span>
-                        <span>Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong></span>
-                        {(item.isAssisted ? item.bestWeight < item.latestWeight : item.bestWeight > item.latestWeight) && (
-                          <>
-                            <span>•</span>
-                            <span className="text-amber-700 font-bold">PR: {item.bestWeight}kg</span>
-                          </>
-                        )}
+                        <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug truncate">
+                          {item.name}
+                        </h4>
+
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium whitespace-nowrap truncate">
+                          <span>
+                            Base: <strong className="text-slate-700">{item.initialWeight}kg</strong>
+                          </span>
+                          <span>•</span>
+                          <span>
+                            Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong>
+                          </span>
+                          {lastRepsStr && (
+                            <span className="text-slate-400 tabular-nums">
+                              ({lastRepsStr}r)
+                            </span>
+                          )}
+                          {(item.isAssisted
+                            ? item.bestWeight < item.latestWeight
+                            : item.bestWeight > item.latestWeight) && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-700 font-bold">PR: {item.bestWeight}kg</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Badge de Evolução em kg */}
-                  <div className="shrink-0 text-right">
-                    {item.hasProgress ? (
-                      <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap">
-                        <TrendingUp className="w-3 h-3 stroke-[2.5]" />
-                        <span>{item.delta > 0 ? `+${item.delta}kg` : `${item.delta}kg`}</span>
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200 whitespace-nowrap">
-                        {item.latestWeight}kg
-                      </span>
-                    )}
+                    {/* Badge de Evolução em kg */}
+                    <div className="shrink-0 text-right">
+                      {item.hasProgress ? (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap">
+                          <TrendingUp className="w-3 h-3 stroke-[2.5]" />
+                          <span>{item.delta > 0 ? `+${item.delta}kg` : `${item.delta}kg`}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-50 text-slate-500 border border-slate-200 whitespace-nowrap">
+                          {item.latestWeight}kg
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
