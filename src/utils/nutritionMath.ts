@@ -416,3 +416,103 @@ export function calculateMacroTargets(
   };
 }
 
+/**
+ * Returns local YYYY-MM-DD date string without UTC timezone rollover bugs after 21:00 (UTC-3).
+ */
+export function getLocalDateStr(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function computeNutritionLogTotals(log: NutritionLog) {
+  const wheyScoops = log.wheyScoops ?? (log.tookWhey ? 2 : 0);
+  const wheyProtein = wheyScoops * 20;
+  const wheyCalories = wheyScoops * 95;
+
+  const milkGlasses = log.milkGlasses ?? 0;
+  const milkProtein = milkGlasses * 6;
+  const milkCalories = milkGlasses * 110;
+  const milkCarbs = milkGlasses * 9;
+  const milkFat = milkGlasses * 5;
+
+  const bConfig = getResolvedBreakfastConfig(log);
+  const bMacros = calculateCustomMealMacros(bConfig);
+
+  let lunchMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  if (log.meals?.lunch === 'caseiro') {
+    lunchMacros = calculatePlateMacros(log.lunchConfig);
+  } else if (log.meals?.lunch === 'churrasquinho') {
+    lunchMacros = calculateChurrascoMacros(log.churrascoConfig);
+  }
+
+  const sConfig = getResolvedSnackConfig(log);
+  const sMacros = calculateCustomMealMacros(sConfig);
+
+  let dinnerMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  if (log.meals?.dinner === 'subway') {
+    dinnerMacros = calculateSubwayMacros(log.dinnerSubwayConfig);
+  } else if (log.meals?.dinner === 'caseiro') {
+    dinnerMacros = calculatePlateMacros(log.dinnerPlateConfig);
+  } else if (log.meals?.dinner === 'churrasquinho') {
+    dinnerMacros = calculateChurrascoMacros(log.dinnerChurrascoConfig);
+  } else if (log.meals?.dinner === 'burger') {
+    dinnerMacros = calculateBurgerMacros(log.dinnerBurgerConfig);
+  } else if (log.meals?.dinner === 'pizza') {
+    dinnerMacros = calculatePizzaMacros(log.dinnerPizzaConfig);
+  }
+
+  const escapeInfo = calculateEscapesMacros(log.escapes);
+  const escapesCount =
+    (log.escapes?.chocSmallCount || 0) +
+    (log.escapes?.snickersBarCount || 0) +
+    (log.escapes?.iceCreamCount || 0) +
+    (log.escapes?.saltySnackCount || 0) +
+    (log.escapes?.besteiraCount || 0) +
+    (log.escapes?.superBesteiraCount || 0);
+
+  const protein =
+    wheyProtein +
+    milkProtein +
+    bMacros.protein +
+    lunchMacros.protein +
+    sMacros.protein +
+    dinnerMacros.protein +
+    escapeInfo.protein;
+  const carbs =
+    milkCarbs +
+    bMacros.carbs +
+    lunchMacros.carbs +
+    sMacros.carbs +
+    dinnerMacros.carbs +
+    escapeInfo.carbs;
+  const fat =
+    milkFat +
+    bMacros.fat +
+    lunchMacros.fat +
+    sMacros.fat +
+    dinnerMacros.fat +
+    escapeInfo.fat;
+  const calories =
+    wheyCalories +
+    milkCalories +
+    bMacros.calories +
+    lunchMacros.calories +
+    sMacros.calories +
+    dinnerMacros.calories +
+    escapeInfo.calories;
+  const waterL = (log.waterMl || 0) / 1000;
+
+  return {
+    protein,
+    carbs,
+    fat,
+    calories,
+    waterL,
+    waterMl: log.waterMl || 0,
+    escapesCount
+  };
+}
+
+

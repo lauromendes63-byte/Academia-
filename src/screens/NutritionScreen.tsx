@@ -44,7 +44,8 @@ import {
   calculateEscapesMacros,
   getResolvedBreakfastConfig,
   getResolvedSnackConfig,
-  calculateMacroTargets
+  calculateMacroTargets,
+  getLocalDateStr
 } from '../utils/nutritionMath';
 
 // ============================================================================
@@ -567,7 +568,7 @@ const ChurrascoBuilder: React.FC<{
 // TELA PRINCIPAL: NutritionScreen
 // ============================================================================
 export const NutritionScreen: React.FC = () => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr();
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [escapeToast, setEscapeToast] = useState<string | null>(null);
 
@@ -966,7 +967,7 @@ export const NutritionScreen: React.FC = () => {
     triggerHaptic('light');
     const current = new Date(selectedDate + 'T00:00:00');
     current.setDate(current.getDate() + daysDelta);
-    setSelectedDate(current.toISOString().split('T')[0]);
+    setSelectedDate(getLocalDateStr(current));
   };
 
   const isToday = selectedDate === todayStr;

@@ -5,6 +5,9 @@
     color-scheme: light;
     --background: #f8fafc;
     --foreground: #0f172a;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
 
   html {
@@ -73,19 +76,61 @@ input[type="number"] {
 /* Butter-smooth micro-animations & Directional Tab Transitions (Zero Blink) */
 @keyframes smoothFadeIn {
   from {
-    opacity: 0.9;
-    transform: translateY(3px);
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalZoomIn95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes drawerSlideUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes toastSlideDown {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes slideFromRight {
   from {
-    opacity: 0.9;
-    transform: translate3d(10px, 0, 0);
+    opacity: 0.92;
+    transform: translate3d(8px, 0, 0);
   }
   to {
     opacity: 1;
@@ -95,8 +140,8 @@ input[type="number"] {
 
 @keyframes slideFromLeft {
   from {
-    opacity: 0.9;
-    transform: translate3d(-10px, 0, 0);
+    opacity: 0.92;
+    transform: translate3d(-8px, 0, 0);
   }
   to {
     opacity: 1;
@@ -105,15 +150,31 @@ input[type="number"] {
 }
 
 .animate-smooth-in {
-  animation: smoothFadeIn 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: smoothFadeIn 0.18s var(--ease-out);
+}
+
+.animate-in.fade-in {
+  animation: modalBackdropFadeIn 0.18s var(--ease-out);
+}
+
+.animate-in.zoom-in-95 {
+  animation: modalZoomIn95 0.2s var(--ease-out);
+}
+
+.animate-in.slide-in-from-bottom {
+  animation: drawerSlideUp 0.26s var(--ease-drawer);
+}
+
+.animate-in.slide-in-from-top-3 {
+  animation: toastSlideDown 0.2s var(--ease-out);
 }
 
 .animate-slide-forward {
-  animation: slideFromRight 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slideFromRight 0.18s var(--ease-out);
 }
 
 .animate-slide-backward {
-  animation: slideFromLeft 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slideFromLeft 0.18s var(--ease-out);
 }
 
 /* Battery-saver & Reduced Motion support */
@@ -125,4 +186,5 @@ input[type="number"] {
     scroll-behavior: auto !important;
   }
 }
+
 

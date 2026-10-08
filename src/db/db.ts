@@ -7,6 +7,7 @@ import type {
   UserProfile
 } from '../types';
 import { DEFAULT_ROUTINES, DEFAULT_USER_PROFILE } from './seedData';
+import { getLocalDateStr } from '../utils/nutritionMath';
 
 export class AcademiaDatabase extends Dexie {
   routines!: Table<RoutineDefinition, string>;
@@ -150,7 +151,7 @@ export async function initializeDatabase(): Promise<void> {
   }
 
   if (weightCount === 0) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     initTasks.push(
       db.weightLogs.add({
         date: today,
@@ -416,7 +417,14 @@ export async function getLastExercisePerformance(
   isAssisted?: boolean
 ): Promise<import('../types').ExercisePerformanceSummary | null> {
   const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
-  const sessions = orderedSessions.filter((s) => s.completed);
+  const sessions = orderedSessions
+    .filter((s) => s.completed)
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) ||
+        (b.endTime || 0) - (a.endTime || 0) ||
+        (b.id || 0) - (a.id || 0)
+    );
   return evaluateExerciseHistory(
     { id: exerciseId, name: exerciseName, targetReps, defaultSets, isAssisted },
     sessions
@@ -436,7 +444,14 @@ export async function getRoutineLastPerformances(
   }[]
 ): Promise<Record<string, import('../types').ExercisePerformanceSummary | null>> {
   const orderedSessions = await db.workoutSessions.orderBy('date').reverse().toArray();
-  const sessions = orderedSessions.filter((s) => s.completed);
+  const sessions = orderedSessions
+    .filter((s) => s.completed)
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) ||
+        (b.endTime || 0) - (a.endTime || 0) ||
+        (b.id || 0) - (a.id || 0)
+    );
 
   const perfMap: Record<string, import('../types').ExercisePerformanceSummary | null> = {};
 

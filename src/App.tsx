@@ -8,6 +8,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 
 import { db } from './db/db';
 import { triggerHaptic } from './utils/audio';
+import { getLocalDateStr } from './utils/nutritionMath';
 import { useAppUpdate } from './utils/appUpdate';
 import { CheckCircle2, X, Sparkles, RefreshCw } from 'lucide-react';
 
@@ -68,7 +69,7 @@ export const AppContent: React.FC = () => {
     window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
 
     const executeQuickAction = async () => {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getLocalDateStr();
       let log = await db.nutritionLogs.get(todayStr);
       if (!log) {
         log = {

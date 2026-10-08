@@ -14,6 +14,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { triggerHaptic } from '../utils/audio';
+import { getLocalDateStr } from '../utils/nutritionMath';
 import confetti from 'canvas-confetti';
 import {
   CheckCircle2,
@@ -23,6 +24,8 @@ import {
   ArrowRight,
   X
 } from 'lucide-react';
+
+const WORKOUT_DRAFT_KEY = 'academia_workout_draft_v1';
 
 interface WorkoutScreenProps {
   onGoToEvolution?: () => void;
@@ -56,7 +59,20 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   }, [routines, selectedRoutineId]);
 
   // Active session in-memory state cached for all routines (A, B, C, D) for 0ms switching
-  const [logsByRoutine, setLogsByRoutine] = useState<Record<string, ExerciseLog[]>>({});
+  const [logsByRoutine, setLogsByRoutine] = useState<Record<string, ExerciseLog[]>>(() => {
+    try {
+      const raw = localStorage.getItem(WORKOUT_DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.date === getLocalDateStr() && parsed.logsByRoutine) {
+          return parsed.logsByRoutine;
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return {};
+  });
   const [lastPerfMap, setLastPerfMap] = useState<
     Record<string, ExercisePerformanceSummary | null>
   >({});
@@ -66,6 +82,22 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     totalSets: number;
     totalExercises: number;
   } | null>(null);
+
+  // Persist in-progress workout draft for today so mobile tab reloads never lose checked sets
+  useEffect(() => {
+    if (Object.keys(logsByRoutine).length === 0) return;
+    try {
+      localStorage.setItem(
+        WORKOUT_DRAFT_KEY,
+        JSON.stringify({
+          date: getLocalDateStr(),
+          logsByRoutine
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [logsByRoutine]);
 
   // Preload all routines once so switching between Treino A / B / C / D is 0ms with zero blink
   useEffect(() => {
@@ -109,7 +141,18 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
       if (isMounted) {
         setLastPerfMap(perfMap);
-        setLogsByRoutine((prev) => ({ ...initialMap, ...prev }));
+        setLogsByRoutine((prev) => {
+          const merged: Record<string, ExerciseLog[]> = { ...initialMap };
+          for (const [rId, existingLogs] of Object.entries(prev)) {
+            const hasActiveProgress = existingLogs?.some(
+              (ex) => ex.abortedForFatigue || ex.isSubstituted || ex.sets.some((s) => s.completed)
+            );
+            if (hasActiveProgress) {
+              merged[rId] = existingLogs;
+            }
+          }
+          return merged;
+        });
       }
     }
 
@@ -209,6 +252,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       return;
     }
 
+    const finishedRoutineId = selectedRoutineId;
     setIsFinishing(true);
     triggerHaptic('success');
 
@@ -219,10 +263,10 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       origin: { y: 0.6 }
     });
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateStr();
 
     const newSession: WorkoutSession = {
-      routineId: selectedRoutineId,
+      routineId: finishedRoutineId,
       date: todayStr,
       startTime: Date.now() - 45 * 60000,
       endTime: Date.now(),
@@ -245,11 +289,40 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       await db.routines.update(currentRoutine.id, { exercises: updatedExercises });
       const refreshedPerf = await getRoutineLastPerformances(updatedExercises);
       setLastPerfMap((prev) => ({ ...prev, ...refreshedPerf }));
+
+      // Reset finished routine's sets to clean state for next cycle
+      setLogsByRoutine((prev) => ({
+        ...prev,
+        [finishedRoutineId]: updatedExercises.map((ex) => {
+          const last = refreshedPerf[ex.id];
+          const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
+          const { minReps } = parseRepRange(ex.targetReps);
+          return {
+            exerciseId: ex.id,
+            exerciseName: ex.name,
+            activeExerciseName: ex.name,
+            isSubstituted: false,
+            abortedForFatigue: false,
+            sets: Array.from({ length: ex.defaultSets }, (_, i) => {
+              const prevSetReps =
+                last && last.weightKg === baseWeight
+                  ? last.lastSetsReps?.[i] ?? last.reps
+                  : minReps;
+              return {
+                setNumber: i + 1,
+                weightKg: baseWeight,
+                reps: prevSetReps || minReps,
+                completed: false
+              };
+            })
+          };
+        })
+      }));
     }
 
     // Advance active routine in cycle (A -> B -> C -> D -> A)
     const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
-    const currentIdx = cycle.indexOf(selectedRoutineId);
+    const currentIdx = cycle.indexOf(finishedRoutineId);
     const nextRoutine = cycle[(currentIdx + 1) % cycle.length];
 
     await db.userProfile.update('main_user', {

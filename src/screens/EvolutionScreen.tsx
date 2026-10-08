@@ -2,15 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { db, evaluateExerciseHistory, parseRepRange } from '../db/db';
 import type { RoutineId, RoutineDefinition, NutritionLog, WorkoutSession } from '../types';
 import {
-  calculatePlateMacros,
-  calculateSubwayMacros,
-  calculateCustomMealMacros,
-  calculateChurrascoMacros,
-  calculateBurgerMacros,
-  calculatePizzaMacros,
-  calculateEscapesMacros,
-  getResolvedBreakfastConfig,
-  getResolvedSnackConfig
+  getLocalDateStr,
+  computeNutritionLogTotals
 } from '../utils/nutritionMath';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
@@ -44,106 +37,24 @@ const EXERCISE_COLORS = [
   '#f97316'  // Laranja Quente
 ];
 
-export function computeNutritionLogTotals(log: NutritionLog) {
-  const wheyScoops = log.wheyScoops ?? (log.tookWhey ? 2 : 0);
-  const wheyProtein = wheyScoops * 20;
-  const wheyCalories = wheyScoops * 95;
-
-  const milkGlasses = log.milkGlasses ?? 0;
-  const milkProtein = milkGlasses * 6;
-  const milkCalories = milkGlasses * 110;
-  const milkCarbs = milkGlasses * 9;
-  const milkFat = milkGlasses * 5;
-
-  const bConfig = getResolvedBreakfastConfig(log);
-  const bMacros = calculateCustomMealMacros(bConfig);
-
-  let lunchMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
-  if (log.meals?.lunch === 'caseiro') {
-    lunchMacros = calculatePlateMacros(log.lunchConfig);
-  } else if (log.meals?.lunch === 'churrasquinho') {
-    lunchMacros = calculateChurrascoMacros(log.churrascoConfig);
-  }
-
-  const sConfig = getResolvedSnackConfig(log);
-  const sMacros = calculateCustomMealMacros(sConfig);
-
-  let dinnerMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
-  if (log.meals?.dinner === 'subway') {
-    dinnerMacros = calculateSubwayMacros(log.dinnerSubwayConfig);
-  } else if (log.meals?.dinner === 'caseiro') {
-    dinnerMacros = calculatePlateMacros(log.dinnerPlateConfig);
-  } else if (log.meals?.dinner === 'churrasquinho') {
-    dinnerMacros = calculateChurrascoMacros(log.dinnerChurrascoConfig);
-  } else if (log.meals?.dinner === 'burger') {
-    dinnerMacros = calculateBurgerMacros(log.dinnerBurgerConfig);
-  } else if (log.meals?.dinner === 'pizza') {
-    dinnerMacros = calculatePizzaMacros(log.dinnerPizzaConfig);
-  }
-
-  const escapeInfo = calculateEscapesMacros(log.escapes);
-  const escapesCount =
-    (log.escapes?.chocSmallCount || 0) +
-    (log.escapes?.snickersBarCount || 0) +
-    (log.escapes?.iceCreamCount || 0) +
-    (log.escapes?.saltySnackCount || 0) +
-    (log.escapes?.besteiraCount || 0) +
-    (log.escapes?.superBesteiraCount || 0);
-
-  const protein =
-    wheyProtein +
-    milkProtein +
-    bMacros.protein +
-    lunchMacros.protein +
-    sMacros.protein +
-    dinnerMacros.protein +
-    escapeInfo.protein;
-  const carbs =
-    milkCarbs +
-    bMacros.carbs +
-    lunchMacros.carbs +
-    sMacros.carbs +
-    dinnerMacros.carbs +
-    escapeInfo.carbs;
-  const fat =
-    milkFat +
-    bMacros.fat +
-    lunchMacros.fat +
-    sMacros.fat +
-    dinnerMacros.fat +
-    escapeInfo.fat;
-  const calories =
-    wheyCalories +
-    milkCalories +
-    bMacros.calories +
-    lunchMacros.calories +
-    sMacros.calories +
-    dinnerMacros.calories +
-    escapeInfo.calories;
-  const waterL = (log.waterMl || 0) / 1000;
-
-  return {
-    protein,
-    carbs,
-    fat,
-    calories,
-    waterL,
-    waterMl: log.waterMl || 0,
-    escapesCount
-  };
-}
-
 const EMPTY_WORKOUT_SESSIONS: WorkoutSession[] = [];
 const EMPTY_NUTRITION_LOGS: NutritionLog[] = [];
 
 export const EvolutionScreen: React.FC = () => {
   const weightLogs = useLiveQuery(() => db.weightLogs.orderBy('date').toArray());
 
-  // Query all completed sessions via indexed date order
+  // Query all completed sessions via indexed date order + deterministic tie-breaking
   const workoutSessions = useLiveQuery(
     async () => {
       const list = await db.workoutSessions.orderBy('date').reverse().toArray();
-      return list.filter((s) => s.completed);
+      return list
+        .filter((s) => s.completed)
+        .sort(
+          (a, b) =>
+            b.date.localeCompare(a.date) ||
+            (b.endTime || 0) - (a.endTime || 0) ||
+            (b.id || 0) - (a.id || 0)
+        );
     },
     [],
     EMPTY_WORKOUT_SESSIONS
@@ -169,9 +80,7 @@ export const EvolutionScreen: React.FC = () => {
 
   // Weight entry state
   const [newWeight, setNewWeight] = useState<string>('97.5');
-  const [weightDate, setWeightDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [weightDate, setWeightDate] = useState<string>(() => getLocalDateStr());
   const [showAddWeight, setShowAddWeight] = useState(false);
 
   // Handle adding weekly weight log
@@ -227,16 +136,17 @@ export const EvolutionScreen: React.FC = () => {
   // =========================================================
   const frequencyStats = useMemo(() => {
     const now = new Date();
+    const todayStr = getLocalDateStr(now);
     const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
     const diffToMonday = (dayOfWeek + 6) % 7;
     const mondayDate = new Date(now);
     mondayDate.setDate(now.getDate() - diffToMonday);
     mondayDate.setHours(0, 0, 0, 0);
 
-    const mondayStr = mondayDate.toISOString().split('T')[0];
+    const mondayStr = getLocalDateStr(mondayDate);
     const sundayDate = new Date(mondayDate);
     sundayDate.setDate(mondayDate.getDate() + 6);
-    const sundayStr = sundayDate.toISOString().split('T')[0];
+    const sundayStr = getLocalDateStr(sundayDate);
 
     // Sessions completed this calendar week (Mon-Sun)
     const thisWeekSessions = workoutSessions.filter(
@@ -252,9 +162,9 @@ export const EvolutionScreen: React.FC = () => {
     const weekDayPills = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((label, idx) => {
       const d = new Date(mondayDate);
       d.setDate(mondayDate.getDate() + idx);
-      const dStr = d.toISOString().split('T')[0];
+      const dStr = getLocalDateStr(d);
       const hadWorkout = distinctDatesThisWeek.has(dStr);
-      const isToday = dStr === now.toISOString().split('T')[0];
+      const isToday = dStr === todayStr;
       return { label, dayNumber: d.getDate(), dStr, hadWorkout, isToday };
     });
 
@@ -281,6 +191,7 @@ export const EvolutionScreen: React.FC = () => {
   // =========================================================
   const weeklyNutritionStats = useMemo(() => {
     const now = new Date();
+    const todayStr = getLocalDateStr(now);
     const dayOfWeek = now.getDay();
     const diffToMonday = (dayOfWeek + 6) % 7;
     const mondayDate = new Date(now);
@@ -302,8 +213,8 @@ export const EvolutionScreen: React.FC = () => {
     const weekDays = dayLabels.map((label, idx) => {
       const d = new Date(mondayDate);
       d.setDate(mondayDate.getDate() + idx);
-      const dStr = d.toISOString().split('T')[0];
-      const isToday = dStr === now.toISOString().split('T')[0];
+      const dStr = getLocalDateStr(d);
+      const isToday = dStr === todayStr;
 
       const log = logsMap.get(dStr);
       const totals = log

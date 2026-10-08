@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { db, exportAllData, importAllData, initializeDatabase } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { triggerHaptic } from '../utils/audio';
+import { getLocalDateStr } from '../utils/nutritionMath';
 import { useAppUpdate } from '../utils/appUpdate';
 import {
   Download,
@@ -58,7 +59,7 @@ export const SettingsScreen: React.FC = () => {
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement('a');
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateStr();
       a.href = url;
       a.download = `academia_backup_${today}.json`;
       document.body.appendChild(a);

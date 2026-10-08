@@ -97,7 +97,7 @@ export function playSetCompleteSound(): void {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.1);
-  } catch (e) {
+  } catch {
     // Ignore audio failures if restricted
   }
 }
@@ -117,7 +117,7 @@ export function triggerHaptic(type: 'light' | 'medium' | 'success' | 'alert' = '
       } else if (type === 'alert') {
         navigator.vibrate([60, 50, 90]);
       }
-    } catch (e) {
+    } catch {
       // Haptics may be disabled in user settings
     }
   }
