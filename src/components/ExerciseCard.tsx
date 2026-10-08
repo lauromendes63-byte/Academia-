@@ -21,7 +21,8 @@ import {
   PlayCircle,
   Trophy,
   Flame,
-  Target
+  Target,
+  Lock
 } from 'lucide-react';
 
 interface ExerciseCardProps {
@@ -57,46 +58,71 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const { minReps, maxReps } = parseRepRange(exercise.targetReps);
   const isUnilateralReps = exercise.targetReps.toLowerCase().includes('lado');
 
-  const currentWeight =
-    log.sets[0]?.weightKg ?? lastPerformance?.weightKg ?? exercise.defaultWeightKg;
+  const completedCount = log.sets.filter((s) => s.completed).length;
+  const allSetsDone = !isAborted && completedCount === log.sets.length && log.sets.length > 0;
 
-  // Check if current weight beats historical Personal Record (PR)
+  // Primeira série pendente (não concluída) recebe os ajustes da barra de Carga
+  const firstPendingSet = log.sets.find((s) => !s.completed);
+  const currentWeight =
+    firstPendingSet?.weightKg ??
+    log.sets[log.sets.length - 1]?.weightKg ??
+    lastPerformance?.weightKg ??
+    exercise.defaultWeightKg;
+
+  // Carga principal de trabalho da sessão (maior carga nos exercícios normais, menor contrapeso no Graviton)
+  const validWeightSets = log.sets.filter((s) => s.weightKg > 0);
+  const workingWeight =
+    validWeightSets.length > 0
+      ? isGraviton
+        ? Math.min(...validWeightSets.map((s) => s.weightKg))
+        : Math.max(...validWeightSets.map((s) => s.weightKg))
+      : currentWeight;
+
+  // Detecta se houve dropset / mudança de carga entre as séries hoje
+  const hasTodayWeightVariation =
+    new Set(log.sets.map((s) => s.weightKg)).size > 1;
+  const hasCompletedWeightDrop =
+    new Set(log.sets.filter((s) => s.completed).map((s) => s.weightKg)).size > 1;
+
+  // Check if current working weight beats historical Personal Record (PR)
   const referenceBest = lastPerformance?.bestWeightKg ?? lastPerformance?.weightKg;
   const isNewPR =
     !isAborted &&
     referenceBest !== undefined &&
-    currentWeight > 0 &&
-    (isGraviton ? currentWeight < referenceBest : currentWeight > referenceBest);
+    workingWeight > 0 &&
+    (isGraviton ? workingWeight < referenceBest : workingWeight > referenceBest);
 
-  const completedCount = log.sets.filter((s) => s.completed).length;
-  const allSetsDone = !isAborted && completedCount === log.sets.length && log.sets.length > 0;
-
-  // Check if all sets in today's session are completed AND at or above the target rep ceiling (maxReps)
+  // Check if all sets in today's session are completed at the same workingWeight AND at/above maxReps
   const isTodayPerfectAtTarget =
-    allSetsDone && log.sets.every((s) => s.reps >= maxReps && s.weightKg > 0);
+    allSetsDone &&
+    workingWeight > 0 &&
+    log.sets.every((s) => s.reps >= maxReps && s.weightKg === workingWeight);
 
-  // Historical streak at the current weight (0, 1, 2, or 3+ workouts at rep ceiling)
+  // Historical streak at the current working weight (0, 1, 2, or 3+ workouts at rep ceiling)
   const isSameWeightAsLast =
     lastPerformance !== null &&
     lastPerformance !== undefined &&
-    currentWeight === lastPerformance.weightKg;
+    workingWeight === lastPerformance.weightKg;
 
   const baseStreak = isSameWeightAsLast ? Math.min(3, lastPerformance.perfectStreak) : 0;
   const liveStreak = Math.min(3, isTodayPerfectAtTarget ? baseStreak + 1 : baseStreak);
 
-  // Progresso da sessão de hoje para preencher parcialmente o segmento atual (quando ainda não bateu o teto nas 3 séries)
-  const todaySetsAtCeiling = log.sets.filter((s) => s.completed && s.reps >= maxReps).length;
+  // Progresso da sessão de hoje para preencher parcialmente o segmento atual (séries no teto mantendo a carga principal)
+  const todaySetsAtCeiling = log.sets.filter(
+    (s) => s.completed && s.reps >= maxReps && s.weightKg === workingWeight
+  ).length;
   const todayCeilingRatio =
     log.sets.length > 0 ? todaySetsAtCeiling / log.sets.length : 0;
 
   // Show progression recommendation banner when user has 3/3 perfect workouts at this weight
   const showProgressionBanner =
     !isAborted &&
+    completedCount === 0 &&
     isSameWeightAsLast &&
     Boolean(lastPerformance?.readyToProgress) &&
     (lastPerformance?.suggestedNextWeightKg ?? 0) > 0;
 
-  // Toggle set completion
+  // Toggle set completion (locks/unlocks that set's weight and reps)
   const handleToggleSet = (setIdx: number) => {
     if (isAborted) return;
 
@@ -120,9 +146,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     });
   };
 
-  // Adjust reps for a single set (-1 / +1) with zero typing
+  // Adjust reps for a single pending set (-1 / +1) — locked once completed!
   const handleAdjustSetReps = (setIdx: number, delta: number) => {
-    if (isAborted) return;
+    if (isAborted || log.sets[setIdx]?.completed) return;
     triggerHaptic('light');
 
     const newSets: SetEntry[] = log.sets.map((s, idx) => {
@@ -141,28 +167,37 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
   // Apply 1-tap weight progression & reset reps to floor of target range (Double Progression)
   const handleApplyProgression = () => {
-    if (!lastPerformance || isAborted) return;
+    if (!lastPerformance || isAborted || allSetsDone) return;
     triggerHaptic('success');
     const nextWeight = lastPerformance.suggestedNextWeightKg;
-    const updatedSets = log.sets.map((s) => ({
-      ...s,
-      weightKg: nextWeight,
-      reps: minReps
-    }));
+    const updatedSets = log.sets.map((s) =>
+      s.completed
+        ? s
+        : {
+            ...s,
+            weightKg: nextWeight,
+            reps: minReps
+          }
+    );
     onUpdateLog({
       ...log,
       sets: updatedSets
     });
   };
 
-  // Adjust weight across sets
+  // Adjust weight ONLY for uncompleted sets (preserves locked completed sets & enables dropsets!)
   const handleAdjustWeight = (delta: number) => {
+    if (isAborted || allSetsDone) return;
     triggerHaptic('light');
     const newWeight = Math.max(0, Number((currentWeight + delta).toFixed(1)));
-    const updatedSets = log.sets.map((s) => ({
-      ...s,
-      weightKg: newWeight
-    }));
+    const updatedSets = log.sets.map((s) =>
+      s.completed
+        ? s
+        : {
+            ...s,
+            weightKg: newWeight
+          }
+    );
     onUpdateLog({
       ...log,
       sets: updatedSets
@@ -170,11 +205,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   };
 
   const handleDirectWeightChange = (val: number) => {
+    if (isAborted || allSetsDone) return;
     const newWeight = Math.max(0, isNaN(val) ? 0 : val);
-    const updatedSets = log.sets.map((s) => ({
-      ...s,
-      weightKg: newWeight
-    }));
+    const updatedSets = log.sets.map((s) =>
+      s.completed
+        ? s
+        : {
+            ...s,
+            weightKg: newWeight
+          }
+    );
     onUpdateLog({
       ...log,
       sets: updatedSets
@@ -211,6 +251,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       : lastPerformance?.reps
       ? `${lastPerformance.reps}`
       : null;
+
+  const lastHadWeightDrop =
+    Boolean(lastPerformance?.hadWeightDrop) &&
+    (lastPerformance?.lastSetsWeights?.length ?? 0) > 1;
+
+  const lastWeightsFormatted = lastHadWeightDrop
+    ? `${lastPerformance!.lastSetsWeights!.join('→')}kg`
+    : lastPerformance
+    ? `${lastPerformance.weightKg}kg`
+    : null;
 
   const isCompact4Cols = log.sets.length >= 4;
 
@@ -364,14 +414,18 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                 {!isAborted && (
                   <span
                     className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 tabular-nums shadow-2xs ${
-                      liveStreak >= 3
+                      hasCompletedWeightDrop
+                        ? 'bg-amber-500 text-white'
+                        : liveStreak >= 3
                         ? 'bg-amber-500 text-white'
                         : liveStreak > 0
                         ? 'bg-blue-600 text-white'
                         : 'bg-slate-900 text-white'
                     }`}
                   >
-                    {liveStreak}/3 {liveStreak >= 3 ? 'PRONTO' : 'no teto'}
+                    {hasCompletedWeightDrop
+                      ? 'Drop ativo'
+                      : `${liveStreak}/3 ${liveStreak >= 3 ? 'PRONTO' : 'no teto'}`}
                   </span>
                 )}
               </div>
@@ -456,55 +510,96 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           )}
 
           {/* =================================================================== */}
-          {/* ZONA 3: BARRA DE CARGA DE ALTO CONTRASTE (SEM PRATA CAFONA)         */}
+          {/* ZONA 3: BARRA DE CARGA DE ALTO CONTRASTE (TRAVA SÉRIES CONCLUÍDAS)   */}
           {/* =================================================================== */}
-          <div className="flex items-center justify-between gap-2 mb-3 p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/80">
+          <div
+            className={`flex items-center justify-between gap-2 mb-3 p-1.5 rounded-2xl border transition-colors ${
+              allSetsDone
+                ? 'bg-emerald-50/50 border-emerald-200/80'
+                : 'bg-slate-100/90 border-slate-200/80'
+            }`}
+          >
             {/* Selo Esquerdo em Azul-Marinho combinando com o Header */}
             <div className="h-8 px-3 rounded-xl bg-slate-900 text-white flex items-center gap-1.5 text-xs font-extrabold tracking-tight shrink-0 shadow-2xs">
-              <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <span>Carga</span>
+              {allSetsDone ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Carga Travada</span>
+                </>
+              ) : (
+                <>
+                  <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>
+                    {completedCount > 0 && firstPendingSet
+                      ? `Carga (S${firstPendingSet.setNumber}+)`
+                      : 'Carga'}
+                  </span>
+                </>
+              )}
             </div>
 
-            {/* Controles Direitos: -5 | 60 kg | +5 */}
+            {/* Controles Direitos: -5 | 60 kg (ou 60→55→50 kg quando todas concluídas em drop) | +5 */}
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => handleAdjustWeight(-5)}
-                disabled={isAborted || currentWeight <= 0}
-                className="h-8 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-black text-xs flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
-                title="Diminuir 5kg"
+                disabled={isAborted || allSetsDone || currentWeight <= 0}
+                className="h-8 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-black text-xs flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-35 disabled:pointer-events-none shadow-2xs"
+                title={
+                  allSetsDone
+                    ? 'Desmarque uma série caso queira alterar a carga'
+                    : 'Diminuir 5kg nas séries pendentes'
+                }
                 aria-label="-5kg"
               >
                 <Minus className="w-3 h-3 stroke-[2.5]" />
                 <span>5</span>
               </button>
 
-              <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-2 h-8 shadow-2xs">
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={currentWeight === 0 ? '' : currentWeight}
-                  placeholder="0"
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    handleDirectWeightChange(val === '' ? 0 : parseFloat(val));
-                  }}
-                  disabled={isAborted}
-                  className="w-11 h-full text-center text-sm font-black text-slate-900 bg-transparent focus:outline-none disabled:opacity-50 tabular-nums"
-                />
-                <span className="text-[10px] font-extrabold text-slate-400 select-none">
-                  kg
-                </span>
-              </div>
+              {allSetsDone && hasTodayWeightVariation ? (
+                <div
+                  className="flex items-center bg-white border border-emerald-200 rounded-xl px-2.5 h-8 shadow-2xs"
+                  title="Cargas registradas em cada série concluída"
+                >
+                  <span className="text-xs font-black text-slate-900 tabular-nums whitespace-nowrap">
+                    {log.sets.map((s) => s.weightKg).join('→')}
+                  </span>
+                  <span className="text-[10px] font-extrabold text-slate-400 ml-1 select-none">
+                    kg
+                  </span>
+                </div>
+              ) : (
+                <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-2 h-8 shadow-2xs">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={currentWeight === 0 ? '' : currentWeight}
+                    placeholder="0"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleDirectWeightChange(val === '' ? 0 : parseFloat(val));
+                    }}
+                    disabled={isAborted || allSetsDone}
+                    className="w-11 h-full text-center text-sm font-black text-slate-900 bg-transparent focus:outline-none disabled:opacity-60 tabular-nums"
+                  />
+                  <span className="text-[10px] font-extrabold text-slate-400 select-none">
+                    kg
+                  </span>
+                </div>
+              )}
 
               <button
                 type="button"
                 onClick={() => handleAdjustWeight(5)}
-                disabled={isAborted}
-                className="h-8 px-3 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-40 shadow-2xs"
-                title="Aumentar 5kg"
+                disabled={isAborted || allSetsDone}
+                className="h-8 px-3 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center gap-0.5 active:scale-[0.95] transition-transform duration-120 ease-out disabled:opacity-35 disabled:pointer-events-none shadow-2xs"
+                title={
+                  allSetsDone
+                    ? 'Desmarque uma série caso queira alterar a carga'
+                    : 'Aumentar 5kg nas séries pendentes'
+                }
                 aria-label="+5kg"
               >
                 <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -524,7 +619,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             {log.sets.map((set, idx) => {
               const isDone = set.completed;
               const currentReps = set.reps || minReps;
-              const isAtTargetCeiling = currentReps >= maxReps;
+              const isAtTargetCeiling =
+                currentReps >= maxReps && set.weightKg === workingWeight;
+              const showSetWeightOnButton = isDone || hasTodayWeightVariation;
 
               return (
                 <div
@@ -537,18 +634,23 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                       : 'border-slate-300/90 bg-slate-100/80 shadow-2xs'
                   }`}
                 >
-                  {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Alto Contraste) */}
+                  {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Trava Peso & Reps ao concluir) */}
                   <button
                     type="button"
                     onClick={() => handleToggleSet(idx)}
                     disabled={isAborted}
-                    className={`w-full h-9 px-2 flex items-center justify-center gap-1.5 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
+                    className={`w-full h-9 px-1.5 flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
                       isAborted
                         ? 'text-slate-400 cursor-not-allowed bg-slate-200'
                         : isDone
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-900 text-white'
                     }`}
+                    title={
+                      isDone
+                        ? `Série ${set.setNumber} travada com ${set.weightKg}kg (${currentReps} reps). Toque para destravar/editar.`
+                        : `Concluir Série ${set.setNumber} com ${set.weightKg}kg`
+                    }
                     aria-label={`Concluir Série ${set.setNumber}`}
                   >
                     {isDone ? (
@@ -556,12 +658,18 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                     ) : (
                       <span className="w-2 h-2 rounded-full border-2 border-blue-400 shrink-0" />
                     )}
-                    <span className="text-[11px] font-black tracking-tight whitespace-nowrap">
-                      {isCompact4Cols ? `S${set.setNumber}` : `Série ${set.setNumber}`}
+                    <span className="text-[11px] font-black tracking-tight whitespace-nowrap tabular-nums">
+                      {showSetWeightOnButton
+                        ? isCompact4Cols
+                          ? `S${set.setNumber}•${set.weightKg}`
+                          : `S${set.setNumber} • ${set.weightKg}kg`
+                        : isCompact4Cols
+                        ? `S${set.setNumber}`
+                        : `Série ${set.setNumber}`}
                     </span>
                   </button>
 
-                  {/* Parte Inferior: Stepper de Repetições com Botões Destacados (- / +) */}
+                  {/* Parte Inferior: Stepper de Repetições (Travado quando a série está concluída) */}
                   <div
                     className={`p-1 flex items-center justify-between gap-0.5 ${
                       isDone ? 'bg-emerald-50/70' : 'bg-slate-100'
@@ -570,8 +678,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => handleAdjustSetReps(idx, -1)}
-                      disabled={isAborted || currentReps <= 1}
-                      className="w-6 h-6 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 active:scale-90 transition-transform disabled:opacity-30 shrink-0 shadow-2xs"
+                      disabled={isAborted || isDone || currentReps <= 1}
+                      className="w-6 h-6 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs"
                       aria-label={`Menos 1 repetição na série ${set.setNumber}`}
                     >
                       <Minus className="w-3 h-3 stroke-[2.5]" />
@@ -597,8 +705,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => handleAdjustSetReps(idx, 1)}
-                      disabled={isAborted || currentReps >= 35}
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30 shrink-0 shadow-2xs ${
+                      disabled={isAborted || isDone || currentReps >= 35}
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs ${
                         isDone ? 'bg-emerald-600' : 'bg-blue-600'
                       }`}
                       aria-label={`Mais 1 repetição na série ${set.setNumber}`}
@@ -617,24 +725,34 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           <div className="mt-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-[11px] text-slate-600">
             <div className="flex items-center gap-1.5 min-w-0 truncate">
               <History className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <div className="truncate">
-                {lastPerformance ? (
-                  <span>
-                    Último:{' '}
-                    <strong className="text-slate-900 font-black tabular-nums">
-                      {lastPerformance.weightKg}kg
-                    </strong>
-                    {lastRepsFormatted && (
-                      <span className="text-slate-700 font-bold ml-1 tabular-nums">
-                        ({lastRepsFormatted} reps)
+              <div className="truncate flex items-center gap-1">
+                {lastPerformance && lastWeightsFormatted ? (
+                  <>
+                    <span className="truncate">
+                      Último:{' '}
+                      <strong className="text-slate-900 font-black tabular-nums">
+                        {lastWeightsFormatted}
+                      </strong>
+                      {lastRepsFormatted && (
+                        <span className="text-slate-700 font-bold ml-1 tabular-nums">
+                          ({lastRepsFormatted} {lastHadWeightDrop ? 'r' : 'reps'})
+                        </span>
+                      )}
+                      {formattedLastDate && (
+                        <span className="text-slate-400 font-semibold ml-1">
+                          • {formattedLastDate}
+                        </span>
+                      )}
+                    </span>
+                    {lastHadWeightDrop && (
+                      <span
+                        className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200/80 text-[9px] font-black shrink-0"
+                        title="Na última sessão houve redução de carga (dropset) entre as séries"
+                      >
+                        Drop
                       </span>
                     )}
-                    {formattedLastDate && (
-                      <span className="text-slate-400 font-semibold ml-1">
-                        • {formattedLastDate}
-                      </span>
-                    )}
-                  </span>
+                  </>
                 ) : (
                   <span className="text-slate-500 font-medium">
                     1ª sessão registrada nesta carga

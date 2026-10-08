@@ -36,6 +36,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 }) => {
   const routines = useLiveQuery(() => db.routines.toArray());
   const userProfile = useLiveQuery(() => db.userProfile.get('main_user'));
+  const sessionsCount = useLiveQuery(() => db.workoutSessions.count());
 
   // Active routine selection (A, B, C, D)
   const [selectedRoutineId, setSelectedRoutineId] = useState<RoutineId>('A');
@@ -99,7 +100,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     }
   }, [logsByRoutine]);
 
-  // Preload all routines once so switching between Treino A / B / C / D is 0ms with zero blink
+  // Preload all routines and refresh automatically if sessions are added/deleted in Evolution
   useEffect(() => {
     let isMounted = true;
 
@@ -124,10 +125,17 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
             isSubstituted: false,
             abortedForFatigue: false,
             sets: Array.from({ length: ex.defaultSets }, (_, i) => {
-              const prevSetReps =
-                last && last.weightKg === baseWeight
-                  ? last.lastSetsReps?.[i] ?? last.reps
-                  : minReps;
+              const setMatchedBaseWeight =
+                last &&
+                last.weightKg === baseWeight &&
+                (!last.lastSetsWeights ||
+                  last.lastSetsWeights[i] === undefined ||
+                  last.lastSetsWeights[i] === baseWeight);
+
+              const prevSetReps = setMatchedBaseWeight
+                ? last.lastSetsReps?.[i] ?? last.reps
+                : minReps;
+
               return {
                 setNumber: i + 1,
                 weightKg: baseWeight,
@@ -161,7 +169,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionsCount]);
 
   // Synchronous fallback so exerciseLogs is NEVER empty while IndexedDB resolves
   const exerciseLogs = useMemo<ExerciseLog[]>(() => {
@@ -212,7 +220,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         };
       });
 
-      // Persist the updated weight into db.routines after rapid taps settle (350ms)
+      // Persist the primary working weight into db.routines after rapid taps settle (350ms)
       if (updated.sets && updated.sets[0] && updated.sets[0].weightKg > 0) {
         const newWeight = updated.sets[0].weightKg;
         const exId = updated.exerciseId;
@@ -277,12 +285,24 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     // Save to Dexie
     await db.workoutSessions.add(newSession);
 
-    // Save final weights to db.routines so they remain permanent for subsequent workouts!
+    // Save final working weights to db.routines so they remain permanent for subsequent workouts!
     if (currentRoutine) {
       const updatedExercises = currentRoutine.exercises.map((ex) => {
         const log = exerciseLogs.find((l) => l.exerciseId === ex.id);
-        if (log && log.sets && log.sets[0] && log.sets[0].weightKg > 0) {
-          return { ...ex, defaultWeightKg: log.sets[0].weightKg };
+        if (log && log.sets) {
+          const completedSets = log.sets.filter((s) => s.completed && s.weightKg > 0);
+          const refSets =
+            completedSets.length > 0
+              ? completedSets
+              : log.sets.filter((s) => s.weightKg > 0);
+          if (refSets.length > 0) {
+            const isGraviton =
+              Boolean(ex.isAssisted) || ex.name.toLowerCase().includes('graviton');
+            const workingWeight = isGraviton
+              ? Math.min(...refSets.map((s) => s.weightKg))
+              : Math.max(...refSets.map((s) => s.weightKg));
+            return { ...ex, defaultWeightKg: workingWeight };
+          }
         }
         return ex;
       });
@@ -304,10 +324,17 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
             isSubstituted: false,
             abortedForFatigue: false,
             sets: Array.from({ length: ex.defaultSets }, (_, i) => {
-              const prevSetReps =
-                last && last.weightKg === baseWeight
-                  ? last.lastSetsReps?.[i] ?? last.reps
-                  : minReps;
+              const setMatchedBaseWeight =
+                last &&
+                last.weightKg === baseWeight &&
+                (!last.lastSetsWeights ||
+                  last.lastSetsWeights[i] === undefined ||
+                  last.lastSetsWeights[i] === baseWeight);
+
+              const prevSetReps = setMatchedBaseWeight
+                ? last.lastSetsReps?.[i] ?? last.reps
+                : minReps;
+
               return {
                 setNumber: i + 1,
                 weightKg: baseWeight,

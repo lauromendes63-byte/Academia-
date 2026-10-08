@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const APP_VERSION = '2.2.1'
+const APP_VERSION = '2.2.2'
 const BUILD_ID = `${APP_VERSION}-${Date.now().toString(36)}`
 const BUILD_TIME = new Date().toLocaleDateString('pt-BR', {
   day: '2-digit',

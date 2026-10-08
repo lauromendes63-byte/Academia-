@@ -780,6 +780,12 @@ export const EvolutionScreen: React.FC = () => {
                   prog?.lastSetsReps && prog.lastSetsReps.length > 0
                     ? prog.lastSetsReps.join('/')
                     : null;
+                const hadDrop =
+                  Boolean(prog?.hadWeightDrop) &&
+                  (prog?.lastSetsWeights?.length ?? 0) > 1;
+                const latestWeightStr = hadDrop
+                  ? `${prog!.lastSetsWeights!.join('→')}kg`
+                  : `${item.latestWeight}kg`;
 
                 return (
                   <div
@@ -820,6 +826,11 @@ export const EvolutionScreen: React.FC = () => {
                                 : `Teto ${Math.min(3, streak)}/3`}
                             </span>
                           )}
+                          {hadDrop && (
+                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200/80 whitespace-nowrap">
+                              Drop
+                            </span>
+                          )}
                         </div>
 
                         <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug truncate">
@@ -832,7 +843,7 @@ export const EvolutionScreen: React.FC = () => {
                           </span>
                           <span>•</span>
                           <span>
-                            Atual: <strong className="text-slate-900 font-bold">{item.latestWeight}kg</strong>
+                            Atual: <strong className="text-slate-900 font-bold tabular-nums">{latestWeightStr}</strong>
                           </span>
                           {lastRepsStr && (
                             <span className="text-slate-400 tabular-nums">

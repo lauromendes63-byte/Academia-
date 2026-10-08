@@ -290,6 +290,8 @@ export function evaluateExerciseHistory(
     weightKg: number;
     bestReps: number;
     setsReps: number[];
+    setsWeights: number[];
+    hadWeightDrop: boolean;
     wasFatiguedOrIncomplete: boolean;
     isPerfectAtTarget: boolean;
   }
@@ -347,6 +349,13 @@ export function evaluateExerciseHistory(
       !wasFatiguedOrIncomplete &&
       completedSets.every((s) => s.reps >= maxReps && s.weightKg === sessionWeight);
 
+    const setsWeights =
+      completedSets.length > 0
+        ? completedSets.map((s) => s.weightKg)
+        : targetSets.map((s) => s.weightKg);
+
+    const hadWeightDrop = new Set(setsWeights).size > 1;
+
     history.push({
       date: session.date,
       weightKg: sessionWeight,
@@ -355,6 +364,8 @@ export function evaluateExerciseHistory(
         completedSets.length > 0
           ? completedSets.map((s) => s.reps)
           : targetSets.map((s) => s.reps),
+      setsWeights,
+      hadWeightDrop,
       wasFatiguedOrIncomplete,
       isPerfectAtTarget
     });
@@ -395,6 +406,8 @@ export function evaluateExerciseHistory(
     date: latest.date,
     bestWeightKg,
     lastSetsReps: latest.setsReps,
+    lastSetsWeights: latest.setsWeights,
+    hadWeightDrop: latest.hadWeightDrop,
     minReps,
     maxReps,
     perfectStreak,

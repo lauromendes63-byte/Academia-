@@ -31,7 +31,7 @@ export const ExerciseExecutionModal: React.FC<ExerciseExecutionModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* TOPO LIMPO */}

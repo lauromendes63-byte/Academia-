@@ -52,6 +52,8 @@ export interface ExercisePerformanceSummary {
   date: string;
   bestWeightKg?: number;
   lastSetsReps: number[];
+  lastSetsWeights?: number[];
+  hadWeightDrop?: boolean;
   minReps: number;
   maxReps: number;
   perfectStreak: number;
