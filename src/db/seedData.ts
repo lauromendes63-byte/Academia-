@@ -17,13 +17,13 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
   {
     id: 'A',
     title: 'TREINO A: PULL',
-    subtitle: 'Costas, Bíceps e Deltoide Posterior',
+    subtitle: 'Costas, Trapézio e Bíceps',
     exercises: [
       {
         id: 'pull_1',
         name: 'Barra Fixa no Graviton',
         muscleGroup: 'Costas & Dorsal',
-        gripOrForm: 'Pronada Aberta (ou Neutra Curva)',
+        gripOrForm: 'Pegada Neutra Fechada',
         defaultSets: 3,
         targetReps: '6-8',
         restSeconds: 120,
@@ -54,26 +54,37 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         substitutes: ['Crucifixo Invertido Halteres Banco', 'Face Pull Polia c/ Corda']
       },
       {
-        id: 'pull_4',
-        name: 'Rosca Bayesiana na Polia',
-        muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
-        gripOrForm: 'Polia Baixa, pegada supinada, cotovelos levemente à frente',
-        defaultSets: 3,
-        targetReps: '12-15',
-        restSeconds: 60,
-        defaultWeightKg: 15,
-        substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
-      },
-      {
-        id: 'pull_5',
-        name: 'Rosca Martelo c/ Halteres',
-        muscleGroup: 'Braquial & Antebraço',
-        gripOrForm: 'Pegada Neutra firme',
+        id: 'pull_shrug',
+        name: 'Encolhimento com Halteres',
+        muscleGroup: 'Trapézio',
+        gripOrForm: 'Halteres ao lado do corpo, elevação vertical sem girar os ombros',
         defaultSets: 3,
         targetReps: '10-12',
         restSeconds: 60,
-        defaultWeightKg: 14,
-        substitutes: ['Rosca Martelo Polia c/ Corda', 'Rosca Inversa Barra']
+        defaultWeightKg: 20,
+        substitutes: ['Encolhimento c/ Barra', 'Encolhimento no Smith']
+      },
+      {
+        id: 'pull_spider',
+        name: 'Rosca Spider c/ Halteres',
+        muscleGroup: 'Bíceps (Pico & Estabilidade)',
+        gripOrForm: 'Peito apoiado no banco inclinado (45°), braços verticais à frente',
+        defaultSets: 3,
+        targetReps: '8-10',
+        restSeconds: 60,
+        defaultWeightKg: 10,
+        substitutes: ['Rosca Spider c/ Barra W', 'Rosca Scott Máquina', 'Rosca no Banco Inclinado']
+      },
+      {
+        id: 'pull_4',
+        name: 'Rosca Bayesian na Polia',
+        muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
+        gripOrForm: 'Polia Baixa, pegada supinada, braço alongado atrás do tronco',
+        defaultSets: 3,
+        targetReps: '10-12',
+        restSeconds: 60,
+        defaultWeightKg: 15,
+        substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
       }
     ]
   },
@@ -178,15 +189,16 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         substitutes: ['Supino Inclinado Barra', 'Supino Smith Inclinado']
       },
       {
-        id: 'push_3',
-        name: 'Elevação Lateral na Polia Baixa',
-        muscleGroup: 'Deltoide Lateral',
-        gripOrForm: 'Cabo na canela, cotovelo fletido 20°',
+        id: 'push_5',
+        name: 'Mergulho Paralelas no Graviton',
+        muscleGroup: 'Peitoral Inferior & Tríceps',
+        gripOrForm: 'Tronco inclinado à frente',
         defaultSets: 3,
-        targetReps: '12-15/lado',
-        restSeconds: 60,
-        defaultWeightKg: 10,
-        substitutes: ['Elevação Lateral Halteres Sentado 90°', 'Elevação Apoiada']
+        targetReps: '8-10',
+        restSeconds: 90,
+        defaultWeightKg: 35,
+        substitutes: ['Supino Fechado Barra', 'Flexão Diamante'],
+        isAssisted: true
       },
       {
         id: 'push_4',
@@ -200,38 +212,26 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         substitutes: ['Crossover Polia Média', 'Crucifixo Halteres']
       },
       {
-        id: 'push_5',
-        name: 'Mergulho Paralelas no Graviton',
-        muscleGroup: 'Peitoral Inferior & Tríceps',
-        gripOrForm: 'Tronco inclinado à frente',
+        id: 'push_3',
+        name: 'Elevação Lateral na Polia Baixa',
+        muscleGroup: 'Deltoide Lateral',
+        gripOrForm: 'Cabo na canela, cotovelo fletido 20°',
         defaultSets: 3,
-        targetReps: '8-10',
-        restSeconds: 90,
-        defaultWeightKg: 35,
-        substitutes: ['Supino Fechado Barra', 'Flexão Diamante'],
-        isAssisted: true
+        targetReps: '12-15/lado',
+        restSeconds: 60,
+        defaultWeightKg: 10,
+        substitutes: ['Elevação Lateral Halteres Sentado 90°', 'Elevação Apoiada']
       },
       {
         id: 'push_6',
-        name: 'Tríceps Polia Alta c/ Corda',
-        muscleGroup: 'Tríceps (Cabeça Lateral)',
-        gripOrForm: 'Pegada neutra abrindo embaixo',
+        name: 'Tríceps Pulley na Polia c/ Barra Reta',
+        muscleGroup: 'Tríceps',
+        gripOrForm: 'Barra reta (ou barra V), pegada pronada, cotovelos colados ao tronco',
         defaultSets: 3,
         targetReps: '10-12',
         restSeconds: 60,
         defaultWeightKg: 25,
-        substitutes: ['Tríceps Pulley Barra Reta', 'Tríceps Coice']
-      },
-      {
-        id: 'push_7',
-        name: 'Tríceps Francês na Polia ou Haltere',
-        muscleGroup: 'Tríceps (Cabeça Longa)',
-        gripOrForm: 'Braço elevado acima da cabeça',
-        defaultSets: 3,
-        targetReps: '12-15',
-        restSeconds: 60,
-        defaultWeightKg: 18,
-        substitutes: ['Tríceps Testa Barra W', 'Tríceps Francês Unilateral']
+        substitutes: ['Tríceps Pulley c/ Barra V', 'Tríceps Polia Alta c/ Corda']
       }
     ]
   },

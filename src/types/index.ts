@@ -25,6 +25,7 @@ export interface SetEntry {
   weightKg: number;
   reps: number;
   completed: boolean;
+  completedAt?: string;
 }
 
 export interface ExerciseLog {

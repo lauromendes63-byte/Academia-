@@ -30,7 +30,7 @@ export class AcademiaDatabase extends Dexie {
 
 export const db = new AcademiaDatabase();
 
-const MIGRATION_FLAG_KEY = 'academia_db_migrated_v216';
+const MIGRATION_FLAG_KEY = 'academia_db_migrated_v230';
 
 /**
  * Initializes database with default routines and user profile if not present.
@@ -86,32 +86,40 @@ export async function initializeDatabase(): Promise<void> {
       initTasks.push(
         (async () => {
           const allRoutines = await db.routines.toArray();
-          for (const routine of allRoutines) {
-            let changed = false;
-            routine.exercises = routine.exercises.map((e) => {
-              let updated = e;
-              if (e.id === 'pull_4' && e.name !== 'Rosca Bayesiana na Polia') {
-                changed = true;
-                updated = {
-                  ...updated,
-                  name: 'Rosca Bayesiana na Polia',
-                  muscleGroup: 'Bíceps (Pico & Tensão Contínua)',
-                  gripOrForm:
-                    'Polia Baixa, pegada supinada, cotovelos levemente à frente',
-                  defaultSets: 3,
-                  targetReps: '12-15',
-                  restSeconds: 60,
-                  substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
-                };
+          const routineById = new Map(allRoutines.map((r) => [r.id, r]));
+
+          for (const defaultRoutine of DEFAULT_ROUTINES) {
+            const existing = routineById.get(defaultRoutine.id);
+            if (!existing) {
+              await db.routines.put(defaultRoutine);
+              continue;
+            }
+
+            if (defaultRoutine.id === 'A' || defaultRoutine.id === 'C') {
+              const prevWeightById = new Map(
+                existing.exercises.map((ex) => [ex.id, ex.defaultWeightKg])
+              );
+              const updatedExercises = defaultRoutine.exercises.map((defEx) => ({
+                ...defEx,
+                defaultWeightKg:
+                  prevWeightById.get(defEx.id) ?? defEx.defaultWeightKg
+              }));
+              await db.routines.put({
+                ...defaultRoutine,
+                exercises: updatedExercises
+              });
+            } else {
+              let changed = false;
+              const updatedExercises = existing.exercises.map((e) => {
+                if (e.defaultSets !== 3) {
+                  changed = true;
+                  return { ...e, defaultSets: 3 };
+                }
+                return e;
+              });
+              if (changed) {
+                await db.routines.put({ ...existing, exercises: updatedExercises });
               }
-              if (updated.defaultSets !== 3) {
-                changed = true;
-                updated = { ...updated, defaultSets: 3 };
-              }
-              return updated;
-            });
-            if (changed) {
-              await db.routines.put(routine);
             }
           }
 
@@ -127,8 +135,8 @@ export async function initializeDatabase(): Promise<void> {
                 modified = true;
                 return {
                   ...ex,
-                  exerciseName: 'Rosca Bayesiana na Polia',
-                  activeExerciseName: 'Rosca Bayesiana na Polia'
+                  exerciseName: 'Rosca Bayesian na Polia',
+                  activeExerciseName: 'Rosca Bayesian na Polia'
                 };
               }
               return ex;
@@ -197,8 +205,8 @@ export async function initializeDatabase(): Promise<void> {
           },
           {
             exerciseId: 'pull_4',
-            exerciseName: 'Rosca Bayesiana na Polia',
-            activeExerciseName: 'Rosca Bayesiana na Polia',
+            exerciseName: 'Rosca Bayesian na Polia',
+            activeExerciseName: 'Rosca Bayesian na Polia',
             isSubstituted: false,
             abortedForFatigue: false,
             sets: [
@@ -255,11 +263,12 @@ export function getSuggestedWeightStep(
   }
   const lowerName = exerciseName.toLowerCase();
   const isSmallStepIsolation =
-    ['pull_4', 'pull_5', 'push_2', 'push_3', 'push_6', 'push_7', 'lower2_1'].includes(
+    ['pull_4', 'pull_5', 'pull_shrug', 'pull_spider', 'push_2', 'push_3', 'push_6', 'push_7', 'lower2_1'].includes(
       exerciseId
     ) ||
     lowerName.includes('haltere') ||
     lowerName.includes('rosca') ||
+    lowerName.includes('encolhimento') ||
     lowerName.includes('elevação lateral') ||
     lowerName.includes('tríceps');
 

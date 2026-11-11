@@ -363,7 +363,7 @@ export const EvolutionScreen: React.FC = () => {
 
       return {
         id: exDef.id,
-        name: exDef.name.includes('Baiana') ? 'Rosca Bayesiana na Polia' : exDef.name,
+        name: exDef.name.includes('Baiana') ? 'Rosca Bayesian na Polia' : exDef.name,
         muscleGroup: exDef.muscleGroup,
         targetReps: exDef.targetReps,
         defaultSets: exDef.defaultSets,

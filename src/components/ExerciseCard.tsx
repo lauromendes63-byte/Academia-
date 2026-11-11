@@ -44,7 +44,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const isAborted = log.abortedForFatigue;
   const displayName =
     log.activeExerciseName.includes('Baiana') || exercise.name.includes('Baiana')
-      ? 'Rosca Bayesiana na Polia'
+      ? 'Rosca Bayesian na Polia'
       : log.activeExerciseName;
 
   // Ilustração anatômica correspondente ao exercício ativo (ou substituto)
@@ -132,10 +132,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         if (nextCompleted) {
           playSetCompleteSound();
           triggerHaptic('success');
-        } else {
-          triggerHaptic('light');
+          const completedAt = new Date().toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+          return { ...s, completed: true, completedAt };
         }
-        return { ...s, completed: nextCompleted };
+        triggerHaptic('light');
+        const { completedAt: _cleared, ...rest } = s;
+        return { ...rest, completed: false };
       }
       return s;
     });
@@ -612,7 +619,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           {/* ZONA 4: OS 3 BOTÕES DE SÉRIES DE ALTO CONTRASTE (SLATE-900 / BLUE)  */}
           {/* =================================================================== */}
           <div
-            className={`grid ${
+            className={`grid items-start ${
               isCompact4Cols ? 'grid-cols-4 gap-1.5' : 'grid-cols-3 gap-2'
             }`}
           >
@@ -624,96 +631,104 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               const showSetWeightOnButton = isDone || hasTodayWeightVariation;
 
               return (
-                <div
-                  key={set.setNumber}
-                  className={`rounded-2xl border overflow-hidden transition-[border-color,background-color,box-shadow] duration-120 ease-out ${
-                    isAborted
-                      ? 'border-slate-200 bg-slate-100 opacity-60'
-                      : isDone
-                      ? 'border-emerald-500 bg-emerald-50/30 ring-1 ring-emerald-500/20 shadow-2xs'
-                      : 'border-slate-300/90 bg-slate-100/80 shadow-2xs'
-                  }`}
-                >
-                  {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Trava Peso & Reps ao concluir) */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSet(idx)}
-                    disabled={isAborted}
-                    className={`w-full h-9 px-1.5 flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
-                      isAborted
-                        ? 'text-slate-400 cursor-not-allowed bg-slate-200'
-                        : isDone
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-900 text-white'
-                    }`}
-                    title={
-                      isDone
-                        ? `Série ${set.setNumber} travada com ${set.weightKg}kg (${currentReps} reps). Toque para destravar/editar.`
-                        : `Concluir Série ${set.setNumber} com ${set.weightKg}kg`
-                    }
-                    aria-label={`Concluir Série ${set.setNumber}`}
-                  >
-                    {isDone ? (
-                      <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-white" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full border-2 border-blue-400 shrink-0" />
-                    )}
-                    <span className="text-[11px] font-black tracking-tight whitespace-nowrap tabular-nums">
-                      {showSetWeightOnButton
-                        ? isCompact4Cols
-                          ? `S${set.setNumber}•${set.weightKg}`
-                          : `S${set.setNumber} • ${set.weightKg}kg`
-                        : isCompact4Cols
-                        ? `S${set.setNumber}`
-                        : `Série ${set.setNumber}`}
-                    </span>
-                  </button>
-
-                  {/* Parte Inferior: Stepper de Repetições (Travado quando a série está concluída) */}
+                <div key={set.setNumber} className="flex flex-col">
                   <div
-                    className={`p-1 flex items-center justify-between gap-0.5 ${
-                      isDone ? 'bg-emerald-50/70' : 'bg-slate-100'
+                    className={`rounded-2xl border overflow-hidden transition-[border-color,background-color,box-shadow] duration-120 ease-out ${
+                      isAborted
+                        ? 'border-slate-200 bg-slate-100 opacity-60'
+                        : isDone
+                        ? 'border-emerald-500 bg-emerald-50/30 ring-1 ring-emerald-500/20 shadow-2xs'
+                        : 'border-slate-300/90 bg-slate-100/80 shadow-2xs'
                     }`}
                   >
+                    {/* Parte Superior: 1 Toque para Marcar/Desmarcar Série (Trava Peso & Reps ao concluir) */}
                     <button
                       type="button"
-                      onClick={() => handleAdjustSetReps(idx, -1)}
-                      disabled={isAborted || isDone || currentReps <= 1}
-                      className="w-6 h-6 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs"
-                      aria-label={`Menos 1 repetição na série ${set.setNumber}`}
+                      onClick={() => handleToggleSet(idx)}
+                      disabled={isAborted}
+                      className={`w-full h-9 px-1.5 flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.97] ${
+                        isAborted
+                          ? 'text-slate-400 cursor-not-allowed bg-slate-200'
+                          : isDone
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-900 text-white'
+                      }`}
+                      title={
+                        isDone
+                          ? `Série ${set.setNumber} travada com ${set.weightKg}kg (${currentReps} reps). Toque para destravar/editar.`
+                          : `Concluir Série ${set.setNumber} com ${set.weightKg}kg`
+                      }
+                      aria-label={`Concluir Série ${set.setNumber}`}
                     >
-                      <Minus className="w-3 h-3 stroke-[2.5]" />
+                      {isDone ? (
+                        <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-white" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full border-2 border-blue-400 shrink-0" />
+                      )}
+                      <span className="text-[11px] font-black tracking-tight whitespace-nowrap tabular-nums">
+                        {showSetWeightOnButton
+                          ? isCompact4Cols
+                            ? `S${set.setNumber}•${set.weightKg}`
+                            : `S${set.setNumber} • ${set.weightKg}kg`
+                          : isCompact4Cols
+                          ? `S${set.setNumber}`
+                          : `Série ${set.setNumber}`}
+                      </span>
                     </button>
 
-                    <div className="flex-1 text-center min-w-0 px-0.5">
-                      <span
-                        className={`text-xs font-black tabular-nums whitespace-nowrap ${
-                          isAtTargetCeiling ? 'text-emerald-700' : 'text-slate-900'
-                        }`}
+                    {/* Parte Inferior: Stepper de Repetições (Travado quando a série está concluída) */}
+                    <div
+                      className={`p-1 flex items-center justify-between gap-0.5 ${
+                        isDone ? 'bg-emerald-50/70' : 'bg-slate-100'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustSetReps(idx, -1)}
+                        disabled={isAborted || isDone || currentReps <= 1}
+                        className="w-6 h-6 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs"
+                        aria-label={`Menos 1 repetição na série ${set.setNumber}`}
                       >
-                        {currentReps}
+                        <Minus className="w-3 h-3 stroke-[2.5]" />
+                      </button>
+
+                      <div className="flex-1 text-center min-w-0 px-0.5">
                         <span
-                          className={`text-[9px] font-extrabold ml-0.5 ${
-                            isAtTargetCeiling ? 'text-emerald-600' : 'text-slate-500'
+                          className={`text-xs font-black tabular-nums whitespace-nowrap ${
+                            isAtTargetCeiling ? 'text-emerald-700' : 'text-slate-900'
                           }`}
                         >
-                          {isCompact4Cols ? 'r' : 'reps'}
+                          {currentReps}
+                          <span
+                            className={`text-[9px] font-extrabold ml-0.5 ${
+                              isAtTargetCeiling ? 'text-emerald-600' : 'text-slate-500'
+                            }`}
+                          >
+                            {isCompact4Cols ? 'r' : 'reps'}
+                          </span>
                         </span>
-                      </span>
-                    </div>
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustSetReps(idx, 1)}
-                      disabled={isAborted || isDone || currentReps >= 35}
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs ${
-                        isDone ? 'bg-emerald-600' : 'bg-blue-600'
-                      }`}
-                      aria-label={`Mais 1 repetição na série ${set.setNumber}`}
-                    >
-                      <Plus className="w-3 h-3 stroke-[2.5]" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustSetReps(idx, 1)}
+                        disabled={isAborted || isDone || currentReps >= 35}
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-25 disabled:pointer-events-none shrink-0 shadow-2xs ${
+                          isDone ? 'bg-emerald-600' : 'bg-blue-600'
+                        }`}
+                        aria-label={`Mais 1 repetição na série ${set.setNumber}`}
+                      >
+                        <Plus className="w-3 h-3 stroke-[2.5]" />
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Horário transitório de conclusão da série (controle rápido de descanso) */}
+                  {isDone && set.completedAt && (
+                    <span className="mt-1 text-center text-[9.5px] font-semibold text-slate-400 tabular-nums tracking-tight whitespace-nowrap select-none leading-none">
+                      {isCompact4Cols ? set.completedAt : `Feita às ${set.completedAt}`}
+                    </span>
+                  )}
                 </div>
               );
             })}

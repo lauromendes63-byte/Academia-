@@ -22,9 +22,9 @@ export function getExerciseGuide(
     steps
   });
 
-  // Rosca Bayesiana na Polia (pull_4 no seedData)
+  // Rosca Bayesian na Polia (pull_4 no seedData)
   if (
-    lower.includes('bayesiana') ||
+    lower.includes('bayesian') ||
     lower.includes('baiana') ||
     lower.includes('rosca direta polia')
   ) {
@@ -32,6 +32,31 @@ export function getExerciseGuide(
       'Dê um passo à frente da polia baixa deixando o braço alongado atrás da linha do tronco.',
       'Mantenha o cotovelo fixo e flexione o antebraço à frente contraindo forte o bíceps.',
       'Retorne devagar sentindo o alongamento completo sem mover o ombro.'
+    ]);
+  }
+
+  // Rosca Spider no Banco (pull_spider no seedData)
+  if (lower.includes('spider') || exerciseId === 'pull_spider') {
+    if (lower.includes('barra')) {
+      return withThumb('/exercises/pull_spider_ez.gif', 'Bíceps (Pico & Isolamento)', [
+        'Apoie o tronco/peito sobre o banco inclinado deixando os braços pendurados na vertical.',
+        'Flexione os cotovelos levando a barra W em direção ao queixo sem balançar os ombros.',
+        'Desça controladamente até quase estender os cotovelos mantendo tensão contínua.'
+      ]);
+    }
+    return withThumb('/exercises/pull_spider.gif', 'Bíceps (Pico & Isolamento)', [
+      'Deite de bruços com o peito firme no banco inclinado (~45°), deixando os braços na vertical.',
+      'Flexione os cotovelos levando os halteres para cima contraindo o bíceps sem recuar os cotovelos.',
+      'Desça devagar até o alongamento completo sem usar impulso do tronco.'
+    ]);
+  }
+
+  // Encolhimento com Halteres (pull_shrug no seedData)
+  if (lower.includes('encolhimento') || exerciseId === 'pull_shrug') {
+    return withThumb('/exercises/pull_shrug.gif', 'Trapézio Superior', [
+      'Fique em pé com os halteres ao lado do corpo, coluna neutra e braços estendidos.',
+      'Eleve os ombros verticalmente em direção às orelhas (sem girar para frente ou para trás) e segure 1s no topo.',
+      'Desça controladamente alongando totalmente o trapézio sem dobrar os cotovelos.'
     ]);
   }
 
@@ -76,11 +101,12 @@ export function getExerciseGuide(
     ]);
   }
 
-  // Puxada Alta / Pulley
+  // Puxada Alta / Pulley (Costas)
   if (
-    lower.includes('puxada') ||
-    lower.includes('puxador') ||
-    lower.includes('pulley')
+    !lower.includes('tríceps') &&
+    (lower.includes('puxada') ||
+      lower.includes('puxador') ||
+      lower.includes('pulley'))
   ) {
     return withThumb(
       '/exercises/pull_1_pulldown.gif',
@@ -93,12 +119,12 @@ export function getExerciseGuide(
     );
   }
 
-  // Barra Fixa no Graviton (pull_1 no seedData)
+  // Barra Fixa no Graviton (pull_1 no seedData — Pegada Neutra Fechada)
   if (lower.includes('barra fixa') || exerciseId === 'pull_1') {
     return withThumb('/exercises/pull_1.gif', 'Grande Dorsal & Costas', [
-      'Deprima as escápulas (abaixe os ombros) antes de flexionar os cotovelos.',
-      'Suba conduzindo os cotovelos em direção às costelas mantendo o peito aberto.',
-      'Desça controlando o movimento até alongar totalmente a dorsal.'
+      'Segure nas alças paralelas internas (pegada neutra fechada) e deprima as escápulas antes de puxar.',
+      'Suba puxando os cotovelos para baixo junto às costelas mantendo o peito aberto.',
+      'Desça controlando o peso até alongar totalmente a dorsal sem soltar os ombros.'
     ]);
   }
 
@@ -207,7 +233,7 @@ export function getExerciseGuide(
     );
   }
 
-  // Tríceps Francês / Testa (push_7 no seedData)
+  // Tríceps Francês / Testa (legado/fallback)
   if (lower.includes('francês') || lower.includes('testa')) {
     return withThumb(
       '/exercises/push_french_press.gif',
@@ -220,12 +246,30 @@ export function getExerciseGuide(
     );
   }
 
-  // Tríceps Polia Alta c/ Corda / Pulley (push_6 no seedData)
-  if (lower.includes('tríceps')) {
+  // Tríceps Pulley na Polia c/ Barra V (substituto)
+  if (lower.includes('tríceps') && lower.includes('barra v')) {
+    return withThumb('/exercises/push_pulley_vbar.gif', 'Tríceps Braquial', [
+      'Segure a barra V mantendo os punhos neutros e os cotovelos colados às costelas.',
+      'Empurre a barra até a extensão total dos cotovelos contraindo firme o tríceps.',
+      'Retorne controlando até ~90° sem deixar os cotovelos abrirem ou subirem.'
+    ]);
+  }
+
+  // Tríceps Polia Alta c/ Corda (substituto)
+  if (lower.includes('tríceps') && lower.includes('corda')) {
     return withThumb('/exercises/push_4.gif', 'Tríceps Braquial', [
       'Cole os cotovelos ao lado das costelas e mantenha-os fixos.',
       'Estenda o antebraço para baixo abrindo a corda no final do movimento.',
       'Suba controladamente até 90° sem deixar os cotovelos subirem.'
+    ]);
+  }
+
+  // Tríceps Pulley na Polia c/ Barra Reta (push_6 no seedData)
+  if (lower.includes('tríceps')) {
+    return withThumb('/exercises/push_pulley_bar.gif', 'Tríceps Braquial', [
+      'Segure a barra reta (ou barra V) em pegada pronada e trave os cotovelos colados ao tronco.',
+      'Estenda os cotovelos empurrando a barra até embaixo contraindo forte o tríceps.',
+      'Suba controlando a carga até ~90° mantendo os ombros parados.'
     ]);
   }
 

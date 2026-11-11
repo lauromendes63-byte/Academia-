@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type {
   RoutineId,
   RoutineDefinition,
+  ExerciseDefinition,
   ExerciseLog,
   WorkoutSession,
   ExercisePerformanceSummary
@@ -22,10 +23,159 @@ import {
   RotateCw,
   Sparkles,
   ArrowRight,
-  X
+  X,
+  Undo2
 } from 'lucide-react';
 
 const WORKOUT_DRAFT_KEY = 'academia_workout_draft_v1';
+const AUTO_FINISH_DELAY_MS = 420;
+
+function buildFreshExerciseLog(
+  ex: ExerciseDefinition,
+  last?: ExercisePerformanceSummary | null
+): ExerciseLog {
+  const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
+  const { minReps } = parseRepRange(ex.targetReps);
+
+  return {
+    exerciseId: ex.id,
+    exerciseName: ex.name,
+    activeExerciseName: ex.name,
+    isSubstituted: false,
+    abortedForFatigue: false,
+    sets: Array.from({ length: ex.defaultSets }, (_, i) => {
+      const setMatchedBaseWeight =
+        last &&
+        last.weightKg === baseWeight &&
+        (!last.lastSetsWeights ||
+          last.lastSetsWeights[i] === undefined ||
+          last.lastSetsWeights[i] === baseWeight);
+
+      const prevSetReps = setMatchedBaseWeight
+        ? last.lastSetsReps?.[i] ?? last.reps
+        : minReps;
+
+      return {
+        setNumber: i + 1,
+        weightKg: baseWeight,
+        reps: prevSetReps || minReps,
+        completed: false
+      };
+    })
+  };
+}
+
+function alignRoutineLogsStructure(
+  routine: RoutineDefinition,
+  existingLogs: ExerciseLog[] | undefined,
+  perfMap: Record<string, ExercisePerformanceSummary | null>
+): ExerciseLog[] {
+  if (
+    existingLogs &&
+    existingLogs.length === routine.exercises.length &&
+    existingLogs.every(
+      (log, idx) =>
+        log.exerciseId === routine.exercises[idx]?.id &&
+        log.sets.length === routine.exercises[idx]?.defaultSets
+    )
+  ) {
+    return existingLogs;
+  }
+
+  const existingById = new Map(
+    (existingLogs ?? []).map((item) => [item.exerciseId, item])
+  );
+
+  return routine.exercises.map((ex) => {
+    const existing = existingById.get(ex.id);
+    if (!existing) {
+      return buildFreshExerciseLog(ex, perfMap[ex.id]);
+    }
+
+    const syncedName = existing.isSubstituted
+      ? existing.activeExerciseName
+      : ex.name;
+    const freshTemplate = buildFreshExerciseLog(ex, perfMap[ex.id]);
+    const reconciledSets =
+      existing.sets.length === ex.defaultSets
+        ? existing.sets
+        : Array.from({ length: ex.defaultSets }, (_, i) => {
+            return existing.sets[i] ?? freshTemplate.sets[i];
+          });
+
+    return {
+      ...existing,
+      exerciseName: ex.name,
+      activeExerciseName: syncedName,
+      sets: reconciledSets
+    };
+  });
+}
+
+function reconcileRoutineLogsOnPreload(
+  routine: RoutineDefinition,
+  existingLogs: ExerciseLog[] | undefined,
+  perfMap: Record<string, ExercisePerformanceSummary | null>
+): ExerciseLog[] {
+  const existingById = new Map(
+    (existingLogs ?? []).map((item) => [item.exerciseId, item])
+  );
+
+  return routine.exercises.map((ex) => {
+    const existing = existingById.get(ex.id);
+    if (!existing) {
+      return buildFreshExerciseLog(ex, perfMap[ex.id]);
+    }
+
+    const hasProgress =
+      existing.abortedForFatigue ||
+      existing.isSubstituted ||
+      existing.sets.some((s) => s.completed);
+
+    if (!hasProgress) {
+      return buildFreshExerciseLog(ex, perfMap[ex.id]);
+    }
+
+    const syncedName = existing.isSubstituted
+      ? existing.activeExerciseName
+      : ex.name;
+    const freshTemplate = buildFreshExerciseLog(ex, perfMap[ex.id]);
+    const reconciledSets =
+      existing.sets.length === ex.defaultSets
+        ? existing.sets
+        : Array.from({ length: ex.defaultSets }, (_, i) => {
+            return existing.sets[i] ?? freshTemplate.sets[i];
+          });
+
+    return {
+      ...existing,
+      exerciseName: ex.name,
+      activeExerciseName: syncedName,
+      sets: reconciledSets
+    };
+  });
+}
+
+function isWorkoutFullyComplete(logs: ExerciseLog[]): boolean {
+  if (logs.length === 0) return false;
+  const hasAnyCompletedSet = logs.some((ex) =>
+    ex.sets.some((s) => s.completed)
+  );
+  if (!hasAnyCompletedSet) return false;
+
+  return logs.every(
+    (ex) =>
+      ex.abortedForFatigue ||
+      (ex.sets.length > 0 && ex.sets.every((s) => s.completed))
+  );
+}
+
+function stripTransientSetFields(logs: ExerciseLog[]): ExerciseLog[] {
+  return logs.map((ex) => ({
+    ...ex,
+    sets: ex.sets.map(({ completedAt: _completedAt, ...rest }) => rest)
+  }));
+}
 
 interface WorkoutScreenProps {
   onGoToEvolution?: () => void;
@@ -78,11 +228,58 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     Record<string, ExercisePerformanceSummary | null>
   >({});
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
   const [completedSummary, setCompletedSummary] = useState<{
     routineTitle: string;
     totalSets: number;
     totalExercises: number;
+    isAutoCompleted?: boolean;
   } | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<{
+    sessionId: number;
+    routineId: RoutineId;
+    previousLogs: ExerciseLog[];
+    previousRoutineExercises: ExerciseDefinition[] | null;
+    previousActiveRoutine: RoutineId;
+  } | null>(null);
+
+  // Refs for stable callbacks, zero-rerender-cascade updates & safe async finish/undo
+  const isMountedRef = useRef(true);
+  const isFinishingRef = useRef(false);
+  const autoFinishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const weightPersistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const selectedRoutineIdRef = useRef<RoutineId>(selectedRoutineId);
+  const logsByRoutineRef = useRef<Record<string, ExerciseLog[]>>(logsByRoutine);
+  const currentRoutineRef = useRef<RoutineDefinition | undefined>(currentRoutine);
+  const routinesRef = useRef<RoutineDefinition[] | undefined>(routines);
+  const lastPerfMapRef = useRef<Record<string, ExercisePerformanceSummary | null>>(lastPerfMap);
+  const userProfileRef = useRef(userProfile);
+
+  useEffect(() => {
+    selectedRoutineIdRef.current = selectedRoutineId;
+    logsByRoutineRef.current = logsByRoutine;
+    currentRoutineRef.current = currentRoutine;
+    routinesRef.current = routines;
+    lastPerfMapRef.current = lastPerfMap;
+    userProfileRef.current = userProfile;
+  });
+
+  const cancelAutoFinish = useCallback(() => {
+    if (autoFinishTimerRef.current) {
+      clearTimeout(autoFinishTimerRef.current);
+      autoFinishTimerRef.current = null;
+    }
+  }, []);
+
+  const selectRoutine = useCallback(
+    (nextRoutineId: RoutineId) => {
+      cancelAutoFinish();
+      selectedRoutineIdRef.current = nextRoutineId;
+      setSelectedRoutineId(nextRoutineId);
+    },
+    [cancelAutoFinish]
+  );
 
   // Persist in-progress workout draft for today so mobile tab reloads never lose checked sets
   useEffect(() => {
@@ -102,64 +299,28 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
   // Preload all routines and refresh automatically if sessions are added/deleted in Evolution
   useEffect(() => {
-    let isMounted = true;
+    let isEffectActive = true;
 
     async function preloadAllRoutines() {
       const allRoutines = await db.routines.toArray();
-      if (!allRoutines || allRoutines.length === 0) return;
+      if (!allRoutines || allRoutines.length === 0 || !isEffectActive) return;
 
       const allExercises = allRoutines.flatMap((r) => r.exercises);
       const perfMap = await getRoutineLastPerformances(allExercises);
 
-      const initialMap: Record<string, ExerciseLog[]> = {};
-      for (const routine of allRoutines) {
-        initialMap[routine.id] = routine.exercises.map((ex) => {
-          const last = perfMap[ex.id];
-          const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
-          const { minReps } = parseRepRange(ex.targetReps);
-
-          return {
-            exerciseId: ex.id,
-            exerciseName: ex.name,
-            activeExerciseName: ex.name,
-            isSubstituted: false,
-            abortedForFatigue: false,
-            sets: Array.from({ length: ex.defaultSets }, (_, i) => {
-              const setMatchedBaseWeight =
-                last &&
-                last.weightKg === baseWeight &&
-                (!last.lastSetsWeights ||
-                  last.lastSetsWeights[i] === undefined ||
-                  last.lastSetsWeights[i] === baseWeight);
-
-              const prevSetReps = setMatchedBaseWeight
-                ? last.lastSetsReps?.[i] ?? last.reps
-                : minReps;
-
-              return {
-                setNumber: i + 1,
-                weightKg: baseWeight,
-                reps: prevSetReps || minReps,
-                completed: false
-              };
-            })
-          };
-        });
-      }
-
-      if (isMounted) {
+      if (isEffectActive && isMountedRef.current) {
         setLastPerfMap(perfMap);
         setLogsByRoutine((prev) => {
-          const merged: Record<string, ExerciseLog[]> = { ...initialMap };
-          for (const [rId, existingLogs] of Object.entries(prev)) {
-            const hasActiveProgress = existingLogs?.some(
-              (ex) => ex.abortedForFatigue || ex.isSubstituted || ex.sets.some((s) => s.completed)
+          const reconciled: Record<string, ExerciseLog[]> = {};
+          for (const routine of allRoutines) {
+            reconciled[routine.id] = reconcileRoutineLogsOnPreload(
+              routine,
+              prev[routine.id],
+              perfMap
             );
-            if (hasActiveProgress) {
-              merged[rId] = existingLogs;
-            }
           }
-          return merged;
+          logsByRoutineRef.current = reconciled;
+          return reconciled;
         });
       }
     }
@@ -167,64 +328,215 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     preloadAllRoutines();
 
     return () => {
-      isMounted = false;
+      isEffectActive = false;
     };
   }, [sessionsCount]);
 
-  // Synchronous fallback so exerciseLogs is NEVER empty while IndexedDB resolves
+  // Synchronous structural alignment so exerciseLogs is NEVER empty or stale after routine updates
   const exerciseLogs = useMemo<ExerciseLog[]>(() => {
     const cached = logsByRoutine[selectedRoutineId];
-    if (cached && cached.length > 0) return cached;
-    if (!currentRoutine) return [];
-
-    return currentRoutine.exercises.map((ex) => {
-      const last = lastPerfMap[ex.id];
-      const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
-      const { minReps } = parseRepRange(ex.targetReps);
-      return {
-        exerciseId: ex.id,
-        exerciseName: ex.name,
-        activeExerciseName: ex.name,
-        isSubstituted: false,
-        abortedForFatigue: false,
-        sets: Array.from({ length: ex.defaultSets }, (_, i) => ({
-          setNumber: i + 1,
-          weightKg: baseWeight,
-          reps: minReps,
-          completed: false
-        }))
-      };
-    });
+    if (currentRoutine) {
+      return alignRoutineLogsStructure(currentRoutine, cached, lastPerfMap);
+    }
+    return cached ?? [];
   }, [logsByRoutine, selectedRoutineId, currentRoutine, lastPerfMap]);
 
-  // Debounce timers per exercise so rapid +5/-5 taps update UI in 0ms without triggering useLiveQuery cascades
-  const weightPersistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
   useEffect(() => {
-    const timers = weightPersistTimersRef.current;
+    isMountedRef.current = true;
+    const weightTimers = weightPersistTimersRef.current;
     return () => {
-      Object.values(timers).forEach(clearTimeout);
+      isMountedRef.current = false;
+      cancelAutoFinish();
+      Object.values(weightTimers).forEach(clearTimeout);
     };
-  }, []);
+  }, [cancelAutoFinish]);
 
-  // Update an exercise log in 0ms & persist load with a 350ms debounce
+  // Core workout finalization (shared between manual tap and 100% auto-completion)
+  const executeFinishWorkout = useCallback(
+    async (
+      finishedRoutineId: RoutineId,
+      logsSnapshot: ExerciseLog[],
+      routineSnapshot: RoutineDefinition | undefined,
+      isAutoCompleted: boolean
+    ) => {
+      if (isFinishingRef.current) return;
+
+      const doneSetsTotal = logsSnapshot.reduce(
+        (acc, ex) => acc + ex.sets.filter((s) => s.completed).length,
+        0
+      );
+
+      if (doneSetsTotal === 0) {
+        if (!isAutoCompleted) {
+          alert('Conclua ao menos uma série antes de finalizar o treino!');
+        }
+        return;
+      }
+
+      cancelAutoFinish();
+      Object.keys(weightPersistTimersRef.current).forEach((key) => {
+        clearTimeout(weightPersistTimersRef.current[key]);
+        delete weightPersistTimersRef.current[key];
+      });
+
+      isFinishingRef.current = true;
+      setIsFinishing(true);
+      triggerHaptic('success');
+
+      // Lightweight confetti effect (smooth 60/120fps)
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 }
+      });
+
+      try {
+        const resolvedRoutine =
+          routineSnapshot ?? (await db.routines.get(finishedRoutineId));
+        const previousRoutineExercises = resolvedRoutine
+          ? resolvedRoutine.exercises.map((ex) => ({ ...ex }))
+          : null;
+        const previousActiveRoutine: RoutineId =
+          userProfileRef.current?.activeRoutine || finishedRoutineId;
+
+        const now = Date.now();
+        const newSession: WorkoutSession = {
+          routineId: finishedRoutineId,
+          date: getLocalDateStr(),
+          startTime: now - 45 * 60000,
+          endTime: now,
+          completed: true,
+          exercises: stripTransientSetFields(logsSnapshot)
+        };
+
+        const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
+        const currentIdx = cycle.indexOf(finishedRoutineId);
+        const nextRoutine = cycle[(currentIdx + 1) % cycle.length];
+
+        const updatedExercises = resolvedRoutine
+          ? resolvedRoutine.exercises.map((ex) => {
+              const log = logsSnapshot.find((l) => l.exerciseId === ex.id);
+              if (log && log.sets) {
+                const completedSets = log.sets.filter(
+                  (s) => s.completed && s.weightKg > 0
+                );
+                const refSets =
+                  completedSets.length > 0
+                    ? completedSets
+                    : log.sets.filter((s) => s.weightKg > 0);
+                if (refSets.length > 0) {
+                  const isGraviton =
+                    Boolean(ex.isAssisted) ||
+                    ex.name.toLowerCase().includes('graviton');
+                  const workingWeight = isGraviton
+                    ? Math.min(...refSets.map((s) => s.weightKg))
+                    : Math.max(...refSets.map((s) => s.weightKg));
+                  return { ...ex, defaultWeightKg: workingWeight };
+                }
+              }
+              return ex;
+            })
+          : null;
+
+        // Save session (without transient set timestamps), update weights & advance routine atomically
+        const savedSessionId = await db.transaction(
+          'rw',
+          [db.workoutSessions, db.routines, db.userProfile],
+          async () => {
+            const id = await db.workoutSessions.add(newSession);
+            if (resolvedRoutine && updatedExercises) {
+              await db.routines.update(resolvedRoutine.id, {
+                exercises: updatedExercises
+              });
+            }
+            await db.userProfile.update('main_user', {
+              activeRoutine: nextRoutine
+            });
+            return id;
+          }
+        );
+
+        if (updatedExercises) {
+          const refreshedPerf = await getRoutineLastPerformances(updatedExercises);
+
+          if (isMountedRef.current) {
+            setLastPerfMap((prev) => ({ ...prev, ...refreshedPerf }));
+            setLogsByRoutine((prev) => {
+              const nextMap = {
+                ...prev,
+                [finishedRoutineId]: updatedExercises.map((ex) =>
+                  buildFreshExerciseLog(ex, refreshedPerf[ex.id])
+                )
+              };
+              logsByRoutineRef.current = nextMap;
+              return nextMap;
+            });
+          }
+        }
+
+        if (isMountedRef.current) {
+          selectedRoutineIdRef.current = nextRoutine;
+          setSelectedRoutineId(nextRoutine);
+          setUndoSnapshot({
+            sessionId: savedSessionId,
+            routineId: finishedRoutineId,
+            previousLogs: logsSnapshot,
+            previousRoutineExercises,
+            previousActiveRoutine
+          });
+          setCompletedSummary({
+            routineTitle: resolvedRoutine?.title || 'Treino Concluído',
+            totalSets: doneSetsTotal,
+            totalExercises: logsSnapshot.filter((ex) =>
+              ex.sets.some((s) => s.completed)
+            ).length,
+            isAutoCompleted
+          });
+        }
+      } finally {
+        isFinishingRef.current = false;
+        if (isMountedRef.current) {
+          setIsFinishing(false);
+        }
+      }
+    },
+    [cancelAutoFinish]
+  );
+
+  // Update an exercise log in 0ms, persist load with 350ms debounce & auto-finish on 100% completion
   const handleUpdateLog = useCallback(
     (updated: ExerciseLog) => {
-      setLogsByRoutine((prev) => {
-        const currentList = prev[selectedRoutineId] || exerciseLogs;
-        return {
-          ...prev,
-          [selectedRoutineId]: currentList.map((item) =>
-            item.exerciseId === updated.exerciseId ? updated : item
-          )
-        };
-      });
+      cancelAutoFinish();
+
+      const routineId = selectedRoutineIdRef.current;
+      const routineObj =
+        currentRoutineRef.current?.id === routineId
+          ? currentRoutineRef.current
+          : routinesRef.current?.find((r) => r.id === routineId);
+
+      const prevRaw = logsByRoutineRef.current[routineId];
+      const currentList = routineObj
+        ? alignRoutineLogsStructure(routineObj, prevRaw, lastPerfMapRef.current)
+        : prevRaw || [];
+
+      const prevLog = currentList.find(
+        (item) => item.exerciseId === updated.exerciseId
+      );
+      const nextList = currentList.map((item) =>
+        item.exerciseId === updated.exerciseId ? updated : item
+      );
+
+      const nextMap = {
+        ...logsByRoutineRef.current,
+        [routineId]: nextList
+      };
+      logsByRoutineRef.current = nextMap;
+      setLogsByRoutine(nextMap);
 
       // Persist the primary working weight into db.routines after rapid taps settle (350ms)
       if (updated.sets && updated.sets[0] && updated.sets[0].weightKg > 0) {
         const newWeight = updated.sets[0].weightKg;
         const exId = updated.exerciseId;
-        const routineId = selectedRoutineId;
 
         if (weightPersistTimersRef.current[exId]) {
           clearTimeout(weightPersistTimersRef.current[exId]);
@@ -235,15 +547,39 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
           const routine = await db.routines.get(routineId);
           if (routine) {
             const exIdx = routine.exercises.findIndex((e) => e.id === exId);
-            if (exIdx !== -1 && routine.exercises[exIdx].defaultWeightKg !== newWeight) {
+            if (
+              exIdx !== -1 &&
+              routine.exercises[exIdx].defaultWeightKg !== newWeight
+            ) {
               routine.exercises[exIdx].defaultWeightKg = newWeight;
               await db.routines.put(routine);
             }
           }
         }, 350);
       }
+
+      // Auto-recognize workout end immediately after finishing the last pending set or skipping last exercise for fatigue
+      const prevCompletedCount = prevLog
+        ? prevLog.sets.filter((s) => s.completed).length
+        : 0;
+      const nextCompletedCount = updated.sets.filter((s) => s.completed).length;
+      const didCompleteASet = nextCompletedCount > prevCompletedCount;
+      const didAbortForFatigue = Boolean(
+        !prevLog?.abortedForFatigue && updated.abortedForFatigue
+      );
+
+      if (
+        !isFinishingRef.current &&
+        (didCompleteASet || didAbortForFatigue) &&
+        isWorkoutFullyComplete(nextList)
+      ) {
+        autoFinishTimerRef.current = setTimeout(() => {
+          autoFinishTimerRef.current = null;
+          void executeFinishWorkout(routineId, nextList, routineObj, true);
+        }, AUTO_FINISH_DELAY_MS);
+      }
     },
-    [selectedRoutineId, exerciseLogs]
+    [cancelAutoFinish, executeFinishWorkout]
   );
 
   const completedSetsCount = useMemo(() => {
@@ -253,131 +589,94 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     );
   }, [exerciseLogs]);
 
-  // Finalize Workout
-  const handleFinishWorkout = async () => {
-    if (completedSetsCount === 0) {
-      alert('Conclua ao menos uma série antes de finalizar o treino!');
-      return;
-    }
+  // Manual Finalize Workout
+  const handleFinishWorkout = () => {
+    void executeFinishWorkout(
+      selectedRoutineId,
+      exerciseLogs,
+      currentRoutine,
+      false
+    );
+  };
 
-    const finishedRoutineId = selectedRoutineId;
-    setIsFinishing(true);
-    triggerHaptic('success');
+  // Undo last workout save & restore full active session (including set timestamps)
+  const handleUndoFinish = async () => {
+    if (!undoSnapshot || isUndoing) return;
+    setIsUndoing(true);
+    cancelAutoFinish();
+    triggerHaptic('light');
 
-    // Lightweight confetti effect (smooth 60/120fps)
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 }
-    });
-
-    const todayStr = getLocalDateStr();
-
-    const newSession: WorkoutSession = {
-      routineId: finishedRoutineId,
-      date: todayStr,
-      startTime: Date.now() - 45 * 60000,
-      endTime: Date.now(),
-      completed: true,
-      exercises: exerciseLogs
-    };
-
-    // Save to Dexie
-    await db.workoutSessions.add(newSession);
-
-    // Save final working weights to db.routines so they remain permanent for subsequent workouts!
-    if (currentRoutine) {
-      const updatedExercises = currentRoutine.exercises.map((ex) => {
-        const log = exerciseLogs.find((l) => l.exerciseId === ex.id);
-        if (log && log.sets) {
-          const completedSets = log.sets.filter((s) => s.completed && s.weightKg > 0);
-          const refSets =
-            completedSets.length > 0
-              ? completedSets
-              : log.sets.filter((s) => s.weightKg > 0);
-          if (refSets.length > 0) {
-            const isGraviton =
-              Boolean(ex.isAssisted) || ex.name.toLowerCase().includes('graviton');
-            const workingWeight = isGraviton
-              ? Math.min(...refSets.map((s) => s.weightKg))
-              : Math.max(...refSets.map((s) => s.weightKg));
-            return { ...ex, defaultWeightKg: workingWeight };
+    try {
+      const snap = undoSnapshot;
+      await db.transaction(
+        'rw',
+        [db.workoutSessions, db.routines, db.userProfile],
+        async () => {
+          await db.workoutSessions.delete(snap.sessionId);
+          if (snap.previousRoutineExercises) {
+            await db.routines.update(snap.routineId, {
+              exercises: snap.previousRoutineExercises
+            });
           }
+          await db.userProfile.update('main_user', {
+            activeRoutine: snap.previousActiveRoutine
+          });
         }
-        return ex;
-      });
-      await db.routines.update(currentRoutine.id, { exercises: updatedExercises });
-      const refreshedPerf = await getRoutineLastPerformances(updatedExercises);
-      setLastPerfMap((prev) => ({ ...prev, ...refreshedPerf }));
+      );
 
-      // Reset finished routine's sets to clean state for next cycle
-      setLogsByRoutine((prev) => ({
-        ...prev,
-        [finishedRoutineId]: updatedExercises.map((ex) => {
-          const last = refreshedPerf[ex.id];
-          const baseWeight = last ? last.weightKg : ex.defaultWeightKg;
-          const { minReps } = parseRepRange(ex.targetReps);
-          return {
-            exerciseId: ex.id,
-            exerciseName: ex.name,
-            activeExerciseName: ex.name,
-            isSubstituted: false,
-            abortedForFatigue: false,
-            sets: Array.from({ length: ex.defaultSets }, (_, i) => {
-              const setMatchedBaseWeight =
-                last &&
-                last.weightKg === baseWeight &&
-                (!last.lastSetsWeights ||
-                  last.lastSetsWeights[i] === undefined ||
-                  last.lastSetsWeights[i] === baseWeight);
+      if (snap.previousRoutineExercises) {
+        const restoredPerf = await getRoutineLastPerformances(
+          snap.previousRoutineExercises
+        );
+        if (isMountedRef.current) {
+          setLastPerfMap((prev) => ({ ...prev, ...restoredPerf }));
+        }
+      }
 
-              const prevSetReps = setMatchedBaseWeight
-                ? last.lastSetsReps?.[i] ?? last.reps
-                : minReps;
-
-              return {
-                setNumber: i + 1,
-                weightKg: baseWeight,
-                reps: prevSetReps || minReps,
-                completed: false
-              };
-            })
-          };
-        })
-      }));
+      if (isMountedRef.current) {
+        const nextMap = {
+          ...logsByRoutineRef.current,
+          [snap.routineId]: snap.previousLogs
+        };
+        logsByRoutineRef.current = nextMap;
+        selectedRoutineIdRef.current = snap.routineId;
+        setLogsByRoutine(nextMap);
+        setSelectedRoutineId(snap.routineId);
+        setCompletedSummary(null);
+        setUndoSnapshot(null);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsUndoing(false);
+      }
     }
+  };
 
-    // Advance active routine in cycle (A -> B -> C -> D -> A)
-    const cycle: RoutineId[] = ['A', 'B', 'C', 'D'];
-    const currentIdx = cycle.indexOf(finishedRoutineId);
-    const nextRoutine = cycle[(currentIdx + 1) % cycle.length];
-
-    await db.userProfile.update('main_user', {
-      activeRoutine: nextRoutine
-    });
-    setSelectedRoutineId(nextRoutine);
-
-    setCompletedSummary({
-      routineTitle: currentRoutine?.title || 'Treino Concluído',
-      totalSets: completedSetsCount,
-      totalExercises: exerciseLogs.filter((ex) => ex.sets.some((s) => s.completed)).length
-    });
-
-    setIsFinishing(false);
+  const dismissCompletedModal = () => {
+    setCompletedSummary(null);
+    setUndoSnapshot(null);
   };
 
   // Reset current session state
   const handleResetSession = () => {
     if (window.confirm('Deseja zerar as séries marcadas nesta sessão?')) {
+      cancelAutoFinish();
       triggerHaptic('light');
-      setLogsByRoutine((prev) => ({
-        ...prev,
-        [selectedRoutineId]: (prev[selectedRoutineId] || exerciseLogs).map((ex) => ({
-          ...ex,
-          abortedForFatigue: false,
-          sets: ex.sets.map((s) => ({ ...s, completed: false }))
+      const currentList = logsByRoutineRef.current[selectedRoutineId] || exerciseLogs;
+      const resetList = currentList.map((ex) => ({
+        ...ex,
+        abortedForFatigue: false,
+        sets: ex.sets.map(({ completedAt: _cleared, ...s }) => ({
+          ...s,
+          completed: false
         }))
       }));
+      const nextMap = {
+        ...logsByRoutineRef.current,
+        [selectedRoutineId]: resetList
+      };
+      logsByRoutineRef.current = nextMap;
+      setLogsByRoutine(nextMap);
     }
   };
 
@@ -408,12 +707,12 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         // Swiped left -> Next routine
         const nextIdx = (currentIdx + 1) % cycle.length;
         triggerHaptic('light');
-        setSelectedRoutineId(cycle[nextIdx]);
+        selectRoutine(cycle[nextIdx]);
       } else {
         // Swiped right -> Previous routine
         const prevIdx = (currentIdx - 1 + cycle.length) % cycle.length;
         triggerHaptic('light');
-        setSelectedRoutineId(cycle[prevIdx]);
+        selectRoutine(cycle[prevIdx]);
       }
     }
 
@@ -448,7 +747,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                   key={rId}
                   onClick={() => {
                     triggerHaptic('light');
-                    setSelectedRoutineId(rId);
+                    selectRoutine(rId);
                   }}
                   className={`py-1.5 rounded-lg text-xs font-black transition-all duration-150 min-h-[34px] flex items-center justify-center active:scale-95 ${
                     isSelected
@@ -527,13 +826,13 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         </button>
       </div>
 
-      {/* MODAL DE CONCLUSÃO COM BOTÃO X E ESCOLHA DE FICAR OU IR PARA EVOLUÇÃO */}
+      {/* MODAL DE CONCLUSÃO COM BOTÃO X, OPÇÕES E DESFAZER SALVAMENTO */}
       {completedSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
             {/* Botão Fechar X no topo */}
             <button
-              onClick={() => setCompletedSummary(null)}
+              onClick={dismissCompletedModal}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center active:scale-90 transition-all"
               title="Fechar"
               aria-label="Fechar"
@@ -547,51 +846,67 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              Treino Salvo com Sucesso!
+              {completedSummary.isAutoCompleted
+                ? 'Treino 100% Concluído & Salvo!'
+                : 'Treino Salvo com Sucesso!'}
             </span>
 
             <h2 className="text-lg font-black text-slate-900 mb-1">
               {completedSummary.routineTitle}
             </h2>
             <p className="text-xs text-slate-500 mb-5">
-              Sessão gravada no histórico e sobrecarga atualizada.
+              {completedSummary.isAutoCompleted
+                ? 'Todas as séries do dia foram concluídas e a sobrecarga foi atualizada.'
+                : 'Sessão gravada no histórico e sobrecarga atualizada.'}
             </p>
 
             <div className="grid grid-cols-2 gap-2.5 mb-5">
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Séries Feitas</div>
-                <div className="text-base font-black text-slate-900">
+                <div className="text-base font-black text-slate-900 tabular-nums">
                   {completedSummary.totalSets}
                 </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="text-[11px] text-slate-400 font-bold uppercase mb-0.5">Exercícios</div>
-                <div className="text-base font-black text-blue-600">
+                <div className="text-base font-black text-blue-600 tabular-nums">
                   {completedSummary.totalExercises}
                 </div>
               </div>
             </div>
 
-            {/* Opções de Ação: Ver Evolução OU Ficar nos Treinos */}
+            {/* Opções de Ação: Ver Evolução, Ficar nos Treinos ou Desfazer */}
             <div className="space-y-2">
               <button
                 onClick={() => {
-                  setCompletedSummary(null);
+                  dismissCompletedModal();
                   if (onGoToEvolution) onGoToEvolution();
                 }}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 min-h-[42px] active:scale-95 transition-all"
               >
                 <span>Ver Minha Evolução</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
               <button
-                onClick={() => setCompletedSummary(null)}
-                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs active:scale-95 transition-all"
+                onClick={dismissCompletedModal}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs min-h-[40px] active:scale-95 transition-all"
               >
                 Continuar nos Treinos
               </button>
+
+              {undoSnapshot && (
+                <button
+                  type="button"
+                  onClick={handleUndoFinish}
+                  disabled={isUndoing}
+                  className="w-full py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs inline-flex items-center justify-center gap-1.5 min-h-[38px] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <Undo2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{isUndoing ? 'Desfazendo...' : 'Desfazer salvamento'}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
