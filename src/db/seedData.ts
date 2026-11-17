@@ -91,6 +91,18 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         restSeconds: 60,
         defaultWeightKg: 15,
         substitutes: ['Rosca Direta Polia Baixa', 'Rosca Scott Polia']
+      },
+      {
+        id: 'pull_cardio',
+        name: 'Bicicleta Ergométrica',
+        muscleGroup: 'Cardio Pós-Treino',
+        gripOrForm: '15 a 20 min (Zona 2 · 75–85 RPM), postura ereta e cadência constante',
+        defaultSets: 1,
+        targetReps: '15-20',
+        focusType: 'cardio',
+        restSeconds: 0,
+        defaultWeightKg: 0,
+        substitutes: ['Esteira (Caminhada Inclinada)', 'Elíptico']
       }
     ]
   },
@@ -134,18 +146,6 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         restSeconds: 90,
         defaultWeightKg: 45,
         substitutes: ['Mesa Flexora', 'Flexão Nórdica / Caneleira']
-      },
-      {
-        id: 'lower1_4',
-        name: 'Leg Press 45° Unilateral',
-        muscleGroup: 'Quadríceps Unilateral',
-        gripOrForm: '1 perna por vez, profundidade limpa',
-        defaultSets: 3,
-        targetReps: '6-8/lado',
-        focusType: 'carga',
-        restSeconds: 90,
-        defaultWeightKg: 60,
-        substitutes: ['Agachamento Búlgaro', 'Step-up no Banco']
       },
       {
         id: 'lower1_5',
@@ -250,6 +250,18 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
         restSeconds: 60,
         defaultWeightKg: 25,
         substitutes: ['Tríceps Pulley c/ Barra V', 'Tríceps Polia Alta c/ Corda']
+      },
+      {
+        id: 'push_cardio',
+        name: 'Bicicleta Ergométrica',
+        muscleGroup: 'Cardio Pós-Treino',
+        gripOrForm: '15 a 20 min (Zona 2 · 75–85 RPM), postura ereta e cadência constante',
+        defaultSets: 1,
+        targetReps: '15-20',
+        focusType: 'cardio',
+        restSeconds: 0,
+        defaultWeightKg: 0,
+        substitutes: ['Esteira (Caminhada Inclinada)', 'Elíptico']
       }
     ]
   },

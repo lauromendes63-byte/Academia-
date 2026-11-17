@@ -360,6 +360,20 @@ export function getExerciseGuide(
     ]);
   }
 
+  // Bicicleta Ergométrica / Cardio Pós-Treino (pull_cardio, push_cardio)
+  if (
+    lower.includes('bicicleta') ||
+    lower.includes('esteira') ||
+    lower.includes('elíptico') ||
+    exerciseId.includes('cardio')
+  ) {
+    return withThumb('/exercises/cardio_bike.gif', 'Sistema Cardiovascular (Zona 2)', [
+      'Ajuste a altura do banco para que o joelho fique levemente flexionado no ponto mais baixo do pedal.',
+      'Mantenha cadência contínua entre 75 e 85 RPM por 15 a 20 minutos em intensidade moderada (Zona 2).',
+      'Mantenha os ombros relaxados e respiração controlada durante todo o percurso.'
+    ]);
+  }
+
   // Panturrilha em Pé (lower1_5 e lower2_5 no seedData)
   return withThumb('/exercises/leg1_4.gif', 'Panturrilhas (Gastrocnêmio)', [
     'Mantenha os joelhos estendidos (sem travar) e o tronco alinhado.',

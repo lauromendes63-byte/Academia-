@@ -308,7 +308,9 @@ export const EvolutionScreen: React.FC = () => {
   const exerciseCurves = useMemo(() => {
     if (!currentRoutine) return [];
 
-    return currentRoutine.exercises.map((exDef, exIdx) => {
+    return currentRoutine.exercises
+      .filter((exDef) => exDef.focusType !== 'cardio' && !exDef.id.includes('cardio'))
+      .map((exDef, exIdx) => {
       const color = EXERCISE_COLORS[exIdx % EXERCISE_COLORS.length];
       const isAssisted =
         !!exDef.isAssisted ||

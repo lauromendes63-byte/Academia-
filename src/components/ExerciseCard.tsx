@@ -57,9 +57,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
   const { minReps, maxReps } = parseRepRange(exercise.targetReps);
   const isUnilateralReps = exercise.targetReps.toLowerCase().includes('lado');
+  const isCardio =
+    exercise.focusType === 'cardio' || exercise.id.includes('cardio');
   const isCargaFocus =
-    exercise.focusType === 'carga' ||
-    (!exercise.focusType && maxReps <= 8);
+    !isCardio &&
+    (exercise.focusType === 'carga' || (!exercise.focusType && maxReps <= 8));
   const focusRangeLabel =
     minReps === maxReps ? `${minReps}` : `${minReps}–${maxReps}`;
   const focusBadgeText = `${isCargaFocus ? 'CARGA' : 'REPS'} · ${focusRangeLabel}`;
@@ -286,7 +288,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             : allSetsDone
             ? 'border-emerald-400 ring-1 ring-emerald-400/25'
             : 'border-slate-200/90'
-        } ${isCargaFocus ? 'border-l-[#EA580C]' : 'border-l-[#0284C7]'}`}
+        } ${
+          isCardio
+            ? allSetsDone
+              ? 'border-l-emerald-500'
+              : 'border-l-slate-400'
+            : isCargaFocus
+            ? 'border-l-[#EA580C]'
+            : 'border-l-[#0284C7]'
+        }`}
       >
         {/* ===================================================================== */}
         {/* ZONA 1: CABEÇALHO ESCURO DE ALTO CONTRASTE (NAVY SLATE-900)           */}
@@ -315,13 +325,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               )}
             </div>
 
-            <span
-              className={`text-xs font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-md text-white whitespace-nowrap shrink-0 tabular-nums shadow-2xs ${
-                isCargaFocus ? 'bg-[#EA580C]' : 'bg-[#0284C7]'
-              }`}
-            >
-              {focusBadgeText}
-            </span>
+            {isCardio ? (
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-white/15 text-slate-200 border border-white/20 whitespace-nowrap shrink-0">
+                CARDIO
+              </span>
+            ) : (
+              <span
+                className={`text-xs font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-md text-white whitespace-nowrap shrink-0 tabular-nums shadow-2xs ${
+                  isCargaFocus ? 'bg-[#EA580C]' : 'bg-[#0284C7]'
+                }`}
+              >
+                {focusBadgeText}
+              </span>
+            )}
           </div>
 
           {/* Linha 2: Nome do Exercício em Branco Puro + Botões de Ação (Direita) */}
@@ -403,6 +419,73 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             </div>
           )}
 
+          {isCardio ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsExecModalOpen(true);
+                  }}
+                  className="w-16 h-16 rounded-2xl bg-white border border-slate-200/90 p-1 flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-2xs overflow-hidden"
+                  title="Ver execução detalhada"
+                  aria-label={`Ilustração de ${displayName}`}
+                >
+                  <img
+                    src={guide.thumbUrl}
+                    alt={displayName}
+                    loading="lazy"
+                    className="w-full h-full object-contain"
+                  />
+                </button>
+
+                <div className="flex-1 min-w-0 rounded-2xl bg-slate-50/90 border border-slate-200/80 px-3 py-2.5">
+                  <div className="text-xs font-black text-slate-900 tabular-nums">
+                    15 a 20 min
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                    Zona 2 · 75–85 RPM
+                  </div>
+                </div>
+              </div>
+
+              {log.sets[0] && (
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSet(0)}
+                    disabled={isAborted}
+                    className={`w-full h-11 px-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs transition-[transform,background-color,color] duration-120 ease-out active:scale-[0.98] ${
+                      isAborted
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        : log.sets[0].completed
+                        ? 'bg-emerald-500 text-white shadow-2xs'
+                        : 'bg-slate-900 text-white shadow-2xs'
+                    }`}
+                  >
+                    {log.sets[0].completed ? (
+                      <Check className="w-4 h-4 stroke-[3] shrink-0 text-white" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-400 shrink-0" />
+                    )}
+                    <span>
+                      {log.sets[0].completed
+                        ? 'Cardio Concluído (15–20 min)'
+                        : 'Concluir Cardio (15–20 min)'}
+                    </span>
+                  </button>
+
+                  {log.sets[0].completed && log.sets[0].completedAt && (
+                    <span className="mt-1 text-center text-[9.5px] font-semibold text-slate-400 tabular-nums tracking-tight whitespace-nowrap select-none leading-none">
+                      Feita às {log.sets[0].completedAt}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
           {/* =================================================================== */}
           {/* ZONA 2: ILUSTRAÇÃO ANATÔMICA + PAINEL DE DOMÍNIO DA CARGA (3 ETAPAS) */}
           {/* =================================================================== */}
@@ -798,6 +881,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               </span>
             )}
           </div>
+            </>
+          )}
         </div>
       </div>
 

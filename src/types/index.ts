@@ -1,5 +1,5 @@
 export type RoutineId = 'A' | 'B' | 'C' | 'D';
-export type ExerciseFocusType = 'carga' | 'reps';
+export type ExerciseFocusType = 'carga' | 'reps' | 'cardio';
 
 export interface ExerciseDefinition {
   id: string;
