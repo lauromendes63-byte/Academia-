@@ -57,6 +57,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
   const { minReps, maxReps } = parseRepRange(exercise.targetReps);
   const isUnilateralReps = exercise.targetReps.toLowerCase().includes('lado');
+  const isCargaFocus =
+    exercise.focusType === 'carga' ||
+    (!exercise.focusType && maxReps <= 8);
+  const focusRangeLabel =
+    minReps === maxReps ? `${minReps}` : `${minReps}–${maxReps}`;
+  const focusBadgeText = `${isCargaFocus ? 'CARGA' : 'REPS'} · ${focusRangeLabel}`;
 
   const completedCount = log.sets.filter((s) => s.completed).length;
   const allSetsDone = !isAborted && completedCount === log.sets.length && log.sets.length > 0;
@@ -274,13 +280,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   return (
     <>
       <div
-        className={`relative bg-white rounded-3xl overflow-hidden border transition-[border-color,box-shadow,opacity] duration-150 ease-out shadow-xs ${
+        className={`relative bg-white rounded-3xl overflow-hidden border border-l-4 transition-[border-color,box-shadow,opacity] duration-150 ease-out shadow-xs ${
           isAborted
             ? 'border-red-300 opacity-85'
             : allSetsDone
             ? 'border-emerald-400 ring-1 ring-emerald-400/25'
             : 'border-slate-200/90'
-        }`}
+        } ${isCargaFocus ? 'border-l-[#EA580C]' : 'border-l-[#0284C7]'}`}
       >
         {/* ===================================================================== */}
         {/* ZONA 1: CABEÇALHO ESCURO DE ALTO CONTRASTE (NAVY SLATE-900)           */}
@@ -294,20 +300,42 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               : 'bg-slate-900 text-white'
           }`}
         >
-          {/* Linha 1: Badge do Músculo (Esquerda) e Botões de Ação (Direita) — h-7 */}
+          {/* Linha 1: Badge do Músculo (Esquerda) e Badge CARGA/REPS (Topo Direito) */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="h-7 px-2.5 rounded-lg inline-flex items-center text-[11px] font-extrabold bg-blue-500/20 text-blue-200 border border-blue-400/30 whitespace-nowrap truncate">
+              <span className="h-6 px-2 rounded-md inline-flex items-center text-[11px] font-extrabold bg-white/10 text-slate-200 border border-white/10 whitespace-nowrap truncate">
                 {exercise.muscleGroup}
               </span>
 
               {isNewPR && (
-                <span className="h-7 px-2 rounded-lg inline-flex items-center gap-1 text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40 whitespace-nowrap shrink-0">
+                <span className="h-6 px-2 rounded-md inline-flex items-center gap-1 text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40 whitespace-nowrap shrink-0">
                   <Trophy className="w-3 h-3 text-amber-300 fill-current" />
                   <span>PR</span>
                 </span>
               )}
             </div>
+
+            <span
+              className={`text-xs font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-md text-white whitespace-nowrap shrink-0 tabular-nums shadow-2xs ${
+                isCargaFocus ? 'bg-[#EA580C]' : 'bg-[#0284C7]'
+              }`}
+            >
+              {focusBadgeText}
+            </span>
+          </div>
+
+          {/* Linha 2: Nome do Exercício em Branco Puro + Botões de Ação (Direita) */}
+          <div className="flex items-center justify-between gap-2">
+            <h3
+              onClick={() => {
+                triggerHaptic('light');
+                setIsExecModalOpen(true);
+              }}
+              className="text-[16px] font-black text-white tracking-tight leading-snug cursor-pointer active:text-blue-300 transition-colors min-w-0"
+              title="Toque para ver animação de execução"
+            >
+              {displayName}
+            </h3>
 
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -352,18 +380,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               </button>
             </div>
           </div>
-
-          {/* Linha 2: Nome do Exercício em Branco Puro de Alto Contraste */}
-          <h3
-            onClick={() => {
-              triggerHaptic('light');
-              setIsExecModalOpen(true);
-            }}
-            className="text-[16px] font-black text-white tracking-tight leading-snug truncate cursor-pointer active:text-blue-300 transition-colors"
-            title="Toque para ver animação de execução"
-          >
-            {displayName}
-          </h3>
         </div>
 
         {/* ===================================================================== */}

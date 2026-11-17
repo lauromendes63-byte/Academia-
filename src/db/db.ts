@@ -30,7 +30,7 @@ export class AcademiaDatabase extends Dexie {
 
 export const db = new AcademiaDatabase();
 
-const MIGRATION_FLAG_KEY = 'academia_db_migrated_v230';
+const MIGRATION_FLAG_KEY = 'academia_db_migrated_v240';
 
 /**
  * Initializes database with default routines and user profile if not present.
@@ -95,32 +95,18 @@ export async function initializeDatabase(): Promise<void> {
               continue;
             }
 
-            if (defaultRoutine.id === 'A' || defaultRoutine.id === 'C') {
-              const prevWeightById = new Map(
-                existing.exercises.map((ex) => [ex.id, ex.defaultWeightKg])
-              );
-              const updatedExercises = defaultRoutine.exercises.map((defEx) => ({
-                ...defEx,
-                defaultWeightKg:
-                  prevWeightById.get(defEx.id) ?? defEx.defaultWeightKg
-              }));
-              await db.routines.put({
-                ...defaultRoutine,
-                exercises: updatedExercises
-              });
-            } else {
-              let changed = false;
-              const updatedExercises = existing.exercises.map((e) => {
-                if (e.defaultSets !== 3) {
-                  changed = true;
-                  return { ...e, defaultSets: 3 };
-                }
-                return e;
-              });
-              if (changed) {
-                await db.routines.put({ ...existing, exercises: updatedExercises });
-              }
-            }
+            const prevWeightById = new Map(
+              existing.exercises.map((ex) => [ex.id, ex.defaultWeightKg])
+            );
+            const updatedExercises = defaultRoutine.exercises.map((defEx) => ({
+              ...defEx,
+              defaultWeightKg:
+                prevWeightById.get(defEx.id) ?? defEx.defaultWeightKg
+            }));
+            await db.routines.put({
+              ...defaultRoutine,
+              exercises: updatedExercises
+            });
           }
 
           const allSessions = await db.workoutSessions.toArray();

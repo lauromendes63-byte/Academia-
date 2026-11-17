@@ -1,4 +1,5 @@
 export type RoutineId = 'A' | 'B' | 'C' | 'D';
+export type ExerciseFocusType = 'carga' | 'reps';
 
 export interface ExerciseDefinition {
   id: string;
@@ -7,6 +8,7 @@ export interface ExerciseDefinition {
   gripOrForm: string;
   defaultSets: number;
   targetReps: string;
+  focusType?: ExerciseFocusType;
   restSeconds: number;
   defaultWeightKg: number;
   substitutes: string[];
