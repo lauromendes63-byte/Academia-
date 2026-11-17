@@ -34,9 +34,9 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
       },
       {
         id: 'pull_2',
-        name: 'Remada Baixa na Polia',
+        name: 'Remada Baixa na Polia (Barra Aberta · Pegada Pronada)',
         muscleGroup: 'Costas (Espessura)',
-        gripOrForm: 'Neutra c/ Triângulo',
+        gripOrForm: 'Barra Aberta · Pegada Pronada',
         defaultSets: 3,
         targetReps: '6-8',
         focusType: 'carga',
@@ -70,7 +70,7 @@ export const DEFAULT_ROUTINES: RoutineDefinition[] = [
       },
       {
         id: 'pull_spider',
-        name: 'Rosca Scott / Spider com Halteres',
+        name: 'Rosca Spider com Halteres (Banco Inclinado)',
         muscleGroup: 'Bíceps (Pico & Estabilidade)',
         gripOrForm: 'Peito apoiado no banco inclinado (45°), braços verticais à frente',
         defaultSets: 3,

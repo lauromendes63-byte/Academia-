@@ -145,7 +145,7 @@ export function getExerciseGuide(
   if (lower.includes('remada') || exerciseId === 'pull_2') {
     return withThumb('/exercises/pull_2.gif', 'Costas (Espessura & Dorsal)', [
       'Mantenha a coluna neutra, peito estufado e tronco firme em 90°.',
-      'Puxe o triângulo até o abdômen fechando bem as escápulas atrás.',
+      'Puxe a barra aberta em pegada pronada em direção ao abdômen/peito inferior fechando bem as escápulas.',
       'Estenda os braços à frente alongando a dorsal sem curvar a lombar.'
     ]);
   }

@@ -30,7 +30,7 @@ export class AcademiaDatabase extends Dexie {
 
 export const db = new AcademiaDatabase();
 
-const MIGRATION_FLAG_KEY = 'academia_db_migrated_v240';
+const MIGRATION_FLAG_KEY = 'academia_db_migrated_v241';
 
 /**
  * Initializes database with default routines and user profile if not present.
